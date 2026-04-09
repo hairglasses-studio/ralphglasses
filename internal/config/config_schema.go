@@ -7,11 +7,12 @@ import (
 
 // knownProviders is the set of recognized LLM provider names.
 var knownProviders = map[string]bool{
-	"claude": true,
-	"gemini": true,
-	"codex":  true,
-	"openai": true,
-	"ollama": true,
+	"claude":      true,
+	"gemini":      true,
+	"codex":       true,
+	"antigravity": true,
+	"openai":      true,
+	"ollama":      true,
 }
 
 // ValidateConfig checks a Config for common misconfigurations.
@@ -31,10 +32,10 @@ func ValidateConfig(cfg *Config) []error {
 
 	// Validate provider names are recognized.
 	if cfg.DefaultProvider != "" && !knownProviders[cfg.DefaultProvider] {
-		errs = append(errs, fmt.Errorf("unknown default provider %q (known: claude, gemini, codex, openai, ollama)", cfg.DefaultProvider))
+		errs = append(errs, fmt.Errorf("unknown default provider %q (known: claude, gemini, codex, antigravity, openai, ollama)", cfg.DefaultProvider))
 	}
 	if cfg.WorkerProvider != "" && !knownProviders[cfg.WorkerProvider] {
-		errs = append(errs, fmt.Errorf("unknown worker provider %q (known: claude, gemini, codex, openai, ollama)", cfg.WorkerProvider))
+		errs = append(errs, fmt.Errorf("unknown worker provider %q (known: claude, gemini, codex, antigravity, openai, ollama)", cfg.WorkerProvider))
 	}
 
 	// Validate worker count in sane range (1-50).

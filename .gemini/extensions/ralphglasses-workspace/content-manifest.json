@@ -1,0 +1,62 @@
+{
+  "name": "ralphglasses-workspace",
+  "version": "1.0.0",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "f4763d084a6ebc6b09f77d9eab4568bfa1c5e14ee70a54666b38157272ba7651"
+    },
+    {
+      "path": "commands/ralph/bootstrap-and-firstboot.toml",
+      "sha256": "4e69c89737b6cf87a319c982f27a984c9d44f07edf854edff06fd98bf1cecb4a"
+    },
+    {
+      "path": "commands/ralph/discover-and-load.toml",
+      "sha256": "4bf5f96961a5acbf5be934f96ccb2f85c49092190b10e1e15848d3ab2216a7d2"
+    },
+    {
+      "path": "commands/ralph/operator-control-plane.toml",
+      "sha256": "bbe3ff8e9ad5bc3466d8cdadc61210f0f701cc932abf6aaf619bd64e082f0d51"
+    },
+    {
+      "path": "commands/ralph/provider-parity.toml",
+      "sha256": "df3c6fe4c8cea3787d871d7a6bbea8d4c7322da05248f29f8416da017bcfbb4c"
+    },
+    {
+      "path": "commands/ralph/repo-hygiene.toml",
+      "sha256": "58dba387aed0f12f92d5e2e0385226a18e17068419e4d17f75740deaa9cafb0f"
+    },
+    {
+      "path": "commands/ralph/repo-triage.toml",
+      "sha256": "a62ca50652cfd6985a0c546a33f67a1da59e10c3f93d63da8ea53101f8a8a689"
+    },
+    {
+      "path": "commands/ralph/runtime-recovery.toml",
+      "sha256": "72245180cc3048d4d93d9b89a263ef9f4d51ba1df07e0e668270ffc83a8dbbec"
+    },
+    {
+      "path": "commands/ralph/session-execution.toml",
+      "sha256": "ae8171808a54a5e535225002c50f1fef6ab305eb1887076f30217a7ce0a87615"
+    },
+    {
+      "path": "gemini-extension.json",
+      "sha256": "0b83eed5413e4e0e8de4afb8a5d67daa8a2523661fb7cfeff2464d64e3a7a944"
+    },
+    {
+      "path": "scripts/cleanup.sh",
+      "sha256": "6848a0db0445ea96b30880474af98cee27a3b0acfe887195e9aa857aea758c99"
+    },
+    {
+      "path": "scripts/run-mcp-extension.sh",
+      "sha256": "ec0ff3ca8066611a968412b3feb04536d5582ad6bfc063a1cc53723739511188"
+    },
+    {
+      "path": "scripts/setup.sh",
+      "sha256": "c6ad40b1a564a6e668bcde0ec69385b68db72ad29109ebc53710c1ceffec252e"
+    },
+    {
+      "path": "scripts/validate.sh",
+      "sha256": "b05d3036a6832dc61426e0505a87206ea91dd940e43b0bf1e201213b4c91b38b"
+    }
+  ]
+}

@@ -535,7 +535,11 @@ func (s *Server) handleProviderCapabilities(_ context.Context, req mcp.CallToolR
 
 	matrix, ok := session.ProviderCapabilityMatrixFor(provider)
 	if !ok {
-		return codedError(ErrInvalidParams, fmt.Sprintf("unknown provider %q (valid: claude, codex, gemini)", provider)), nil
+		valid := make([]string, 0, len(session.PrimaryProviders()))
+		for _, p := range session.PrimaryProviders() {
+			valid = append(valid, string(p))
+		}
+		return codedError(ErrInvalidParams, fmt.Sprintf("unknown provider %q (valid: %s)", provider, strings.Join(valid, ", "))), nil
 	}
 	return fleetJSON(matrix)
 }
@@ -559,6 +563,8 @@ func (s *Server) handleProviderCompare(_ context.Context, req mcp.CallToolReques
 			"provider":             matrix.Provider,
 			"binary":               matrix.Binary,
 			"default_model":        matrix.DefaultModel,
+			"execution_model":      matrix.ExecutionModel,
+			"experimental":         matrix.Experimental,
 			"project_instructions": matrix.ProjectInstructions,
 			"repo_config_path":     matrix.RepoConfigPath,
 			"agent_config_path":    matrix.AgentConfigPath,

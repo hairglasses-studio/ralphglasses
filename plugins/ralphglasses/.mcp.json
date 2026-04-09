@@ -6,7 +6,8 @@
         "--scan-path",
         "~/hairglasses-studio"
       ],
-      "command": "bash"
+      "command": "bash",
+      "cwd": "."
     }
   }
 }

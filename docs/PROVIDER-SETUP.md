@@ -1,12 +1,13 @@
 # Multi-LLM Provider Setup
 
-Sessions can target any of three providers via the `provider` parameter:
+Sessions can target Claude, Gemini, Codex, or the experimental Antigravity external-manager handoff via the `provider` parameter:
 
 | Provider | CLI Binary | Default Model | Stream Format | Resume Support |
 |----------|-----------|---------------|---------------|----------------|
 | `codex` (default) | `codex` | `gpt-5.4` | `--json` (NDJSON) | Yes (`exec resume`, when supported by the installed CLI) |
 | `claude` | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
 | `gemini` | `gemini` | `gemini-3.1-pro` | `stream-json` | Yes (`--resume`) |
+| `antigravity` | `antigravity` | Antigravity-managed | External interactive handoff | No |
 
 ## Prerequisites
 
@@ -21,6 +22,10 @@ npm install -g @google/gemini-cli
 # OpenAI Codex CLI
 npm install -g @openai/codex-cli
 # https://developers.openai.com/codex/noninteractive
+
+# Google Antigravity
+# install via the official Google distribution for your platform
+# https://antigravity.google/docs/mcp
 ```
 
 ## Environment Variables
@@ -33,6 +38,8 @@ ANTHROPIC_API_KEY=sk-ant-...    # Claude
 GOOGLE_API_KEY=AIza...          # Gemini
 OPENAI_API_KEY=sk-...           # Codex
 ```
+
+Antigravity itself does not require a separate Ralph-owned API key variable. It inherits provider credentials from the local environment and its own app configuration.
 
 ## Orchestration Pattern
 
@@ -57,16 +64,16 @@ The canonical capability registry lives in `internal/session/provider_capabiliti
 - `ralphglasses_provider_compare`
 - `ralphglasses_provider_recommend`
 
-| Capability | Claude | Gemini | Codex |
-|------------|--------|--------|-------|
-| Budget | Native `--max-budget-usd` | Externally enforced by ralphglasses | Externally enforced by ralphglasses |
-| Max turns | Native | Unsupported | Unsupported |
-| Agent flag | Native `--agent` | Unsupported | Unsupported |
-| Allowed tools | Native | Native but deprecated upstream | Unsupported |
-| Worktree | Native | Native | Unsupported |
-| Permission mode | Native | Native via `--approval-mode` | Emulated through `--sandbox` |
-| Output schema | Native `--json-schema` | Unsupported | Native `--output-schema` |
-| MCP server mode | Unsupported | Unsupported | Native `codex mcp-server` |
+| Capability | Claude | Gemini | Codex | Antigravity |
+|------------|--------|--------|-------|-------------|
+| Budget | Native `--max-budget-usd` | Externally enforced by ralphglasses | Externally enforced by ralphglasses | Externally enforced by ralphglasses |
+| Max turns | Native | Unsupported | Unsupported | Unsupported |
+| Agent flag | Native `--agent` | Unsupported | Unsupported | Unsupported |
+| Allowed tools | Native | Native but deprecated upstream | Unsupported | Unsupported |
+| Worktree | Native | Native | Unsupported | Unsupported |
+| Permission mode | Native | Native via `--approval-mode` | Emulated through `--sandbox` | Unsupported |
+| Output schema | Native `--json-schema` | Unsupported | Native `--output-schema` | Unsupported |
+| MCP server mode | Unsupported | Unsupported | Native `codex mcp-server` | Unsupported |
 
 ## CLI Flags
 
@@ -125,7 +132,9 @@ Batch jobs are submitted via `ralphglasses_fleet_submit` with `batch: true`. Res
 - `.gemini/settings.json` — Gemini CLI MCP server registration
 - `.codex/config.toml` — Codex CLI project config + MCP server registration
 - `.mcp.json` — shared source of truth for MCP server command and cwd
-- See [PROVIDER-PARITY-OBJECTIVES.md](PROVIDER-PARITY-OBJECTIVES.md) for the broader three-provider parity plan
+- `.agents/rules/` and `.agents/workflows/` — generated Antigravity/Gemini repo-native rule and slash-command surfaces
+- `.gemini/extensions/ralphglasses-workspace/` — generated thin extension bundle for Gemini and Antigravity
+- See [PROVIDER-PARITY-OBJECTIVES.md](PROVIDER-PARITY-OBJECTIVES.md) for the broader provider parity plan and Antigravity constraints
 - See [GEMINI.md](../GEMINI.md) for Gemini-specific instructions
 - See [CLAUDE.md](../CLAUDE.md) for Claude-specific instructions
 - See [AGENTS.md](../AGENTS.md) for Codex-specific instructions

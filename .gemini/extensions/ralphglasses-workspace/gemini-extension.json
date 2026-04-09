@@ -1,5 +1,15 @@
 {
-  "contextFileName": "GEMINI.md",
+  "contextFileName": "AGENTS.md",
+  "description": "Repo-native Ralphglasses workflows, MCP surfaces, and operator commands for Gemini and Antigravity.",
+  "mcpServers": {
+    "ralphglasses": {
+      "args": [
+        "${extensionPath}${/}scripts${/}run-mcp-extension.sh"
+      ],
+      "command": "bash",
+      "cwd": "${extensionPath}"
+    }
+  },
   "name": "ralphglasses-workspace",
   "version": "1.0.0"
 }

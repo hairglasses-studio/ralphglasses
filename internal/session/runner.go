@@ -52,6 +52,9 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	if opts.Model == "" {
 		opts.Model = ProviderDefaults(provider)
 	}
+	if provider == ProviderAntigravity {
+		return launchAntigravityHandoff(ctx, opts, bus...)
+	}
 
 	sessionCtx, cancel := context.WithCancel(ctx)
 	cmd, err := buildCmdForProvider(sessionCtx, opts)

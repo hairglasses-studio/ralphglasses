@@ -77,7 +77,7 @@ The `plugin_*` namespace is reserved for per-plugin configuration.
 | `auto_restart` | `bool` | -- | -- |
 | `cost_rate_multiplier` | `float` | -- | -- |
 | `default_budget_usd` | `float` | -- | -- |
-| `default_provider` | `string` | `claude`, `gemini`, `codex`, `openai`, `ollama` | -- |
+| `default_provider` | `string` | `claude`, `gemini`, `codex`, `antigravity`, `openai`, `ollama` | -- |
 | `health_check_interval` | `duration` | -- | -- |
 | `kill_timeout` | `int` | -- | [1, 60] |
 | `log_level` | `string` | `debug`, `info`, `warn`, `error` | -- |
@@ -85,12 +85,12 @@ The `plugin_*` namespace is reserved for per-plugin configuration.
 | `max_workers` | `int` | -- | [0, 50] |
 | `notify_desktop` | `bool` | -- | -- |
 | `notify_sound` | `bool` | -- | -- |
-| `provider` | `string` | `claude`, `gemini`, `codex`, `openai`, `ollama` | -- |
+| `provider` | `string` | `claude`, `gemini`, `codex`, `antigravity`, `openai`, `ollama` | -- |
 | `scan_interval` | `int` | -- | [1, 3600] |
 | `scan_paths` | `[]string` | -- | -- |
 | `session_timeout` | `duration` | -- | -- |
 | `telemetry_enabled` | `bool` | -- | -- |
-| `worker_provider` | `string` | `claude`, `gemini`, `codex`, `openai`, `ollama` | -- |
+| `worker_provider` | `string` | `claude`, `gemini`, `codex`, `antigravity`, `openai`, `ollama` | -- |
 
 ---
 

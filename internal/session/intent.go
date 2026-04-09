@@ -23,12 +23,12 @@ const (
 // through the session lifecycle. Every tool call or NL command is first
 // converted to an Intent before execution.
 type Intent struct {
-	Type       IntentType        `json:"type"`
-	SessionID  string            `json:"session_id,omitempty"`
-	Provider   Provider          `json:"provider,omitempty"`
-	Parameters map[string]string `json:"parameters,omitempty"`
-	Destructive bool             `json:"destructive"` // requires confirmation
-	Source     string            `json:"source"`       // "nl", "mcp", "api", "schedule"
+	Type        IntentType        `json:"type"`
+	SessionID   string            `json:"session_id,omitempty"`
+	Provider    Provider          `json:"provider,omitempty"`
+	Parameters  map[string]string `json:"parameters,omitempty"`
+	Destructive bool              `json:"destructive"` // requires confirmation
+	Source      string            `json:"source"`      // "nl", "mcp", "api", "schedule"
 }
 
 // Validate checks that the intent has all required fields for its type.
@@ -181,6 +181,8 @@ func classifyProvider(text string) Provider {
 		return ProviderGemini
 	case strings.Contains(lower, "codex"):
 		return ProviderCodex
+	case strings.Contains(lower, "antigravity"):
+		return ProviderAntigravity
 	default:
 		return ProviderClaude // default
 	}

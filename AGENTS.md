@@ -3,7 +3,7 @@
 
 Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
 
-Supports **Claude Code**, **Gemini CLI**, **OpenAI Codex CLI**, and **Cline CLI** as session providers.
+Supports **Claude Code**, **Gemini CLI**, **OpenAI Codex CLI**, **Google Antigravity** (experimental external-manager handoff), and **Cline CLI** as session providers.
 
 ## Start Here
 
@@ -71,7 +71,7 @@ The `internal/session/` package uses a provider dispatch pattern:
 - **`providers.go`**: `buildCmdForProvider()` dispatches to per-provider command builders. `normalizeEvent()` dispatches to per-provider event normalizers.
 - **`provider_capabilities.go`**: canonical provider capability registry used by launch validation, warnings, and MCP comparison surfaces.
 - **`runner.go`**: Provider-agnostic session lifecycle.
-- **`types.go`**: `Provider` type (`claude`|`gemini`|`codex`).
+- **`types.go`**: `Provider` type (`claude`|`gemini`|`codex`|`antigravity`).
 - **`budget.go`**: Per-provider cost tracking via `LedgerEntry` and `CostSummary`.
 
 ## Multi-LLM Provider Support
@@ -81,7 +81,10 @@ The `internal/session/` package uses a provider dispatch pattern:
 | `codex` (default) | `codex` | `gpt-5.4` | `--json` (NDJSON) | Yes (`exec resume`, when supported by the installed CLI) |
 | `claude` | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
 | `gemini` | `gemini` | `gemini-3.1-pro` | `stream-json` | Yes (`--resume`) |
+| `antigravity` | `antigravity` | Antigravity-managed | External interactive handoff | No |
 | `cline` | `cline` | Cline-managed (free tier) | `--json` (NDJSON) | Yes (`--taskId`, `--continue`) |
+
+Antigravity is intentionally narrower than the streaming providers. Ralph launches `antigravity chat --mode agent --new-window` in the repo, records a synthetic handoff session, and relies on `AGENTS.md`, `.agents/rules/`, `.agents/workflows/`, `.agents/skills/`, and `.mcp.json` for repo-native integration instead of trying to emulate Claude/Codex-style structured runtime control.
 
 ## Codex-Specific Notes
 
@@ -106,7 +109,7 @@ Ralphglasses exposes 222 MCP tools: 218 grouped tools plus 4 management tools ac
 Key tools for Codex-led development:
 
 ```
-ralphglasses_session_launch    Launch a headless session (provider: codex/gemini/claude)
+ralphglasses_session_launch    Launch a session (provider: codex/gemini/claude/antigravity)
 ralphglasses_team_create       Create a multi-provider team (Codex as lead)
 ralphglasses_team_delegate     Delegate subtasks to Gemini/Claude workers
 ralphglasses_session_list      List sessions (filter by provider)
@@ -168,12 +171,15 @@ Sessions persist state via MCP tools enabling handoff between providers:
 | Location | Purpose | Canonical? |
 |----------|---------|-----------|
 | `.agents/skills/` | Provider-neutral workflow definitions | Yes — source of truth for skills and workflows |
+| `.agents/workflows/` | Provider-neutral workflow command surfaces | Yes — generated from the canonical workflow catalog |
+| `.agents/rules/` | Provider-neutral Antigravity/Gemini rule surfaces | Yes — generated from canonical repo guidance |
 | `.agents/roles/` | Provider-neutral reusable fleet role definitions | Yes — source of truth for reusable roles |
 | `.claude/skills/` | Claude Code skill projections | Generated mirror |
 | `.codex/agents/` | Codex native role projections | Generated from `.agents/roles/*.json` |
 | `.claude/agents/` | Claude native role projections | Generated from `.agents/roles/*.json` |
 | `.gemini/agents/` | Gemini native role projections | Generated from `.agents/roles/*.json` |
-| `.gemini/commands/` | Gemini shortcut prompts and legacy compatibility commands | Compatibility-only, not canonical |
+| `.gemini/commands/ralph/*.toml` | Generated workflow command mirrors for Gemini and Antigravity | Generated mirror |
+| `.gemini/extensions/ralphglasses-workspace/` | Thin extension bundle for Gemini/Antigravity linking | Generated mirror |
 
 Regenerate skill surfaces: `make skill-surface`
 Regenerate role projections: `python3 scripts/sync-provider-roles.py`

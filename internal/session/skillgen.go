@@ -276,6 +276,7 @@ func generateCodexPluginBundle(repoPath, skillContent string) error {
 			"ralphglasses": map[string]any{
 				"command": "bash",
 				"args":    []string{"./scripts/dev/run-mcp.sh", "--scan-path", config.DefaultScanPath},
+				"cwd":     ".",
 			},
 		},
 	}

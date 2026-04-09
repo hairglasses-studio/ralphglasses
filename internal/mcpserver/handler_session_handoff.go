@@ -97,6 +97,8 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 			tp = session.ProviderGemini
 		case "codex":
 			tp = session.ProviderCodex
+		case "antigravity":
+			tp = session.ProviderAntigravity
 		default:
 			return codedError(ErrInvalidParams, fmt.Sprintf("unknown provider: %s", targetProvider)), nil
 		}

@@ -58,6 +58,7 @@ var providerAliases = map[string]Provider{
 	"claude": ProviderClaude, "anthropic": ProviderClaude,
 	"gemini": ProviderGemini, "google": ProviderGemini,
 	"codex": ProviderCodex, "openai": ProviderCodex,
+	"antigravity": ProviderAntigravity,
 }
 
 // timeRangeKeywords maps natural-language time references to canonical keys.

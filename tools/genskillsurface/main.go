@@ -34,7 +34,7 @@ func main() {
 		return
 	}
 
-	if err := session.GenerateSkillSurfaces(repoRoot, buildToolDocs(repoRoot)); err != nil {
+	if err := generateSurfaces(repoRoot); err != nil {
 		fmt.Fprintf(os.Stderr, "genskillsurface: %v\n", err)
 		os.Exit(1)
 	}
@@ -83,7 +83,7 @@ func checkSkillSurfaces(repoRoot string) error {
 	if err := copyCanonicalSkillInputs(repoRoot, tempRoot, cfg); err != nil {
 		return err
 	}
-	if err := session.GenerateSkillSurfaces(tempRoot, buildToolDocs(repoRoot)); err != nil {
+	if err := generateSurfacesWithToolDocs(tempRoot, buildToolDocs(repoRoot)); err != nil {
 		return err
 	}
 
@@ -108,6 +108,11 @@ func checkSkillSurfaces(repoRoot string) error {
 			)
 		}
 	}
+	antigravityFiles, err := generatedAntigravityFiles(repoRoot)
+	if err != nil {
+		return err
+	}
+	filesToCheck = append(filesToCheck, antigravityFiles...)
 
 	for _, rel := range filesToCheck {
 		expected, err := os.ReadFile(filepath.Join(tempRoot, rel))
@@ -126,6 +131,17 @@ func checkSkillSurfaces(repoRoot string) error {
 	return nil
 }
 
+func generateSurfaces(repoRoot string) error {
+	return generateSurfacesWithToolDocs(repoRoot, buildToolDocs(repoRoot))
+}
+
+func generateSurfacesWithToolDocs(repoRoot string, toolDocs []session.ToolDescription) error {
+	if err := session.GenerateSkillSurfaces(repoRoot, toolDocs); err != nil {
+		return err
+	}
+	return generateAntigravitySurfaces(repoRoot)
+}
+
 func copyCanonicalSkillInputs(srcRoot, dstRoot string, cfg session.SkillSurfaceConfig) error {
 	if err := os.MkdirAll(filepath.Join(dstRoot, ".agents", "skills"), 0o755); err != nil {
 		return err
@@ -137,6 +153,21 @@ func copyCanonicalSkillInputs(srcRoot, dstRoot string, cfg session.SkillSurfaceC
 	}
 	if err := os.WriteFile(filepath.Join(dstRoot, ".agents", "skills", "surface.yaml"), data, 0o644); err != nil {
 		return fmt.Errorf("write surface config: %w", err)
+	}
+	if err := copyFile(filepath.Join(srcRoot, "AGENTS.md"), filepath.Join(dstRoot, "AGENTS.md")); err != nil {
+		return err
+	}
+	ruleEntries, err := os.ReadDir(filepath.Join(srcRoot, ".claude", "rules"))
+	if err != nil {
+		return fmt.Errorf("read .claude/rules: %w", err)
+	}
+	for _, entry := range ruleEntries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".md" {
+			continue
+		}
+		if err := copyFile(filepath.Join(srcRoot, ".claude", "rules", entry.Name()), filepath.Join(dstRoot, ".claude", "rules", entry.Name())); err != nil {
+			return err
+		}
 	}
 
 	for _, skill := range cfg.Skills {
@@ -157,5 +188,19 @@ func copyCanonicalSkillInputs(srcRoot, dstRoot string, cfg session.SkillSurfaceC
 		}
 	}
 
+	return nil
+}
+
+func copyFile(src, dst string) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", src, err)
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return fmt.Errorf("create %s: %w", filepath.Dir(dst), err)
+	}
+	if err := os.WriteFile(dst, data, 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", dst, err)
+	}
 	return nil
 }

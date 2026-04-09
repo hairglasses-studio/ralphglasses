@@ -531,9 +531,9 @@ Launch a headless LLM CLI session (claude/gemini/codex) for a repo with a `promp
 | `prompt` | string | yes | Prompt/task to send |
 | `repo` | string | yes | Repo name |
 | `agent` | string |  | Agent/subagent name. Native for Claude only. |
-| `allowed_tools` | string |  | Comma-separated allowed tools (e.g. Bash,Read,Edit). Supported by Claude and Gemini; unsupported by Codex. |
+| `allowed_tools` | string |  | Comma-separated allowed tools (e.g. Bash,Read,Edit). Supported by Claude and Gemini; unsupported by Codex and Antigravity. |
 | `bare` | boolean |  | Skip hooks/plugins for faster scripted startup |
-| `budget_usd` | number |  | Budget in USD — maximum spend for this session. Native for Claude; externally enforced by ralphglasses for Codex and Gemini. |
+| `budget_usd` | number |  | Budget in USD — maximum spend for this session. Native for Claude; externally enforced by ralphglasses for Codex, Gemini, and Antigravity. |
 | `effort` | string |  | Thinking effort level: low, medium, high, max |
 | `enhance_prompt` | string |  | Auto-enhance the prompt before launch: local (deterministic), llm (Claude API), auto (try LLM, fallback). Omit to skip enhancement |
 | `fallback_model` | string |  | Auto-fallback model on overload |
@@ -541,12 +541,12 @@ Launch a headless LLM CLI session (claude/gemini/codex) for a repo with a `promp
 | `model` | string |  | Model to use |
 | `no_journal` | string |  | Skip improvement journal injection: true/false (default: false) |
 | `output_schema` | string |  | JSON schema for structured output validation (Claude: --json-schema, Codex: --output-schema) |
-| `provider` | string |  | LLM provider: codex (default), claude, gemini |
+| `provider` | string |  | LLM provider: codex (default), claude, gemini, antigravity. Antigravity opens an external interactive handoff instead of a managed streaming session. |
 | `session_name` | string |  | Human-readable session name |
-| `system_prompt` | string |  | Additional system prompt to append. Native for Claude only; use GEMINI.md or AGENTS.md for Gemini/Codex repo instructions. |
+| `system_prompt` | string |  | Additional system prompt to append. Native for Claude only; use GEMINI.md or AGENTS.md plus .agents/rules/.agents/workflows for Gemini, Codex, and Antigravity repo instructions. |
 | `target_provider` | string |  | Target LLM provider for prompt enhancement: claude, gemini, openai (defaults to session provider) |
 | `tenant_id` | string |  | Workspace tenant ID (default: _default) |
-| `worktree` | string |  | Git worktree isolation (true for auto, or branch name). Supported by Claude and Gemini; unsupported for Codex. |
+| `worktree` | string |  | Git worktree isolation (true for auto, or branch name). Supported by Claude and Gemini; unsupported for Codex and Antigravity. |
 
 **Example:**
 
@@ -567,7 +567,7 @@ List all tracked LLM sessions with status, cost, and turns
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `include_ended` | boolean |  | Include historical ended sessions from the persistent store when available |
-| `provider` | string |  | Filter by provider: claude, gemini, codex (omit for all) |
+| `provider` | string |  | Filter by provider: claude, gemini, codex, antigravity (omit for all) |
 | `repo` | string |  | Filter by repo name (omit for all) |
 | `status` | string |  | Filter by status: running, completed, errored, stopped |
 | `tenant_id` | string |  | Workspace tenant ID (default: _default) |
@@ -609,7 +609,7 @@ Resume a previous LLM CLI session for `repo` using `session_id`
 | `repo` | string | yes | Repo name |
 | `session_id` | string | yes | Provider session ID to resume (from session status) |
 | `prompt` | string |  | Follow-up prompt (optional) |
-| `provider` | string |  | LLM provider: codex (default), claude, gemini |
+| `provider` | string |  | LLM provider: codex (default), claude, gemini. Antigravity is launch-only and cannot be resumed through ralphglasses. |
 | `tenant_id` | string |  | Workspace tenant ID (default: _default) |
 
 **Example:**
@@ -907,7 +907,7 @@ Transfer session state to a new session, optionally switching providers. Include
 | `handoff_reason` | string |  | Reason for handoff (tracked in handoff record) |
 | `include_context` | boolean |  | Include observation context in handoff (default: true) |
 | `stop_source` | boolean |  | Stop the source session after handoff (default: false) |
-| `target_provider` | string |  | Target provider: claude, gemini, codex (default: same as source) |
+| `target_provider` | string |  | Target provider: claude, gemini, codex, antigravity (default: same as source) |
 
 **Example:**
 

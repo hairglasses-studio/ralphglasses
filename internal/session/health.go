@@ -14,8 +14,8 @@ import (
 // ProviderHealth holds the result of a health check for a single provider.
 type ProviderHealth struct {
 	Provider  Provider  `json:"provider"`
-	Available bool      `json:"available"`  // binary found on PATH
-	EnvOK     bool      `json:"env_ok"`     // required API key present
+	Available bool      `json:"available"` // binary found on PATH
+	EnvOK     bool      `json:"env_ok"`    // required API key present
 	Binary    string    `json:"binary"`
 	Version   string    `json:"version,omitempty"`
 	CheckedAt time.Time `json:"checked_at"`
@@ -70,7 +70,7 @@ func CheckProviderHealth(p Provider) ProviderHealth {
 
 // CheckAllProviderHealth runs health checks for all known providers in parallel.
 func CheckAllProviderHealth() map[Provider]ProviderHealth {
-	providers := []Provider{ProviderClaude, ProviderGemini, ProviderCodex}
+	providers := []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ProviderAntigravity}
 	type result struct {
 		p Provider
 		h ProviderHealth

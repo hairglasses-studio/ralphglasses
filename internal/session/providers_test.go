@@ -37,6 +37,7 @@ func TestProviderDefaults(t *testing.T) {
 		{ProviderClaude, "sonnet"},
 		{ProviderGemini, "gemini-3.1-pro"},
 		{ProviderCodex, "gpt-5.4"},
+		{ProviderAntigravity, ""},
 	}
 	for _, tt := range tests {
 		got := ProviderDefaults(tt.provider)
@@ -70,6 +71,23 @@ func TestProviderCapabilityMatrixFor(t *testing.T) {
 	}
 	if cap := codexMatrix.Capabilities[CapabilityPermissionMode]; cap.Support != CapabilityEmulated {
 		t.Fatalf("codex permission_mode support = %q, want emulated", cap.Support)
+	}
+
+	antigravityMatrix, ok := ProviderCapabilityMatrixFor(ProviderAntigravity)
+	if !ok {
+		t.Fatal("expected antigravity capability matrix")
+	}
+	if antigravityMatrix.ExecutionModel != "external_manager" {
+		t.Fatalf("execution_model = %q, want external_manager", antigravityMatrix.ExecutionModel)
+	}
+	if !antigravityMatrix.Experimental {
+		t.Fatal("antigravity provider should be marked experimental")
+	}
+	if cap := antigravityMatrix.Capabilities[CapabilityMCPClient]; cap.Support != CapabilityNative {
+		t.Fatalf("antigravity mcp_client support = %q, want native", cap.Support)
+	}
+	if cap := antigravityMatrix.Capabilities[CapabilityResume]; cap.Support != CapabilityUnsupported {
+		t.Fatalf("antigravity resume support = %q, want unsupported", cap.Support)
 	}
 }
 
@@ -132,6 +150,45 @@ func TestBuildCodexCmd(t *testing.T) {
 	}
 	if cmd.Dir != "/tmp/repo" {
 		t.Errorf("cmd.Dir = %q, want /tmp/repo", cmd.Dir)
+	}
+}
+
+func TestBuildAntigravityCmd(t *testing.T) {
+	ctx := context.Background()
+	repoPath := t.TempDir()
+	if err := os.WriteFile(filepath.Join(repoPath, "AGENTS.md"), []byte("# test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(repoPath, ".agents", "rules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repoPath, ".agents", "rules", "ralphglasses.md"), []byte("# rules\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := buildAntigravityCmd(ctx, LaunchOptions{
+		RepoPath: repoPath,
+		Prompt:   "Audit the repo",
+	})
+
+	cmdStr := strings.Join(cmd.Args, " ")
+	for _, want := range []string{"chat", "--mode", "agent", "--new-window", "--add-file", "AGENTS.md", ".agents/rules/ralphglasses.md", "Audit the repo"} {
+		if !strings.Contains(cmdStr, want) {
+			t.Errorf("antigravity cmd %q missing %q", cmdStr, want)
+		}
+	}
+	if cmd.Dir != repoPath {
+		t.Errorf("cmd.Dir = %q, want %q", cmd.Dir, repoPath)
+	}
+}
+
+func TestValidateLaunchOptionsRejectsAntigravityResume(t *testing.T) {
+	err := validateLaunchOptions(LaunchOptions{
+		Provider: ProviderAntigravity,
+		Resume:   "abc123",
+	})
+	if err == nil || !strings.Contains(err.Error(), "does not support resume") {
+		t.Fatalf("expected antigravity resume validation error, got %v", err)
 	}
 }
 

@@ -9,12 +9,13 @@
 
 Command-and-control TUI for parallel multi-LLM agent fleets.
 
-Orchestrates [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview), [Gemini CLI](https://ai.google.dev/gemini-api/docs), and [OpenAI Codex CLI](https://developers.openai.com/codex/noninteractive) sessions from a single k9s-style interface. Built with [Charmbracelet](https://github.com/charmbracelet) (BubbleTea + Lip Gloss).
+Orchestrates [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview), [Gemini CLI](https://ai.google.dev/gemini-api/docs), [OpenAI Codex CLI](https://developers.openai.com/codex/noninteractive), and experimental [Google Antigravity](https://antigravity.google/docs/mcp) handoffs from a single k9s-style interface. Built with [Charmbracelet](https://github.com/charmbracelet) (BubbleTea + Lip Gloss).
 
 ## What It Does
 
-- **Orchestrate** multiple LLM providers (Claude, Gemini, Codex) with unified session management
+- **Orchestrate** multiple LLM providers (Claude, Gemini, Codex, Antigravity) with capability-aware session management
 - **Project** provider-neutral fleet roles into native Codex, Claude, and Gemini agent surfaces
+- **Generate** repo-native Antigravity and Gemini workflow surfaces from the canonical Ralph workflow catalog
 - **Discover** ralph-enabled repos across your workspace (`--scan-path`)
 - **Monitor** live status: loop iteration, circuit breaker state, per-provider costs, model selection
 - **Control** ralph loops, headless sessions, and Codex planner/worker loops from TUI or MCP tools
@@ -55,6 +56,9 @@ Launch sessions against any supported provider:
 | `codex` (default) | [Codex CLI](https://developers.openai.com/codex/noninteractive) | `gpt-5.4` | `npm i -g @openai/codex-cli` |
 | `claude` | [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) | `sonnet` | Pre-installed |
 | `gemini` | [Gemini CLI](https://ai.google.dev/gemini-api/docs) | `gemini-3.1-pro` | `npm i -g @google/gemini-cli` |
+| `antigravity` | [Google Antigravity](https://antigravity.google/docs/mcp) | Antigravity-managed | Install Antigravity locally |
+
+Antigravity is launch-only from Ralph. It opens a new Antigravity agent window rooted at the repo and relies on checked-in `.agents/rules/`, `.agents/workflows/`, `.agents/skills/`, `.mcp.json`, and the generated `.gemini/extensions/ralphglasses-workspace/` bundle instead of participating in Ralph's streaming session runtime, teams, loops, or failover.
 
 ### Usage via MCP
 
@@ -87,7 +91,9 @@ ANTHROPIC_API_KEY=sk-ant-...    # Claude Code (optional if using OAuth)
 - `.agents/skills/` is canonical for provider-neutral workflows.
 - `.agents/roles/*.json` is canonical for reusable fleet roles.
 - `.codex/agents/*.toml`, `.claude/agents/*.md`, and `.gemini/agents/*.md` are native projections of that shared role catalog.
-- `.gemini/commands/` remains a compatibility shortcut surface, not the canonical reusable-role source.
+- `.agents/workflows/` and `.agents/rules/` are the repo-native Antigravity/Gemini command surfaces generated from the live Ralph workflow catalog and repo guidance.
+- `.gemini/commands/ralph/*.toml` is the generated local command mirror for Gemini and Antigravity.
+- `.gemini/extensions/ralphglasses-workspace/` is a thin generated extension bundle that wraps the repo-local MCP server, commands, and `AGENTS.md`.
 - Gemini parity is native-first: local `.gemini/agents/*.md` subagents, remote A2A agents, skills, and extensions all participate in the shared fleet model.
 
 ## Two Deliverables
@@ -120,7 +126,7 @@ See [ROADMAP.md](ROADMAP.md) for the full plan.
 ### Multi-Provider Session Management
 | Tool | Description |
 |------|-------------|
-| `ralphglasses_session_launch` | Launch a headless session (`provider`: codex/claude/gemini) |
+| `ralphglasses_session_launch` | Launch a session (`provider`: codex/claude/gemini/antigravity`) |
 | `ralphglasses_session_list` | List sessions (filter by `provider`, repo, status) |
 | `ralphglasses_session_status` | Detailed session info (provider, cost, turns, model) |
 | `ralphglasses_session_resume` | Resume a previous session (`codex`/`claude`/`gemini`, if the installed CLI supports resume) |
@@ -202,6 +208,8 @@ main.go → cmd/root.go (Cobra CLI)
 - [ROADMAP.md](ROADMAP.md) — Full development roadmap
 - [docs/CODEX-REFERENCE.md](docs/CODEX-REFERENCE.md) — Codex-first runtime notes, pinned docs, Claude cache guardrails
 - [docs/CODEX-PARITY-STATUS.md](docs/CODEX-PARITY-STATUS.md) — Codex parity closeout state and future-session rules
+- [docs/PROVIDER-SETUP.md](docs/PROVIDER-SETUP.md) — provider setup plus Antigravity launch-only constraints
+- [docs/PROVIDER-PARITY-OBJECTIVES.md](docs/PROVIDER-PARITY-OBJECTIVES.md) — provider capability matrix and Antigravity parity boundaries
 - [docs/CLI-PARITY.md](docs/CLI-PARITY.md) — CLI-to-MCP and skill-backed parity matrix
 - [docs/RESEARCH.md](docs/RESEARCH.md) — Agent OS & sandboxing research
 - [docs/MULTI-SESSION.md](docs/MULTI-SESSION.md) — Multi-session tool comparison

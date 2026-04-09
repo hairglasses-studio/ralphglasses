@@ -62,7 +62,7 @@ func TestHealthyProviders(t *testing.T) {
 
 func TestCheckAllProviderHealthReturnsAllProviders(t *testing.T) {
 	health := CheckAllProviderHealth()
-	for _, p := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex} {
+	for _, p := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ProviderAntigravity} {
 		if _, ok := health[p]; !ok {
 			t.Errorf("missing health entry for provider %q", p)
 		}

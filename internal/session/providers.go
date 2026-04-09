@@ -57,7 +57,7 @@ func ValidateProvider(p Provider) error {
 	}
 	bin := providerBinary(p)
 	if bin == "" {
-		return fmt.Errorf("unknown provider: %q (valid: claude, gemini, codex, cline, crush, goose, amp, a2a)", p)
+		return fmt.Errorf("unknown provider: %q (valid: claude, gemini, codex, antigravity, cline, crush, goose, amp, a2a)", p)
 	}
 	if _, err := exec.LookPath(bin); err != nil {
 		return fmt.Errorf("%s binary not found on PATH: %w", bin, err)
@@ -80,6 +80,8 @@ func providerEnvVar(p Provider) string {
 		return "AMP_ACCESS_TOKEN"
 	case ProviderCline:
 		return "" // Cline uses WorkOS OAuth, not an env var API key
+	case ProviderAntigravity:
+		return "" // Antigravity manages provider auth internally.
 	case ProviderA2A:
 		return "A2A_AGENT_URL" // Not a secret, but used for configuration
 	default:
@@ -99,6 +101,9 @@ func ValidateProviderEnv(p Provider) error {
 		return nil
 	}
 	envVar := providerEnvVar(p)
+	if envVar == "" {
+		return nil
+	}
 	if os.Getenv(envVar) == "" {
 		// Gemini also accepts GEMINI_API_KEY
 		if p == ProviderGemini && os.Getenv("GEMINI_API_KEY") != "" {
@@ -204,6 +209,8 @@ func ProviderDefaults(p Provider) (model string) {
 		return "amp-default"
 	case ProviderCline:
 		return "" // Cline uses its own configured model; empty means use Cline's default
+	case ProviderAntigravity:
+		return ""
 	case ProviderA2A:
 		return "a2a-remote"
 	default:
@@ -221,6 +228,8 @@ func providerBinary(p Provider) string {
 		return "gemini"
 	case ProviderCodex:
 		return "codex"
+	case ProviderAntigravity:
+		return "antigravity"
 	case ProviderCrush:
 		return "crush"
 	case ProviderGoose:
@@ -263,6 +272,8 @@ func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, er
 		return buildGeminiCmd(ctx, opts), nil
 	case ProviderCodex:
 		return buildCodexCmd(ctx, opts), nil
+	case ProviderAntigravity:
+		return buildAntigravityCmd(ctx, opts), nil
 	case ProviderCrush:
 		return buildCrushCmd(ctx, opts), nil
 	case ProviderGoose:
@@ -274,6 +285,31 @@ func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, er
 	default:
 		return buildClaudeCmd(ctx, opts), nil
 	}
+}
+
+// buildAntigravityCmd constructs a launch-only Antigravity handoff command.
+// Antigravity's repo context comes from AGENTS.md plus the generated
+// .agents/rules and .agents/workflows surfaces rather than a system-prompt flag.
+func buildAntigravityCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
+	args := []string{"chat", "--mode", "agent", "--new-window"}
+
+	for _, rel := range []string{
+		"AGENTS.md",
+		filepath.Join(".agents", "rules", "ralphglasses.md"),
+	} {
+		if _, err := os.Stat(filepath.Join(opts.RepoPath, rel)); err == nil {
+			args = append(args, "--add-file", rel)
+		}
+	}
+	if opts.Prompt != "" {
+		args = append(args, opts.Prompt)
+	}
+
+	cmd := exec.CommandContext(ctx, "antigravity", args...)
+	cmd.Dir = opts.RepoPath
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Env = quietAgentSessionEnv(os.Environ())
+	return cmd
 }
 
 // buildClaudeCmd constructs the claude CLI command from LaunchOptions.
@@ -477,6 +513,9 @@ func validateLaunchOptions(opts LaunchOptions) error {
 	}
 	if err := ValidateModelName(opts.Provider, opts.Model); err != nil {
 		return fmt.Errorf("model %q is invalid for %s provider: %w", opts.Model, opts.Provider, err)
+	}
+	if opts.Provider == ProviderAntigravity && (opts.Resume != "" || opts.Continue) {
+		return fmt.Errorf("antigravity provider does not support resume or continue through the ralphglasses runtime")
 	}
 	if opts.Provider == ProviderCodex && opts.Resume != "" && !codexExecResumeSupported() {
 		return fmt.Errorf("codex provider on this install does not support exec resume")

@@ -13,14 +13,15 @@ import (
 type Provider string
 
 const (
-	ProviderClaude Provider = "claude"
-	ProviderGemini Provider = "gemini"
-	ProviderCodex  Provider = "codex"
-	ProviderCrush  Provider = "crush"
-	ProviderGoose  Provider = "goose"
-	ProviderAmp    Provider = "amp"
-	ProviderCline  Provider = "cline"
-	ProviderA2A    Provider = "a2a"
+	ProviderClaude      Provider = "claude"
+	ProviderGemini      Provider = "gemini"
+	ProviderCodex       Provider = "codex"
+	ProviderAntigravity Provider = "antigravity"
+	ProviderCrush       Provider = "crush"
+	ProviderGoose       Provider = "goose"
+	ProviderAmp         Provider = "amp"
+	ProviderCline       Provider = "cline"
+	ProviderA2A         Provider = "a2a"
 )
 
 // SessionStatus represents the lifecycle state of a managed CLI session.

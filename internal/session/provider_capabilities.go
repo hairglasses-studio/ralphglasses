@@ -44,6 +44,8 @@ type ProviderCapabilityMatrix struct {
 	Provider            Provider                      `json:"provider"`
 	Binary              string                        `json:"binary"`
 	DefaultModel        string                        `json:"default_model"`
+	ExecutionModel      string                        `json:"execution_model,omitempty"`
+	Experimental        bool                          `json:"experimental,omitempty"`
 	ProjectInstructions string                        `json:"project_instructions"`
 	RepoConfigPath      string                        `json:"repo_config_path,omitempty"`
 	AgentConfigPath     string                        `json:"agent_config_path,omitempty"`
@@ -52,7 +54,7 @@ type ProviderCapabilityMatrix struct {
 
 // PrimaryProviders returns the primary interactive providers in comparison order.
 func PrimaryProviders() []Provider {
-	return []Provider{ProviderClaude, ProviderCodex, ProviderGemini, ProviderCline}
+	return []Provider{ProviderClaude, ProviderCodex, ProviderGemini, ProviderAntigravity, ProviderCline}
 }
 
 // ProviderCapabilityMatrices returns the capability matrix for all primary providers.
@@ -76,6 +78,7 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 			Provider:            ProviderCodex,
 			Binary:              "codex",
 			DefaultModel:        ProviderDefaults(ProviderCodex),
+			ExecutionModel:      "streaming_cli",
 			ProjectInstructions: "AGENTS.md",
 			RepoConfigPath:      ".codex/config.toml",
 			AgentConfigPath:     ".codex/agents/*.toml",
@@ -157,6 +160,7 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 			Provider:            ProviderClaude,
 			Binary:              "claude",
 			DefaultModel:        ProviderDefaults(ProviderClaude),
+			ExecutionModel:      "streaming_cli",
 			ProjectInstructions: "CLAUDE.md",
 			RepoConfigPath:      ".claude/settings.json",
 			AgentConfigPath:     ".claude/agents/*.md",
@@ -236,6 +240,7 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 			Provider:            ProviderGemini,
 			Binary:              "gemini",
 			DefaultModel:        ProviderDefaults(ProviderGemini),
+			ExecutionModel:      "streaming_cli",
 			ProjectInstructions: "GEMINI.md",
 			RepoConfigPath:      ".gemini/settings.json",
 			AgentConfigPath:     ".gemini/agents/*.md",
@@ -311,11 +316,93 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 				},
 			},
 		}, true
+	case ProviderAntigravity:
+		return ProviderCapabilityMatrix{
+			Provider:            ProviderAntigravity,
+			Binary:              "antigravity",
+			DefaultModel:        "",
+			ExecutionModel:      "external_manager",
+			Experimental:        true,
+			ProjectInstructions: "AGENTS.md + .agents/rules/ralphglasses.md",
+			RepoConfigPath:      ".mcp.json",
+			AgentConfigPath:     ".agents/workflows/*.md",
+			Capabilities: map[string]ProviderCapability{
+				CapabilityBudgetUSD: {
+					Support: CapabilityEmulated,
+					Detail:  "ralphglasses tracks Antigravity budget intent externally because the public Antigravity CLI does not expose a budget flag.",
+				},
+				CapabilityMaxTurns: {
+					Support: CapabilityUnsupported,
+					Detail:  "Antigravity's public CLI does not expose a max-turns flag.",
+				},
+				CapabilityAgent: {
+					Support: CapabilityUnsupported,
+					Detail:  "Use repo-native workflows, skills, and rules instead of a runtime --agent flag.",
+				},
+				CapabilityAllowedTools: {
+					Support: CapabilityUnsupported,
+					Detail:  "Tool permissions are managed inside Antigravity, not via a CLI allowlist flag.",
+				},
+				CapabilitySystemPrompt: {
+					Support: CapabilityUnsupported,
+					Detail:  "Use AGENTS.md, .agents/rules, and .agents/workflows; the public Antigravity CLI has no system-prompt flag.",
+				},
+				CapabilityResume: {
+					Support: CapabilityUnsupported,
+					Detail:  "ralphglasses only supports Antigravity as an external handoff launch, not a resumable managed session.",
+				},
+				CapabilityWorktree: {
+					Support: CapabilityUnsupported,
+					Detail:  "Antigravity uses the selected workspace path directly and exposes no worktree flag through the public CLI.",
+				},
+				CapabilityPermissionMode: {
+					Support: CapabilityUnsupported,
+					Detail:  "Permissions are managed in the Antigravity UI rather than through a launch flag.",
+				},
+				CapabilityOutputSchema: {
+					Support: CapabilityUnsupported,
+					Detail:  "Antigravity launches an interactive managed session and does not expose a structured output-schema flag.",
+				},
+				CapabilitySandboxImage: {
+					Support: CapabilityUnsupported,
+					Detail:  "The public Antigravity CLI does not accept a sandbox image override.",
+				},
+				CapabilityProjectInstructions: {
+					Support: CapabilityNative,
+					Detail:  "Antigravity reads repo instructions from AGENTS.md plus repo-native .agents/rules and .agents/workflows surfaces.",
+				},
+				CapabilityMCPClient: {
+					Support: CapabilityNative,
+					Detail:  "Antigravity can consume repo and global MCP server registrations.",
+				},
+				CapabilityMCPServer: {
+					Support: CapabilityUnsupported,
+					Detail:  "Antigravity is an MCP client, not an MCP server.",
+				},
+				CapabilitySkills: {
+					Support: CapabilityNative,
+					Detail:  "Antigravity supports repo-native skills and generated workflow surfaces.",
+				},
+				CapabilityPlugins: {
+					Support: CapabilityNative,
+					Detail:  "Gemini-style extension bundles are the supported Antigravity plugin surface.",
+				},
+				CapabilitySubagents: {
+					Support: CapabilityUnsupported,
+					Detail:  "Antigravity may orchestrate internally, but ralphglasses does not expose it as a managed subagent runtime.",
+				},
+				CapabilityHooks: {
+					Support: CapabilityUnsupported,
+					Detail:  "The public Antigravity CLI does not expose repo hooks compatible with ralphglasses runtime semantics.",
+				},
+			},
+		}, true
 	case ProviderCline:
 		return ProviderCapabilityMatrix{
 			Provider:            ProviderCline,
 			Binary:              "cline",
 			DefaultModel:        ProviderDefaults(ProviderCline),
+			ExecutionModel:      "streaming_cli",
 			ProjectInstructions: ".clinerules",
 			RepoConfigPath:      ".cline/mcp.json",
 			AgentConfigPath:     ".clinerules",

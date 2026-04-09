@@ -83,15 +83,16 @@ type ValidationRule struct {
 // validProviders is the authoritative set of recognized LLM provider names
 // for the rule-based validator.
 var validProviders = map[string]bool{
-	"claude": true,
-	"gemini": true,
-	"codex":  true,
-	"openai": true,
-	"ollama": true,
-	"crush":  true,
-	"goose":  true,
-	"amp":    true,
-	"a2a":    true,
+	"claude":      true,
+	"gemini":      true,
+	"codex":       true,
+	"antigravity": true,
+	"openai":      true,
+	"ollama":      true,
+	"crush":       true,
+	"goose":       true,
+	"amp":         true,
+	"a2a":         true,
 }
 
 // validModelPrefixes maps each provider to accepted model name prefixes.
@@ -177,11 +178,11 @@ func ruleCostRateMultiplier(cfg *Config, r *ValidationResult) {
 func ruleProviderNames(cfg *Config, r *ValidationResult) {
 	if cfg.DefaultProvider != "" && !validProviders[cfg.DefaultProvider] {
 		r.addError("default_provider",
-			fmt.Sprintf("unknown provider %q (valid: claude, gemini, codex, openai, ollama)", cfg.DefaultProvider))
+			fmt.Sprintf("unknown provider %q (valid: claude, gemini, codex, antigravity, openai, ollama)", cfg.DefaultProvider))
 	}
 	if cfg.WorkerProvider != "" && !validProviders[cfg.WorkerProvider] {
 		r.addError("worker_provider",
-			fmt.Sprintf("unknown provider %q (valid: claude, gemini, codex, openai, ollama)", cfg.WorkerProvider))
+			fmt.Sprintf("unknown provider %q (valid: claude, gemini, codex, antigravity, openai, ollama)", cfg.WorkerProvider))
 	}
 }
 

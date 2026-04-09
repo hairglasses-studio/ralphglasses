@@ -33,7 +33,7 @@ var doctorCmd = &cobra.Command{
 configured correctly for running ralphglasses.
 
 Checks include:
-  - Provider binaries (claude, gemini, codex, cline)
+  - Provider binaries (claude, gemini, codex, antigravity, cline)
   - Git binary and version (>= 2.20 for worktree support)
   - Config file (` + ralphpath.ConfigPathDefaultDescription() + `)
   - State directory (` + ralphpath.StateDirDefaultDescription() + `) permissions
@@ -100,6 +100,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	collect(checkClaude())
 	collect(checkGemini())
 	collect(checkCodex())
+	collect(checkAntigravity())
 	collect(checkCline())
 
 	// --- Git ---
@@ -219,6 +220,15 @@ func checkCodex() doctorResult {
 		return doctorResult{Name: "codex", Status: statusWarn, Message: "codex not found in PATH (optional)"}
 	}
 	return doctorResult{Name: "codex", Status: statusPass, Message: path}
+}
+
+// checkAntigravity verifies the antigravity binary is on PATH (optional).
+func checkAntigravity() doctorResult {
+	path, err := exec.LookPath("antigravity")
+	if err != nil {
+		return doctorResult{Name: "antigravity", Status: statusWarn, Message: "antigravity not found in PATH (optional external-manager provider)"}
+	}
+	return doctorResult{Name: "antigravity", Status: statusPass, Message: path}
 }
 
 // checkCline verifies the cline binary is on PATH and reports its version.
