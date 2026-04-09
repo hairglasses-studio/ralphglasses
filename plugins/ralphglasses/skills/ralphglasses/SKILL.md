@@ -479,7 +479,7 @@ Auto-generated from the live MCP contract. 222 tools available.
 
 - **ralphglasses_roadmap_analyze**: Compare roadmap vs codebase at `path` — find gaps, stale checkboxes, ready tasks, orphaned code
 - **ralphglasses_roadmap_expand**: Generate proposed roadmap expansions at `path` from analysis gaps and research findings
-- **ralphglasses_roadmap_export**: Export roadmap items at `path` as structured task specs for ralph loop consumption
+- **ralphglasses_roadmap_export**: Export roadmap items at `path` as loop specs or tranche checkpoint summaries for ralph automation
 - **ralphglasses_roadmap_parse**: Parse ROADMAP.md at `path` into structured JSON (phases, sections, tasks, deps, completion stats)
 - **ralphglasses_roadmap_prioritize**: Score and rank uncompleted roadmap items by impact, effort, and dependency readiness. Detects section-level blocking and adds phase momentum bonus. Returns prioritized list and recommended next sprint.
 - **ralphglasses_roadmap_research**: Search GitHub for relevant repos and tools at `path` that unlock new capabilities

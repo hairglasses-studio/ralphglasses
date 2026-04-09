@@ -45,7 +45,7 @@ func (s *Server) buildRoadmapGroup() ToolGroup {
 				mcp.WithDescription(descriptions.DescRalphglassesRoadmapExport),
 				mcp.WithString("path", mcp.Required(), mcp.Description("Repo root path")),
 				mcp.WithString("file", mcp.Description("Override filename (default: ROADMAP.md)")),
-				mcp.WithString("format", mcp.Description("Output format: rdcycle, fix_plan, progress, launch_ready (default: rdcycle). launch_ready enriches tasks with difficulty_score, suggested_provider, estimated_budget_usd")),
+				mcp.WithString("format", mcp.Description("Output format: rdcycle, fix_plan, progress, launch_ready, checkpoint (default: rdcycle). checkpoint emits a docs-ready tranche summary with completed work, verification notes, and next-wave follow-ups. launch_ready enriches tasks with difficulty_score, suggested_provider, estimated_budget_usd")),
 				mcp.WithString("phase", mcp.Description("Filter by phase name (default: all)")),
 				mcp.WithString("section", mcp.Description("Filter by section name (default: all)")),
 				mcp.WithNumber("max_tasks", mcp.Description("Max tasks to export (default 20)")),

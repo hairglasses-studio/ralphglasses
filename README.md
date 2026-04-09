@@ -147,7 +147,7 @@ See [ROADMAP.md](ROADMAP.md) for the full plan.
 | `ralphglasses_roadmap_analyze` | Compare roadmap vs codebase |
 | `ralphglasses_roadmap_research` | Search GitHub for relevant repos/tools |
 | `ralphglasses_roadmap_expand` | Generate proposed roadmap expansions |
-| `ralphglasses_roadmap_export` | Export tasks as rdcycle/fix_plan specs |
+| `ralphglasses_roadmap_export` | Export tasks as rdcycle/fix_plan specs or docs-ready tranche checkpoints |
 
 ### Repo Configuration
 | Tool | Description |

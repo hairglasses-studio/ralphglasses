@@ -9,7 +9,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/hairglasses-studio/docs/pkg/roadmap"
+	"github.com/hairglasses-studio/ralphglasses/internal/roadmap"
 )
 
 // Roadmap handlers
@@ -293,6 +293,9 @@ func (s *Server) handleRoadmapExport(_ context.Context, req mcp.CallToolRequest)
 	maxTasks := int(getNumberArg(req, "max_tasks", 20))
 	respectDeps := getStringArg(req, "respect_deps") != "false"
 	statusFilter := getStringArg(req, "status")
+	if statusFilter == "" && format == "checkpoint" {
+		statusFilter = "all"
+	}
 	if statusFilter == "" {
 		statusFilter = "incomplete"
 	}

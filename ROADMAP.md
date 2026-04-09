@@ -74,6 +74,35 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
   - File: `internal/session/reflexion.go` — rule extraction from positive/negative patterns already working
   - **Acceptance:** After 5+ cycles, `rules` array contains at least 1 learned rule
 
+## Whiteclaw Migration Autonomy Notes `[NEW]`
+
+Immediate roadmap notes for improving the perpetual autonomous development cycle while the whiteclaw migration program expands across the fleet.
+
+- [x] **WM-1** — Add a tranche checkpoint emitter that writes docs-side migration updates after each completed wave instead of relying on manual session summaries `P0` `M`
+  - Target: `internal/roadmap/` + roadmap export surface
+  - Shipped via `ralphglasses_roadmap_export format=checkpoint` with repo, component, verification, and next-wave sections for docs-side checkpoint stubs
+  - **Acceptance:** a completed tranche can emit a docs checkpoint stub with repo, component, verification, and next-wave data
+
+- [ ] **WM-2** — Add GitHub capability probing before publish or repo-creation tasks so loops know the difference between connector install, CLI auth, push rights, and repo-creation rights `P0` `M`
+  - Target: `internal/session/` + `internal/roadmap/`
+  - **Acceptance:** planner can block or reroute publish/create tasks when auth or app capability is missing
+
+- [ ] **WM-3** — Add a component-level migration ledger input so loops can plan from `source artifact -> target repo -> verification` instead of repo-only backlog slices `P0` `M`
+  - Target: `internal/roadmap/` + docs ingest
+  - **Acceptance:** roadmap tooling can ingest a machine-readable whiteclaw component map and rank next tranches from it
+
+- [ ] **WM-4** — Add existing-equivalent detection before proposing new repos; only create a new repo when no existing repo can coherently own the migrated surface `P1` `S`
+  - Target: `internal/roadmap/` repo-classification heuristics
+  - **Acceptance:** planner records why an existing repo was selected or why no viable owner existed
+
+- [ ] **WM-5** — Prefer clean publish lanes via dedicated worktrees when canonical repos are dirty or ahead/behind, instead of mixing tranche commits into unstable checkouts `P1` `M`
+  - Target: `internal/session/` + operator workflow docs
+  - **Acceptance:** publish-oriented loops can select a safe worktree branch strategy automatically
+
+- [ ] **WM-6** — Keep a rolling next-tranche queue and auto-promote the next wave immediately after the prior wave verifies cleanly `P1` `M`
+  - Target: `internal/roadmap/` + session loop selection
+  - **Acceptance:** completing one tranche updates the ranked next-tranche backlog without manual reseeding
+
 ---
 
 ## Autonomous Tranche Delivery Notes [NEW]

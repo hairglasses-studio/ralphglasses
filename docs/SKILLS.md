@@ -1881,13 +1881,13 @@ Generate proposed roadmap expansions at `path` from analysis gaps and research f
 
 ### `ralphglasses_roadmap_export`
 
-Export roadmap items at `path` as structured task specs for ralph loop consumption
+Export roadmap items at `path` as loop specs or tranche checkpoint summaries for ralph automation
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `path` | string | yes | Repo root path |
 | `file` | string |  | Override filename (default: ROADMAP.md) |
-| `format` | string |  | Output format: rdcycle, fix_plan, progress, launch_ready (default: rdcycle). launch_ready enriches tasks with difficulty_score, suggested_provider, estimated_budget_usd |
+| `format` | string |  | Output format: rdcycle, fix_plan, progress, launch_ready, checkpoint (default: rdcycle). checkpoint emits a docs-ready tranche summary with completed work, verification notes, and next-wave follow-ups. launch_ready enriches tasks with difficulty_score, suggested_provider, estimated_budget_usd |
 | `max_tasks` | number |  | Max tasks to export (default 20) |
 | `phase` | string |  | Filter by phase name (default: all) |
 | `respect_deps` | string |  | Skip tasks with unmet deps (default: true) |

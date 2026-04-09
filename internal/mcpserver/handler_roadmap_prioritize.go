@@ -9,7 +9,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/hairglasses-studio/docs/pkg/roadmap"
+	"github.com/hairglasses-studio/ralphglasses/internal/roadmap"
 )
 
 func (s *Server) handleRoadmapPrioritize(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
