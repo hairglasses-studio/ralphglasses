@@ -153,9 +153,6 @@
     "evidence_path"
   ],
   "first_recommended_execution_order": [
-    "layout_harness_drift_gate",
-    "shared_path_bypass_audit",
-    "adoption_led_tranche_selector",
-    "remote_main_red_signal_filter"
+    "generated_surface_drift_gate"
   ]
 }

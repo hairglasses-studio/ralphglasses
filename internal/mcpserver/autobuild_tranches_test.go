@@ -47,3 +47,37 @@ func TestAutobuildTrancheSummary_ReturnsRankedPatchCandidates(t *testing.T) {
 		t.Fatalf("expected populated trigger signal: %+v", first.TriggerSignal)
 	}
 }
+
+func TestAutobuildTrancheSummary_FiltersRedSignals(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_STATE_HOME", tmpHome)
+
+	telemetryDir := filepath.Join(tmpHome, "ralphglasses")
+	if err := os.MkdirAll(telemetryDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	appSrv := NewServer(t.TempDir())
+
+	// Write telemetry events
+	events := `{"type":"crash","timestamp":"2026-04-08T12:00:00Z","session_id":"s1","repo_name":"ralphglasses","data":{"remote_main_verified":true,"dirty_worktree":false}}
+{"type":"crash","timestamp":"2026-04-08T12:01:00Z","session_id":"s2","repo_name":"ralphglasses","data":{"remote_main_verified":false,"dirty_worktree":false}}
+{"type":"crash","timestamp":"2026-04-08T12:02:00Z","session_id":"s3","repo_name":"ralphglasses","data":{"remote_main_verified":true,"dirty_worktree":true}}
+`
+	if err := os.WriteFile(filepath.Join(telemetryDir, "telemetry.jsonl"), []byte(events), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	summary := appSrv.autobuildTrancheSummary()
+
+	// Should only have s1 as a candidate, prepended to the static list
+	// Wait, the static list has 3 items. Total = 4.
+	if len(summary.Candidates) != len(autobuildCandidateDefs)+1 {
+		t.Fatalf("expected %d candidates, got %d", len(autobuildCandidateDefs)+1, len(summary.Candidates))
+	}
+
+	if summary.Candidates[0].PatchID != "integrity_crash_s1" {
+		t.Fatalf("Highest priority patch should be integrity_crash_s1, got %q", summary.Candidates[0].PatchID)
+	}
+}

@@ -5,14 +5,18 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/parity"
+	"github.com/hairglasses-studio/ralphglasses/internal/telemetry"
 )
 
 type AutobuildTriggerSignal struct {
-	Type             string   `json:"type"`
-	Source           string   `json:"source"`
-	Summary          string   `json:"summary"`
-	MatchedWorkflows []string `json:"matched_workflows,omitempty"`
-	MatchedSurfaces  []string `json:"matched_surfaces,omitempty"`
+	Type               string   `json:"type"`
+	Source             string   `json:"source"`
+	Summary            string   `json:"summary"`
+	RemoteMainVerified *bool    `json:"remote_main_verified,omitempty"`
+	MatchedWorkflows   []string `json:"matched_workflows,omitempty"`
+	MatchedSurfaces    []string `json:"matched_surfaces,omitempty"`
 }
 
 type AutobuildPatchCandidate struct {
@@ -118,7 +122,7 @@ func (s *Server) autobuildTrancheSummary() AutobuildTrancheSummary {
 		SurfaceCandidateCount:  adoption.SurfaceCandidateCount,
 	}
 
-	candidates := make([]AutobuildPatchCandidate, 0, len(autobuildCandidateDefs))
+	candidates := s.activeRedSignalCandidates()
 	for _, def := range autobuildCandidateDefs {
 		workflowMatches := matchingWorkflowCandidates(def.RelevantWorkflows, adoption.TopWorkflowCandidates)
 		surfaceMatches := matchingSurfaceCandidates(def.RelevantWorkflows, adoption.TopSurfaceCandidates)
@@ -283,4 +287,54 @@ func stringListsIntersect(left, right []string) bool {
 		}
 	}
 	return false
+}
+
+func (s *Server) activeRedSignalCandidates() []AutobuildPatchCandidate {
+	events, err := parity.LoadTelemetry(parity.TelemetryOptions{
+		Type: string(telemetry.EventCrash),
+		Repo: "ralphglasses",
+	})
+	if err != nil {
+		return nil
+	}
+
+	var candidates []AutobuildPatchCandidate
+	// Keep track of which sessions we've generated a candidate for
+	seen := make(map[string]bool)
+
+	for i := len(events) - 1; i >= 0; i-- {
+		ev := events[i]
+		if ev.SessionID == "" || seen[ev.SessionID] {
+			continue
+		}
+
+		verified, _ := ev.Data["remote_main_verified"].(bool)
+		dirty, _ := ev.Data["dirty_worktree"].(bool)
+
+		if dirty || !verified {
+			continue
+		}
+
+		seen[ev.SessionID] = true
+		tTrue := true
+
+		candidates = append(candidates, AutobuildPatchCandidate{
+			PatchID:                 fmt.Sprintf("integrity_crash_%s", ev.SessionID),
+			Priority:                "P0",
+			QueueRank:               0,
+			Score:                   1000,
+			Confidence:              1.0,
+			ConfidenceLabel:         "high",
+			RecommendedEntrySurface: "ralph:///runtime/recovery",
+			RepoOwnedScope:          []string{"crash repair"},
+			WhyNow:                  []string{"Red signal on remote main requires immediate fix"},
+			TriggerSignal: AutobuildTriggerSignal{
+				Type:               "integrity",
+				Source:             "telemetry.EventCrash",
+				Summary:            fmt.Sprintf("Crash in session %s requires fix", ev.SessionID),
+				RemoteMainVerified: &tTrue,
+			},
+		})
+	}
+	return candidates
 }
