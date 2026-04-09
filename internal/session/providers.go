@@ -433,16 +433,8 @@ func buildCodexCmd(ctx context.Context, opts LaunchOptions) *exec.Cmd {
 			effort = "max"
 		}
 	}
-	switch strings.ToLower(effort) {
-	case "low":
-		args = append(args, "--reasoning-effort", "low")
-	case "medium":
-		args = append(args, "--reasoning-effort", "medium")
-	case "high":
-		args = append(args, "--reasoning-effort", "high")
-	case "max":
-		args = append(args, "--reasoning-effort", "xhigh")
-	}
+	// Note: codex CLI does not support --reasoning-effort yet.
+	// switch strings.ToLower(effort) { ... }
 
 	args = append(args, "--json", "--full-auto")
 	if sandboxMode := codexSandboxMode(opts); sandboxMode != "" {

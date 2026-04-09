@@ -17,6 +17,7 @@ import (
 // SelfTestConfig configures a recursive self-test run where ralphglasses
 // builds a snapshot binary and tests itself in isolation.
 type SelfTestConfig struct {
+	SnapshotPackage string `json:"snapshot_package"`
 	RepoPath       string   `json:"repo_path"`
 	BinaryPath     string   `json:"binary_path"`
 	MaxIterations  int      `json:"max_iterations"`
@@ -93,7 +94,11 @@ func Prepare(ctx context.Context, config SelfTestConfig) (*SelfTestRunner, error
 		}
 
 		snapshotPath := filepath.Join(binDir, "ralphglasses-snapshot")
-		cmd := exec.CommandContext(ctx, "go", "build", "-o", snapshotPath, "./cmd/ralphglasses")
+		pkg := "./cmd/ralphglasses"
+		if proj := os.Getenv("PROJECT_NAME"); proj != "" {
+			pkg = "./cmd/" + proj
+		}
+		cmd := exec.CommandContext(ctx, "go", "build", "-o", snapshotPath, pkg)
 		cmd.Dir = config.RepoPath
 		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 		if output, err := cmd.CombinedOutput(); err != nil {
