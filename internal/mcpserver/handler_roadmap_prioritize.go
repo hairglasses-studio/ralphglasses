@@ -25,6 +25,8 @@ func (s *Server) handleRoadmapPrioritize(_ context.Context, req mcp.CallToolRequ
 		return codedError(ErrFilesystem, fmt.Sprintf("parse roadmap: %v", err)), nil
 	}
 
+	assignUniqueTaskIDs(rm)
+
 	// Parse weights.
 	wImpact := 0.4
 	wEffort := 0.3
