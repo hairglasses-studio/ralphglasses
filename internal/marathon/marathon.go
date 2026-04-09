@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -119,6 +120,7 @@ func (m *Marathon) Run(ctx context.Context) (*Stats, error) {
 	sup.SetBus(m.bus)
 	sup.SetMonitor(session.NewHealthMonitor(session.DefaultHealthThresholds()))
 	sup.SetChainer(session.NewCycleChainer())
+	sup.SetSprintPlanner(session.NewSprintPlanner(filepath.Join(m.cfg.RepoPath, "ROADMAP.md")))
 
 	m.mu.Lock()
 	m.sup = sup

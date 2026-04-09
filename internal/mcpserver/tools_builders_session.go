@@ -226,6 +226,8 @@ func (s *Server) buildLoopGroup() ToolGroup {
 				mcp.WithNumber("max_iterations", mcp.Description("Maximum iterations (default: 5)")),
 				mcp.WithNumber("budget_usd", mcp.Description("Budget in USD (default: 20.0, split 1/4 planner + 3/4 worker)")),
 				mcp.WithNumber("duration_hours", mcp.Description("Maximum duration in hours (default: 4)")),
+					mcp.WithString("planner_provider", mcp.Description("Planner provider (claude, gemini, codex)")),
+					mcp.WithString("worker_provider", mcp.Description("Worker provider (claude, gemini, codex)")),
 				mcp.WithString("trace_level", mcp.Description("Trace verbosity: none, summary (default), verbose")),
 			), s.handleSelfImprove},
 			{mcp.NewTool("ralphglasses_loop_prune",

@@ -458,6 +458,49 @@
       ]
     },
     {
+      "date": "2026-04-09",
+      "patch_id": "generated_surface_drift_gate",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "integrity",
+        "source": "docs/autobuild-patch-queue.json",
+        "summary": "The ranked autobuild queue selected generated_surface_drift_gate to ensure docs and parity surfaces fail tests when the source contract changes without regeneration.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "generated runtime docs",
+        "provider-parity docs",
+        "drift verification"
+      ],
+      "recommended_entry_surface": "ralph:///catalog/provider-parity",
+      "changes": [
+        "added TestRenderTemplateData_MatchesCheckedInDoc to tools/genmcpdocs",
+        "added TestRenderSkillMarkdown_MatchesCheckedInDoc to tools/genskilldoc",
+        "added TestRenderConfigReference_MatchesCheckedInDoc to tools/genconfig",
+        "added TestRenderManpages_MatchesCheckedInTree to tools/gendoc",
+        "added TestCheckSkillSurfaces_MatchesCheckedInFiles to tools/genskillsurface"
+      ],
+      "verification_surface": [
+        {
+          "type": "test",
+          "ref": "tools/**/*_test.go",
+          "summary": "Verifies that checking in mismatched generated outputs fails CI."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses now properly guards generated surfaces against drift.",
+        "prevented_failure_class": [
+          "silent drift between capabilities and docs",
+          "operator confusion from stale parity references"
+        ]
+      },
+      "next_recommended_patch": "telemetry_to_patch_feedback",
+      "notes": [
+        "This patch closes the gap on generated-surface integrity, enabling trust in autobuild output."
+      ]
+    },
+    {
       "date": "2026-04-08",
       "patch_id": "remote_main_red_signal_filter",
       "status": "completed",

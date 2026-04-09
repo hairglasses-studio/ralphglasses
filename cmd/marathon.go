@@ -24,6 +24,7 @@ var (
 	marathonDuration   string
 	marathonCheckpoint string
 	marathonRepo       string
+	marathonRoadmap    string
 	marathonResume     bool
 )
 
@@ -91,6 +92,12 @@ Checkpoints are saved at the specified interval for resumability.`,
 		sup.SetMonitor(session.NewHealthMonitor(session.DefaultHealthThresholds()))
 		sup.SetChainer(session.NewCycleChainer())
 
+		if marathonRoadmap != "" {
+			roadmapPath := filepath.Join(repoPath, marathonRoadmap)
+			sup.SetSprintPlanner(session.NewSprintPlanner(roadmapPath))
+			fmt.Fprintf(os.Stderr, "marathon: loaded roadmap from %s\n", roadmapPath)
+		}
+
 		// Resume from previous state if flag set.
 		if marathonResume {
 			if err := sup.ResumeFromState(); err != nil {
@@ -150,6 +157,8 @@ func init() {
 		"Checkpoint save interval (e.g. 5m, 10m)")
 	marathonCmd.Flags().StringVar(&marathonRepo, "repo", "",
 		"Target repository path (default: <scan-path>/ralphglasses)")
+	marathonCmd.Flags().StringVar(&marathonRoadmap, "roadmap", "ROADMAP.md",
+		"Roadmap file name within the repo (default: ROADMAP.md)")
 	marathonCmd.Flags().BoolVar(&marathonResume, "resume", false,
 		"Resume from previous supervisor state")
 	rootCmd.AddCommand(marathonCmd)

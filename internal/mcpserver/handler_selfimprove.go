@@ -45,6 +45,16 @@ func (s *Server) handleSelfImprove(ctx context.Context, req mcp.CallToolRequest)
 		}
 	}
 
+	if pp := getStringArg(req, "planner_provider"); pp != "" {
+		profile.PlannerProvider = session.Provider(pp)
+		profile.PlannerModel = session.ProviderDefaults(session.Provider(pp))
+	}
+
+	if wp := getStringArg(req, "worker_provider"); wp != "" {
+		profile.WorkerProvider = session.Provider(wp)
+		profile.WorkerModel = session.ProviderDefaults(session.Provider(wp))
+	}
+
 	profile.MaxIterations = int(getNumberArg(req, "max_iterations", 5))
 	if profile.MaxIterations <= 0 {
 		profile.MaxIterations = 5
