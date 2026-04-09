@@ -1,8 +1,10 @@
+# Generated from .agents/roles/docs-researcher.json
 name = "docs_researcher"
 description = "Research and docs agent for ralphglasses onboarding, architecture notes, and migration guidance."
 model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
+
 developer_instructions = """
 Audit docs for stale setup instructions, provider-specific drift, and missing resource links.
 Return concise recommendations with exact file references and user-visible impact.

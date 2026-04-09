@@ -7,13 +7,13 @@ import (
 	"strings"
 )
 
-// agentDir returns the agent definition directory for a given provider.
+// agentDir returns the primary agent definition directory for a given provider.
 func agentDir(repoPath string, provider Provider) string {
 	switch provider {
 	case ProviderCodex:
 		return filepath.Join(repoPath, ".codex", "agents")
 	case ProviderGemini:
-		return filepath.Join(repoPath, ".gemini", "commands")
+		return filepath.Join(repoPath, ".gemini", "agents")
 	default:
 		return filepath.Join(repoPath, ".claude", "agents")
 	}
@@ -33,7 +33,8 @@ func ValidateLaunchAgent(provider Provider, agent string) error {
 }
 
 // ListAgents reads reusable provider role definitions from a repo for a given provider.
-// Claude: .claude/agents/*.md, Gemini: .gemini/commands/*.toml, Codex: .codex/agents/*.toml.
+// Claude: .claude/agents/*.md, Gemini: .gemini/agents/*.md with legacy
+// .gemini/commands/*.toml fallback, Codex: .codex/agents/*.toml.
 // If provider is empty, defaults to the primary provider.
 func ListAgents(repoPath string) ([]AgentDef, error) {
 	return DiscoverAgents(repoPath, DefaultPrimaryProvider())
@@ -43,6 +44,9 @@ func ListAgents(repoPath string) ([]AgentDef, error) {
 func DiscoverAgents(repoPath string, provider Provider) ([]AgentDef, error) {
 	if provider == "" {
 		provider = DefaultPrimaryProvider()
+	}
+	if provider == ProviderGemini {
+		return discoverGeminiAgents(repoPath)
 	}
 
 	dir := agentDir(repoPath, provider)
@@ -62,10 +66,10 @@ func DiscoverAgents(repoPath string, provider Provider) ([]AgentDef, error) {
 		if e.IsDir() {
 			continue
 		}
-		if (provider == ProviderCodex || provider == ProviderGemini) && !strings.HasSuffix(e.Name(), ".toml") {
+		if provider == ProviderCodex && !strings.HasSuffix(e.Name(), ".toml") {
 			continue
 		}
-		if provider != ProviderCodex && provider != ProviderGemini && !strings.HasSuffix(e.Name(), ".md") {
+		if provider != ProviderCodex && !strings.HasSuffix(e.Name(), ".md") {
 			continue
 		}
 
@@ -77,8 +81,6 @@ func DiscoverAgents(repoPath string, provider Provider) ([]AgentDef, error) {
 		var def AgentDef
 		if provider == ProviderCodex {
 			def = parseCodexAgentToml(e.Name(), string(data))
-		} else if provider == ProviderGemini {
-			def = parseGeminiCommandToml(e.Name(), string(data))
 		} else {
 			def = parseAgentMd(e.Name(), string(data))
 		}
@@ -86,6 +88,74 @@ func DiscoverAgents(repoPath string, provider Provider) ([]AgentDef, error) {
 		agents = append(agents, def)
 	}
 	return agents, nil
+}
+
+func discoverGeminiAgents(repoPath string) ([]AgentDef, error) {
+	type sourceSpec struct {
+		dir      string
+		markdown bool
+	}
+
+	sources := []sourceSpec{
+		{dir: filepath.Join(repoPath, ".gemini", "agents"), markdown: true},
+		{dir: filepath.Join(repoPath, ".gemini", "commands"), markdown: false},
+	}
+
+	seen := make(map[string]bool)
+	var agents []AgentDef
+	foundAny := false
+
+	for _, source := range sources {
+		entries, err := os.ReadDir(source.dir)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("read gemini agents dir %s: %w", source.dir, err)
+		}
+		foundAny = true
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			if source.markdown && !strings.HasSuffix(e.Name(), ".md") {
+				continue
+			}
+			if !source.markdown && !strings.HasSuffix(e.Name(), ".toml") {
+				continue
+			}
+
+			data, err := os.ReadFile(filepath.Join(source.dir, e.Name()))
+			if err != nil {
+				continue
+			}
+
+			var def AgentDef
+			if source.markdown {
+				def = parseAgentMd(e.Name(), string(data))
+			} else {
+				def = parseGeminiCommandToml(e.Name(), string(data))
+			}
+			def.Provider = ProviderGemini
+			key := normalizeAgentKey(def.Name)
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			agents = append(agents, def)
+		}
+	}
+
+	if !foundAny {
+		return nil, nil
+	}
+	return agents, nil
+}
+
+func normalizeAgentKey(name string) string {
+	name = strings.TrimSpace(strings.ToLower(name))
+	name = strings.ReplaceAll(name, "-", "_")
+	return name
 }
 
 // discoverLegacyCodexAgents parses legacy AGENTS.md custom-agent sections.
@@ -166,9 +236,6 @@ func WriteAgent(repoPath string, def AgentDef) error {
 	if def.Provider == ProviderCodex {
 		return writeCodexAgent(repoPath, def)
 	}
-	if def.Provider == ProviderGemini {
-		return writeGeminiCommand(repoPath, def)
-	}
 
 	dir := agentDir(repoPath, def.Provider)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -189,16 +256,16 @@ func writeCodexAgent(repoPath string, def AgentDef) error {
 	return os.WriteFile(filepath.Join(dir, def.Name+".toml"), []byte(renderCodexAgentToml(def)), 0644)
 }
 
-// writeGeminiCommand writes a Gemini custom command TOML file under .gemini/commands/.
+// writeGeminiCommand writes a Gemini legacy command TOML file under .gemini/commands/.
 func writeGeminiCommand(repoPath string, def AgentDef) error {
-	dir := agentDir(repoPath, ProviderGemini)
+	dir := filepath.Join(repoPath, ".gemini", "commands")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("create gemini commands dir: %w", err)
 	}
 	return os.WriteFile(filepath.Join(dir, def.Name+".toml"), []byte(renderGeminiCommandToml(def)), 0644)
 }
 
-// parseAgentMd parses a .claude/agents/*.md file into an AgentDef.
+// parseAgentMd parses a provider .md agent file into an AgentDef.
 // Format: YAML frontmatter between --- fences, then markdown body.
 func parseAgentMd(filename, content string) AgentDef {
 	name := strings.TrimSuffix(filename, ".md")
@@ -457,7 +524,7 @@ func ComposeAgents(repoPath string, agentNames []string, provider Provider, name
 	return composite, nil
 }
 
-// renderAgentMd produces a .claude/agents/*.md file content.
+// renderAgentMd produces a provider markdown agent file content.
 func renderAgentMd(def AgentDef) string {
 	var b strings.Builder
 	b.WriteString("---\n")

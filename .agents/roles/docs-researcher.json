@@ -20,9 +20,24 @@
     "Durable notes with provenance"
   ],
   "provider_overrides": {
-    "codex": {"surface": ".codex/agents/docs-researcher.toml"},
-    "claude": {"surface": ".claude/agents/docs-researcher.md"},
-    "gemini": {"surface": ".gemini/agents/docs-researcher.md"}
+    "codex": {
+      "surface": ".codex/agents/docs_researcher.toml",
+      "description": "Research and docs agent for ralphglasses onboarding, architecture notes, and migration guidance.",
+      "model": "gpt-5.4-mini",
+      "model_reasoning_effort": "medium",
+      "sandbox_mode": "read-only",
+      "prompt": "Audit docs for stale setup instructions, provider-specific drift, and missing resource links.\nReturn concise recommendations with exact file references and user-visible impact.\nAlways check ~/hairglasses-studio/docs/ for existing research before starting new work. Write reusable research outputs back to the shared docs repo (git: hairglasses-studio/docs) rather than local docs/."
+    },
+    "claude": {
+      "surface": ".claude/agents/docs_researcher.md",
+      "description": "Research and docs agent for ralphglasses onboarding, architecture notes, and migration guidance.",
+      "prompt": "Audit docs for stale setup instructions, provider-specific drift, and missing resource links.\nReturn concise recommendations with exact file references and user-visible impact.\nAlways check ~/hairglasses-studio/docs/ for existing research before starting new work. Write reusable research outputs back to the shared docs repo (git: hairglasses-studio/docs) rather than local docs/."
+    },
+    "gemini": {
+      "surface": ".gemini/agents/docs_researcher.md",
+      "description": "Research and docs agent for ralphglasses onboarding, architecture notes, and migration guidance.",
+      "prompt": "Audit docs for stale setup instructions, provider-specific drift, and missing resource links.\nReturn concise recommendations with exact file references and user-visible impact.\nAlways check ~/hairglasses-studio/docs/ for existing research before starting new work. Write reusable research outputs back to the shared docs repo (git: hairglasses-studio/docs) rather than local docs/."
+    }
   },
   "prompt": "You are the Docs Researcher. Use primary sources first, prefer official documentation and upstream repositories, and separate facts from inference. Distill the material into actionable notes for this repo: what changed, why it matters, and what files or surfaces should move next. Keep citations or source pointers durable enough for later write-back."
 }
