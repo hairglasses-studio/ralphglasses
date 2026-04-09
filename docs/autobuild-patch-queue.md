@@ -34,21 +34,7 @@ That means the next autobuild work should not reopen another broad sweep. The ne
 
 ## Ranked Patch Queue
 
-### 1. `integrity_temp_artifact_gate`
-
-Priority: `P0`
-
-Why now:
-
-- Tracked temp artifacts and placeholder outputs directly weaken source verification.
-- This is small, local, and a good first autobuild tranche because it reduces false confidence in every later patch.
-
-Acceptance:
-
-- Repo-owned verification fails when tracked temp artifacts or placeholder outputs are present.
-- The failure names the offending path and does not rely on manual review.
-
-### 2. `layout_harness_drift_gate`
+### 1. `layout_harness_drift_gate`
 
 Priority: `P1`
 
@@ -62,7 +48,7 @@ Acceptance:
 - Nested layout width regressions become deterministic test failures.
 - The gate protects the known TUI harness path instead of relying on ad hoc visual cleanup.
 
-### 3. `shared_path_bypass_audit`
+### 2. `shared_path_bypass_audit`
 
 Priority: `P1`
 
@@ -76,7 +62,7 @@ Acceptance:
 - Active config, state, cache, session, and coordination paths resolve through shared helpers or are explicitly justified.
 - The queue stops after the remaining repo-owned bypass set is exhausted.
 
-### 4. `adoption_led_tranche_selector`
+### 3. `adoption_led_tranche_selector`
 
 Priority: `P1`
 
@@ -90,7 +76,7 @@ Acceptance:
 - One machine-readable summary ranks the next repo-owned patch candidates.
 - The summary includes source signal, recommended entry surface, and confidence.
 
-### 5. `remote_main_red_signal_filter`
+### 4. `remote_main_red_signal_filter`
 
 Priority: `P1`
 
@@ -104,7 +90,7 @@ Acceptance:
 - Automated patch selection requires remote-main verification metadata for a red signal.
 - Dirty-worktree or branch-local failures do not enter the repo-owned patch queue by default.
 
-### 6. `generated_surface_drift_gate`
+### 5. `generated_surface_drift_gate`
 
 Priority: `P2`
 
@@ -118,7 +104,7 @@ Acceptance:
 - Generated runtime, parity, or docs surfaces fail verification when the source contract changes without regeneration.
 - Drift is recorded as a source-backed integrity failure, not as generic docs cleanup.
 
-### 7. `telemetry_to_patch_feedback`
+### 6. `telemetry_to_patch_feedback`
 
 Priority: `P2`
 
@@ -153,9 +139,9 @@ Every queued patch should carry the same minimum metadata:
 
 ## First Recommended Execution Order
 
-1. `integrity_temp_artifact_gate`
-2. `layout_harness_drift_gate`
-3. `shared_path_bypass_audit`
-4. `adoption_led_tranche_selector`
+1. `layout_harness_drift_gate`
+2. `shared_path_bypass_audit`
+3. `adoption_led_tranche_selector`
+4. `remote_main_red_signal_filter`
 
 That order starts with small integrity gates, then narrows remaining path debt, then lets telemetry choose the next larger tranche.

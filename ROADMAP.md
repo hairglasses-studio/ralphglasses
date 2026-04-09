@@ -150,6 +150,10 @@ Immediate roadmap notes captured from the Jellyfin ecosystem rollout so the perp
   - Target: `internal/session/` execution + tranche receipt model
   - **Acceptance:** loops verify generated archives or equivalent recovery artifacts before pruning older generations or documenting restore readiness
 
+- [x] **ATD-11** — Add a tracked-temp-artifact gate to repo verification so stray temp outputs and placeholder files fail fast before longer commit checks run `P0` `S`
+  - Target: `scripts/dev/` + autobuild patch queue memory
+  - Shipped via `scripts/dev/check-tracked-artifacts.sh`, `scripts/dev/test_tracked_artifacts.sh`, and commit-gate wiring in `scripts/dev/ci.sh` and `scripts/dev/pre-commit`
+  - **Acceptance:** repo-owned verification names offending tracked artifact paths and fails deterministically before deeper CI stages continue
 ---
 
 ## Phase 0: Foundation (COMPLETE)

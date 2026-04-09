@@ -115,6 +115,21 @@ Rule:
 
 If a red commit gate reproduces against current remote `main`, promote that repair ahead of new roadmap breadth until the publish lane is green again.
 
+### 2026-04-08: Artifact gates should start with path contracts, not content heuristics
+
+Signal:
+- the next integrity tranche targeted tracked temp artifacts and placeholder outputs
+
+What mattered:
+
+- filename and path-segment checks are deterministic
+- content greps would have false positives across docs, fixtures, and examples
+- an explicit allowlist keeps exceptional cases reviewable instead of silently tolerated
+
+Rule:
+
+When guarding against tracked temp artifacts, start with tracked-path and filename rules plus an explicit allowlist before adding any content-level heuristic.
+
 ## Autobuild Patch Note Template
 
 Use this shape when closing or reprioritizing a tranche:
@@ -143,13 +158,12 @@ Next recommended patch:
 
 ## Current Recommended Sequence
 
-1. `integrity_temp_artifact_gate`
-2. `layout_harness_drift_gate`
-3. `shared_path_bypass_audit`
-4. `adoption_led_tranche_selector`
-5. `remote_main_red_signal_filter`
-6. `generated_surface_drift_gate`
-7. `telemetry_to_patch_feedback`
+1. `layout_harness_drift_gate`
+2. `shared_path_bypass_audit`
+3. `adoption_led_tranche_selector`
+4. `remote_main_red_signal_filter`
+5. `generated_surface_drift_gate`
+6. `telemetry_to_patch_feedback`
 
 ## Backlog For Future Productization
 
@@ -194,3 +208,30 @@ What this should prevent next time:
 
 Next recommended patch:
 - `autobuild_execution_ledger_template`
+
+## 2026-04-08: integrity_temp_artifact_gate
+
+Signal:
+- autobuild queue ranked tracked temp artifacts and placeholder outputs as the first narrow integrity gate after the planning bundle and the short-suite repair
+
+Scope:
+- repo-owned verification only
+
+What changed:
+- added a tracked artifact gate that scans `git ls-files`
+- added an explicit repo-owned allowlist for justified exceptions
+- added fixture tests for `.DS_Store`, temp directories, placeholder filenames, and allowlist behavior
+- wired the gate into `scripts/dev/ci.sh` and `scripts/dev/pre-commit`
+
+Evidence:
+- `scripts/dev/check-tracked-artifacts.sh`
+- `scripts/dev/test_tracked_artifacts.sh`
+- `.tracked-artifact-allowlist`
+
+What this should prevent next time:
+- stray tracked temp outputs reaching `main`
+- placeholder output files shipping as real repo artifacts
+- long CI runs masking an early source-tree integrity failure
+
+Next recommended patch:
+- `layout_harness_drift_gate`

@@ -26,24 +26,6 @@
   "ranked_queue": [
     {
       "rank": 1,
-      "id": "integrity_temp_artifact_gate",
-      "priority": "P0",
-      "why_now": [
-        "Tracked temp artifacts and placeholder outputs directly weaken source verification.",
-        "This is a small first tranche that reduces false confidence in every later patch."
-      ],
-      "recommended_scope": [
-        "repo-owned verification",
-        "tracked artifact detection",
-        "source-tree placeholder checks"
-      ],
-      "acceptance": [
-        "Repo-owned verification fails when tracked temp artifacts or placeholder outputs are present.",
-        "The failure names the offending path and does not rely on manual review."
-      ]
-    },
-    {
-      "rank": 2,
       "id": "layout_harness_drift_gate",
       "priority": "P1",
       "why_now": [
@@ -61,7 +43,7 @@
       ]
     },
     {
-      "rank": 3,
+      "rank": 2,
       "id": "shared_path_bypass_audit",
       "priority": "P1",
       "why_now": [
@@ -81,7 +63,7 @@
       ]
     },
     {
-      "rank": 4,
+      "rank": 3,
       "id": "adoption_led_tranche_selector",
       "priority": "P1",
       "why_now": [
@@ -100,7 +82,7 @@
       ]
     },
     {
-      "rank": 5,
+      "rank": 4,
       "id": "remote_main_red_signal_filter",
       "priority": "P1",
       "why_now": [
@@ -118,7 +100,7 @@
       ]
     },
     {
-      "rank": 6,
+      "rank": 5,
       "id": "generated_surface_drift_gate",
       "priority": "P2",
       "why_now": [
@@ -136,7 +118,7 @@
       ]
     },
     {
-      "rank": 7,
+      "rank": 6,
       "id": "telemetry_to_patch_feedback",
       "priority": "P2",
       "why_now": [
@@ -171,9 +153,9 @@
     "evidence_path"
   ],
   "first_recommended_execution_order": [
-    "integrity_temp_artifact_gate",
     "layout_harness_drift_gate",
     "shared_path_bypass_audit",
-    "adoption_led_tranche_selector"
+    "adoption_led_tranche_selector",
+    "remote_main_red_signal_filter"
   ]
 }

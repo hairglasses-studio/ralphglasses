@@ -133,6 +133,67 @@
         "The next highest-leverage follow-up is to link these artifacts from README.md and ROADMAP.md so they become canonical entrypoints instead of discoverable-only docs.",
         "Further roadmap work should remain narrow and integrity-led rather than reopening broad filesystem-hardening sweeps."
       ]
+    },
+    {
+      "date": "2026-04-08",
+      "patch_id": "integrity_temp_artifact_gate",
+      "status": "completed",
+      "trigger_signal": {
+        "type": "integrity",
+        "source": "docs/autobuild-patch-queue.json",
+        "summary": "The ranked autobuild queue selected tracked temp artifacts and placeholder outputs as the next small repo-owned gate after the short-suite repair.",
+        "remote_main_verified": true
+      },
+      "repo_owned_scope": [
+        "tracked artifact detection",
+        "repo-owned verification entrypoints",
+        "fixture tests for artifact-path failures"
+      ],
+      "recommended_entry_surface": "scripts/dev/check-tracked-artifacts.sh",
+      "changes": [
+        "added a tracked artifact gate that scans tracked paths via git ls-files",
+        "added an explicit repo-owned allowlist for justified artifact exceptions",
+        "added shell fixture tests for temp artifacts and placeholder filenames",
+        "wired the artifact gate into scripts/dev/ci.sh and scripts/dev/pre-commit"
+      ],
+      "acceptance_condition": [
+        "repo-owned verification fails when tracked temp artifacts or placeholder outputs are present",
+        "the failure names the offending path without requiring manual review"
+      ],
+      "stop_condition": [
+        "stop after deterministic path-based checks, allowlist support, and fixture coverage exist",
+        "do not expand this tranche into broader content linting or unrelated cleanup"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "ref": "scripts/dev/check-tracked-artifacts.sh",
+          "summary": "Introduces the tracked-path artifact gate."
+        },
+        {
+          "kind": "test",
+          "ref": "scripts/dev/test_tracked_artifacts.sh",
+          "summary": "Covers .DS_Store, temp directory, placeholder filename, and allowlist behavior."
+        },
+        {
+          "kind": "file",
+          "ref": "scripts/dev/ci.sh",
+          "summary": "Runs the artifact gate before the longer CI phases."
+        }
+      ],
+      "result": {
+        "closure_state": "completed",
+        "summary": "Ralphglasses now fails fast on tracked temp artifacts and placeholder outputs before deeper verification runs.",
+        "prevented_failure_class": [
+          "tracked temp artifacts on main",
+          "placeholder outputs shipping as source",
+          "late detection of source-tree hygiene failures"
+        ]
+      },
+      "next_recommended_patch": "layout_harness_drift_gate",
+      "notes": [
+        "The gate intentionally uses path and filename contracts instead of content greps to avoid false positives in docs, fixtures, and examples."
+      ]
     }
   ]
 }
