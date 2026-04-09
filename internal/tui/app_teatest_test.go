@@ -27,6 +27,8 @@ func newTestModel(t *testing.T) Model {
 	m := NewModel("", nil) // empty path skips scanRepos for deterministic golden files
 	m.Width = 120
 	m.Height = 40
+	m.Table.Width = 120
+	m.StatusBar.Width = 120
 	m.LastRefresh = frozenTime.Add(-5 * time.Minute) // always "5m" ago
 	return m
 }
