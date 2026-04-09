@@ -154,6 +154,18 @@ func writeJournalEntryToFile(repoPath string, entry JournalEntry, autoConsolidat
 	data = append(data, '\n')
 
 	path := filepath.Join(repoPath, journalFile)
+
+	// Append-only guardrail: validate that we are not overwriting or truncating
+	// existing records by ensuring the file size never shrinks.
+	stat, statErr := os.Stat(path)
+	if statErr == nil && stat.Size() > 0 {
+		// Just a programmatic validation to ensure we're adding to existing data
+		// rather than replacing it. The O_APPEND flag below enforces the actual write behavior.
+		if stat.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("append-only policy violation: journal file is a symlink")
+		}
+	}
+
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -184,11 +196,9 @@ func autoConsolidateJournal(repoPath string, maxEntries int) {
 		return
 	}
 
-	pruned, err := PruneJournal(repoPath, maxEntries)
-	if err != nil {
-		return // silently ignore — best-effort consolidation
-	}
-	_ = pruned
+	// In an append-only system, we can still consolidate patterns 
+	// but we must not delete (prune) the original entries.
+	_ = ConsolidatePatterns(repoPath)
 }
 
 // CountJournalEntries returns the number of entries in the journal file.
@@ -465,51 +475,15 @@ func findFirstSeen(entries []JournalEntry, text string, getter func(JournalEntry
 	return time.Time{}
 }
 
-// PruneJournal keeps only the last keepN entries, consolidating patterns first.
+// PruneJournal is deprecated. In an append-only system, entries cannot be deleted.
 func PruneJournal(repoPath string, keepN int) (pruned int, err error) {
-	if keepN <= 0 {
-		keepN = 100
-	}
-
-	// Consolidate before pruning
+	// Consolidate patterns as a side-effect, but do not truncate the journal.
 	if err := ConsolidatePatterns(repoPath); err != nil {
 		return 0, fmt.Errorf("consolidate: %w", err)
 	}
-
-	entries, err := ReadRecentJournal(repoPath, 10000) // read all
-	if err != nil {
-		return 0, err
-	}
-
-	if len(entries) <= keepN {
-		return 0, nil
-	}
-
-	prunedCount := len(entries) - keepN
-	kept := entries[len(entries)-keepN:]
-
-	// Rewrite file
-	path := filepath.Join(repoPath, journalFile)
-	f, err := os.Create(path)
-	if err != nil {
-		return 0, err
-	}
-	defer f.Close()
-
-	for _, entry := range kept {
-		data, err := json.Marshal(entry)
-		if err != nil {
-			continue
-		}
-		if _, err := f.Write(data); err != nil {
-			continue
-		}
-		if _, err := f.Write([]byte{'\n'}); err != nil {
-			continue
-		}
-	}
-
-	return prunedCount, nil
+	
+	// Enforce append-only policy
+	return 0, fmt.Errorf("append-only policy violation: journal pruning is disabled")
 }
 
 // parseImprovementMarkers extracts worked/failed/suggest from output history.

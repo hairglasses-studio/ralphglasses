@@ -19,6 +19,7 @@ type LoopConfig struct {
 	WorkerProvider          Provider      `json:"worker_provider,omitempty"`           // worker session provider
 	EnableWorkerEnhancement bool          `json:"enable_worker_enhancement,omitempty"` // prompt enhancement before worker calls
 	Timeout                 time.Duration `json:"timeout,omitempty"`
+	ReviewPatience          int           `json:"review_patience,omitempty"`
 }
 
 // LoopValidationWarning describes a single validation issue with a loop config.

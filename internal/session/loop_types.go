@@ -48,6 +48,7 @@ type LoopProfile struct {
 	// MaxAutoFixRetries attempts per iteration (default 2, 0 = disabled).
 	AutoFixOnVerifyFail bool `json:"auto_fix_on_verify_fail,omitempty"`
 	MaxAutoFixRetries   int  `json:"max_auto_fix_retries,omitempty"` // 0 = disabled, default 2 when AutoFixOnVerifyFail is true
+	ReviewPatience      int  `json:"review_patience,omitempty"`      // default 3
 }
 
 // LoopTask is the bounded implementation unit produced by the planner.
@@ -73,6 +74,9 @@ type LoopIteration struct {
 	Status            string             `json:"status"`
 	Task              LoopTask           `json:"task"`
 	Tasks             []LoopTask         `json:"tasks,omitempty"` // multiple tasks for concurrent execution
+	Phase0SessionID   string             `json:"phase0_session_id,omitempty"`
+	Phase0Output      string             `json:"phase0_output,omitempty"`
+	Phase0EndedAt     *time.Time         `json:"phase0_ended_at,omitempty"`
 	PlannerSessionID  string             `json:"planner_session_id,omitempty"`
 	WorkerSessionID   string             `json:"worker_session_id,omitempty"`  // first/only worker (backwards compat)
 	WorkerSessionIDs  []string           `json:"worker_session_ids,omitempty"` // all workers for concurrent execution

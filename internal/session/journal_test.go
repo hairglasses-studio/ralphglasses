@@ -249,28 +249,33 @@ func TestPruneJournal(t *testing.T) {
 	}
 
 	pruned, err := PruneJournal(dir, 50)
-	if err != nil {
-		t.Fatalf("PruneJournal: %v", err)
+	if err == nil {
+		t.Fatalf("expected PruneJournal to fail due to append-only policy")
 	}
-	if pruned != 150 {
-		t.Errorf("pruned = %d, want 150", pruned)
+	if pruned != 0 {
+		t.Errorf("pruned = %d, want 0", pruned)
 	}
 
-	// Verify remaining count
+	// Verify remaining count (all 200 should remain)
 	entries, err := ReadRecentJournal(dir, 10000)
 	if err != nil {
 		t.Fatalf("ReadRecentJournal: %v", err)
 	}
-	if len(entries) != 50 {
-		t.Errorf("remaining entries = %d, want 50", len(entries))
+	if len(entries) != 200 {
+		t.Errorf("remaining entries = %d, want 200", len(entries))
 	}
 
-	// Should be the last 50 (turn counts 151-200)
-	if entries[0].TurnCount != 151 {
-		t.Errorf("first remaining turn_count = %d, want 151", entries[0].TurnCount)
+	// Should be the first entry (turn count 1)
+	if entries[0].TurnCount != 1 {
+		t.Errorf("first remaining turn_count = %d, want 1", entries[0].TurnCount)
 	}
 
-	// Patterns file should have been written
+	// Should be the last entry (turn count 200)
+	if entries[199].TurnCount != 200 {
+		t.Errorf("last remaining turn_count = %d, want 200", entries[199].TurnCount)
+	}
+
+	// Patterns file should have been written as a side-effect
 	if _, err := os.Stat(filepath.Join(dir, patternsFile)); err != nil {
 		t.Error("expected patterns file after prune")
 	}
@@ -285,8 +290,8 @@ func TestPruneJournal_NoPruneNeeded(t *testing.T) {
 	}
 
 	pruned, err := PruneJournal(dir, 100)
-	if err != nil {
-		t.Fatalf("PruneJournal: %v", err)
+	if err == nil {
+		t.Fatalf("expected PruneJournal to fail due to append-only policy")
 	}
 	if pruned != 0 {
 		t.Errorf("pruned = %d, want 0", pruned)
@@ -657,19 +662,11 @@ func TestPruneJournal_DefaultKeepN(t *testing.T) {
 
 	// keepN <= 0 defaults to 100
 	pruned, err := PruneJournal(dir, 0)
-	if err != nil {
-		t.Fatalf("PruneJournal: %v", err)
+	if err == nil {
+		t.Fatalf("expected PruneJournal to fail due to append-only policy")
 	}
-	if pruned != 50 {
-		t.Errorf("pruned = %d, want 50", pruned)
-	}
-
-	entries, err := ReadRecentJournal(dir, 10000)
-	if err != nil {
-		t.Fatalf("ReadRecentJournal: %v", err)
-	}
-	if len(entries) != 100 {
-		t.Errorf("remaining = %d, want 100", len(entries))
+	if pruned != 0 {
+		t.Errorf("pruned = %d, want 0", pruned)
 	}
 }
 

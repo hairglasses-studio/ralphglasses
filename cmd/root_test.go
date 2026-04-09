@@ -3,8 +3,10 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/e2e"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -803,6 +806,73 @@ func TestGateCheckCmd_WithBaselineAndObservations(t *testing.T) {
 	// Observations may not be valid format, but at least the code path executes
 	if err != nil && err != ErrGateFailed {
 		t.Logf("gate-check with observations: %v (acceptable)", err)
+	}
+}
+
+func TestGateCheckCmd_IgnoresStandaloneObservations(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	baselineDir := filepath.Join(tmpDir, ".ralph")
+	if err := os.MkdirAll(baselineDir, 0o755); err != nil {
+		t.Fatalf("mkdir baseline dir: %v", err)
+	}
+	baseline := &e2e.LoopBaseline{
+		GeneratedAt: time.Now(),
+		Entries: map[string]*e2e.BaselineStats{
+			"task-a:claude": {CostP95: 1.0, LatencyP95: 5000, SampleCount: 5},
+		},
+		Aggregate: &e2e.BaselineStats{CostP95: 1.0, LatencyP95: 5000, SampleCount: 5},
+		Rates:     &e2e.BaselineRates{CompletionRate: 1.0, VerifyPassRate: 1.0, ErrorRate: 0.0},
+	}
+	data, err := json.Marshal(baseline)
+	if err != nil {
+		t.Fatalf("marshal baseline: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(baselineDir, "loop_baseline.json"), data, 0o644); err != nil {
+		t.Fatalf("write baseline: %v", err)
+	}
+
+	logsDir := filepath.Join(tmpDir, ".ralph", "logs")
+	if err := os.MkdirAll(logsDir, 0o755); err != nil {
+		t.Fatalf("mkdir logs dir: %v", err)
+	}
+	observations := []session.LoopObservation{
+		{Timestamp: time.Now(), Mode: "standalone", Status: "failed", Error: "launch failed", TaskTitle: "smoke test", TotalCostUSD: 5.0, TotalLatencyMs: 1000},
+		{Timestamp: time.Now(), Mode: "mock", Status: "idle", VerifyPassed: true, TaskTitle: "task-a", PlannerProvider: "claude", TotalCostUSD: 0.8, TotalLatencyMs: 4000},
+		{Timestamp: time.Now(), Mode: "mock", Status: "idle", VerifyPassed: true, TaskTitle: "task-a", PlannerProvider: "claude", TotalCostUSD: 0.9, TotalLatencyMs: 4200},
+		{Timestamp: time.Now(), Mode: "mock", Status: "idle", VerifyPassed: true, TaskTitle: "task-a", PlannerProvider: "claude", TotalCostUSD: 0.85, TotalLatencyMs: 4100},
+		{Timestamp: time.Now(), Mode: "mock", Status: "idle", VerifyPassed: true, TaskTitle: "task-a", PlannerProvider: "claude", TotalCostUSD: 0.95, TotalLatencyMs: 4300},
+	}
+	f, err := os.Create(filepath.Join(logsDir, "loop_observations.jsonl"))
+	if err != nil {
+		t.Fatalf("create observations: %v", err)
+	}
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	for _, obs := range observations {
+		if err := enc.Encode(obs); err != nil {
+			t.Fatalf("encode observation: %v", err)
+		}
+	}
+
+	origScanPath := scanPath
+	origGateBaseline := gateBaselinePath
+	origGateJSON := gateJSON
+	origGateHours := gateHours
+	defer func() {
+		scanPath = origScanPath
+		gateBaselinePath = origGateBaseline
+		gateJSON = origGateJSON
+		gateHours = origGateHours
+	}()
+
+	scanPath = tmpDir
+	gateBaselinePath = filepath.Join(baselineDir, "loop_baseline.json")
+	gateJSON = true
+	gateHours = 24 * 365
+
+	if err := gateCheckCmd.RunE(gateCheckCmd, nil); err != nil {
+		t.Fatalf("gate-check should ignore standalone observations, got: %v", err)
 	}
 }
 

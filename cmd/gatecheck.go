@@ -74,6 +74,13 @@ Exits 0 on pass/warn/skip, exits 1 on fail.`,
 			}
 			return fmt.Errorf("load observations: %w", err)
 		}
+		filtered := make([]session.LoopObservation, 0, len(observations))
+		for _, obs := range observations {
+			if session.ObservationEligibleForBaseline(obs) {
+				filtered = append(filtered, obs)
+			}
+		}
+		observations = filtered
 
 		// Evaluate gates
 		thresholds := e2e.DefaultGateThresholds()

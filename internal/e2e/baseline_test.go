@@ -60,6 +60,32 @@ func TestBuildBaseline_ZeroWindowIncludesAll(t *testing.T) {
 	}
 }
 
+func TestBuildBaseline_ExcludesStandaloneObservations(t *testing.T) {
+	now := time.Now()
+	obs := []session.LoopObservation{
+		{Timestamp: now, Mode: "standalone", TaskTitle: "session smoke test", PlannerProvider: "codex", TotalCostUSD: 1.0, Status: "failed", Error: "launch failed"},
+		{Timestamp: now, Mode: "mock", TaskTitle: "e2e scenario", PlannerProvider: "claude", TotalCostUSD: 0.2, Status: "idle"},
+		{Timestamp: now, Mode: "live", TaskTitle: "loop task", PlannerProvider: "codex", TotalCostUSD: 0.4, Status: "idle"},
+	}
+
+	bl := BuildBaseline(obs, 0)
+	if bl.Aggregate == nil {
+		t.Fatal("Aggregate should not be nil")
+	}
+	if bl.Aggregate.SampleCount != 2 {
+		t.Fatalf("SampleCount = %d, want 2 (standalone excluded)", bl.Aggregate.SampleCount)
+	}
+	if _, ok := bl.Entries["session smoke test:codex"]; ok {
+		t.Fatal("standalone observation should not contribute a baseline entry")
+	}
+	if _, ok := bl.Entries["e2e scenario:claude"]; !ok {
+		t.Fatal("mock observation should contribute a baseline entry")
+	}
+	if _, ok := bl.Entries["loop task:codex"]; !ok {
+		t.Fatal("live observation should contribute a baseline entry")
+	}
+}
+
 func TestBuildBaseline_PercentileCalculations(t *testing.T) {
 	now := time.Now()
 	var obs []session.LoopObservation

@@ -86,10 +86,12 @@ Immediate roadmap notes for improving the perpetual autonomous development cycle
 - [ ] **WM-2** — Add GitHub capability probing before publish or repo-creation tasks so loops know the difference between connector install, CLI auth, push rights, and repo-creation rights `P0` `M`
   - Target: `internal/session/` + `internal/roadmap/`
   - **Acceptance:** planner can block or reroute publish/create tasks when auth or app capability is missing
+  - Field note (2026-04-08): root-shell auth looked blocked while the real operator lane (`hg` over SSH) could fetch and push, so capability probes need to test the actual publish identity instead of one ambient shell context
 
 - [ ] **WM-3** — Add a component-level migration ledger input so loops can plan from `source artifact -> target repo -> verification` instead of repo-only backlog slices `P0` `M`
   - Target: `internal/roadmap/` + docs ingest
   - **Acceptance:** roadmap tooling can ingest a machine-readable whiteclaw component map and rank next tranches from it
+  - Field note (2026-04-08): `docs/projects/agent-parity/whiteclaw-component-migration-map.json` is now the first real fixture this ingest path should consume
 
 - [ ] **WM-4** — Add existing-equivalent detection before proposing new repos; only create a new repo when no existing repo can coherently own the migrated surface `P1` `S`
   - Target: `internal/roadmap/` repo-classification heuristics
@@ -98,10 +100,12 @@ Immediate roadmap notes for improving the perpetual autonomous development cycle
 - [ ] **WM-5** — Prefer clean publish lanes via dedicated worktrees when canonical repos are dirty or ahead/behind, instead of mixing tranche commits into unstable checkouts `P1` `M`
   - Target: `internal/session/` + operator workflow docs
   - **Acceptance:** publish-oriented loops can select a safe worktree branch strategy automatically
+  - Field note (2026-04-08): `surfacekit` and `docs` both required clean publish clones because the operator checkouts were dirty and one checkout was also ahead/behind `origin/main`
 
 - [ ] **WM-6** — Keep a rolling next-tranche queue and auto-promote the next wave immediately after the prior wave verifies cleanly `P1` `M`
   - Target: `internal/roadmap/` + session loop selection
   - **Acceptance:** completing one tranche updates the ranked next-tranche backlog without manual reseeding
+  - Field note (2026-04-08): the live queue advanced from docs-side ledger work to `surfacekit` contradiction evidence and then to `.github` reusable workflow rollout without re-running a fresh fleet scan
 
 ---
 
@@ -159,10 +163,39 @@ Immediate roadmap notes captured from the Jellyfin ecosystem rollout so the perp
   - Target: `.claude/agents/` + `.gemini/agents/` + autobuild tranche sequencing
   - Shipped by regenerating provider role projections from `.agents/roles/*.json` after `scripts/sync-provider-roles.py --check` failed on current `main`
   - **Acceptance:** `python3 scripts/sync-provider-roles.py --check` and full `scripts/dev/ci.sh` pass on current `main` after the resync
-
 - [ ] **ATD-13** — Add overlay-risk detection for automations that can hide local state, such as remote mounts or generated mirror directories `P1` `M`
   - Target: `internal/roadmap/` safety heuristics + operator prompt generation
   - **Acceptance:** plans default to explicit opt-in flags or guard rails whenever an automation would shadow non-empty local paths
+
+## Perpetual Development Cycle Notes `[NEW]`
+
+Operator continuity notes captured from the Hyprland persistence rollout. These are future autopatch and autobuild follow-ups so desktop iteration can keep terminal state alive while still landing verified tranche commits continuously.
+
+- [ ] **PDC-1** — Add a desktop destructive-action classifier so planner loops distinguish `safe_reload` from `explicit_restart` when Hyprland, launchers, or other session-bearing UI surfaces are involved `P0` `M`
+  - Target: `internal/session/` planner prompts + `internal/roadmap/` task annotations
+  - **Acceptance:** desktop tasks touching reload/restart flows default to safe reload lanes unless a hard restart is explicitly requested
+
+- [ ] **PDC-2** — Add tmux continuity preflight checks to roadmap and autobuild execution: main session presence, TPM bootstrap, resurrect/continuum availability, and last persistence-health result `P0` `S`
+  - Target: `internal/session/` + `internal/roadmap/`
+  - **Acceptance:** loops fail fast on "persistence configured but not operational" before they schedule risky reload or restart work
+
+- [ ] **PDC-3** — Emit verified tranche checkpoints after each commit with tests run, files touched, publish outcome, and next-tranche seed so long-running loops can resume without reconstructing session context `P1` `M`
+  - Target: `internal/roadmap/` + checkpoint/journal surfaces
+  - **Acceptance:** every completed tranche can produce a resumable machine-readable checkpoint entry
+
+- [ ] **PDC-4** — Probe publish-lane capabilities before promising "push between tranches": SSH auth, connector write access, branch protection, divergence from `main`, and dirty-worktree risk `P0` `M`
+  - Target: `internal/session/` publish orchestration
+  - **Acceptance:** planner reports whether publish can happen via SSH, GitHub app, clean worktree, or is blocked before tranche work begins
+  - Field note (2026-04-08): publish preflight also needs to classify which local identity has auth and whether the current checkout is a safe commit lane or just a source of files for a clean clone
+
+- [ ] **PDC-5** — Prefer clean worktree publish lanes for tranche commits when live repos are dirty, then mirror the landed tranche diff back into the operator checkout without overwriting unrelated edits `P1` `M`
+  - Target: `internal/session/` + operator workflow docs
+  - **Acceptance:** autonomous publish flows stop depending on committing from dirty working trees
+  - Field note (2026-04-08): the same fallback should cover bare-repo operator layouts like `ralphglasses`, where a normal clean clone is simpler than trying to publish from the live checkout
+
+- [ ] **PDC-6** — Add desktop continuity regression fixtures to autobuild smoke suites: safe reload must not restart Hyprshell, dropdown terminals must not kill tmux sessions, and tmux persistence health must pass before restart lanes execute `P1` `M`
+  - Target: `internal/roadmap/` + future autobuild smoke harness
+  - **Acceptance:** future autonomous desktop patches catch session-destroying regressions before merge
 ---
 
 ## Phase 0: Foundation (COMPLETE)
@@ -2873,3 +2906,31 @@ Phase 10.5 (Scaling) ----> Phase 11 (A2A) ----> Phase 12 (Tailscale)
 | `M` | Medium — 1-4 hours, 2-5 files |
 | `L` | Large — 4-16 hours, cross-package |
 | `XL` | Extra large — multi-day, architectural change |
+
+<!-- whiteclaw-rollout:start -->
+## Whiteclaw-Derived Overhaul (2026-04-08)
+
+This tranche applies the highest-value whiteclaw findings that fit this repo's real surface: engineer briefs, bounded skills/runbooks, searchable provenance, scoped MCP packaging, and explicit verification ladders.
+
+### Strategic Focus
+- Use whiteclaw patterns to harden the repo's operator front door: engineer briefs, discovery surfaces, and explicit verification ladders.
+- Prefer typed contracts and reusable control-plane machinery over more handwritten transport or prompt glue.
+- Keep the repo searchable and self-describing so future sweeps do not depend on raw code spelunking.
+
+### Recommended Work
+- [ ] [Structure] Document subtree ownership and canonical source boundaries across nested modules, packages, or roadmaps.
+- [ ] [CI] Add at least one smoke workflow that proves the public build/test path still matches the docs.
+- [ ] [Verification] Add a layered verification ladder: build/lint, help/startup, discovery/health, and one non-destructive end-to-end check.
+- [ ] [Telemetry] Tighten `.ralph` verification, cost, recovery, and improvement-journal coverage around the flows that actually matter.
+- [ ] [Discovery] Add or harden a discovery-first contract layer for catalog/search/schema/health before widening the mutating tool surface.
+- [ ] [Public docs] Keep release, migration, and example docs aligned with the real public workflow.
+
+### Rationale Snapshot
+- Tier / lifecycle: `tier-1` / `active`
+- Language profile: `Go`
+- Visibility / sensitivity: `PUBLIC` / `public`
+- Surface baseline: AGENTS=yes, skills=yes, codex=yes, mcp_manifest=configured, ralph=yes, roadmap=yes
+- Whiteclaw transfers in scope: verification ladder, skill/runbook splits, manifest smoke tests, engineer brief
+- Live repo notes: AGENTS, skills, Codex config, configured .mcp.json, .ralph, multi-module/workspace, nested roadmaps
+
+<!-- whiteclaw-rollout:end -->

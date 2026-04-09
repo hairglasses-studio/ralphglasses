@@ -23,6 +23,37 @@ import (
 // DefaultMaxConcurrent is the default number of concurrent MCP tool handlers.
 const DefaultMaxConcurrent = 32
 
+// SecretSanitizationMiddleware redacts API keys and secrets from the tool result content
+// and error messages before they are returned to the client.
+func SecretSanitizationMiddleware() server.ToolHandlerMiddleware {
+	return func(next server.ToolHandlerFunc) server.ToolHandlerFunc {
+		return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			result, err := next(ctx, req)
+			
+			if err != nil {
+				err = fmt.Errorf("%s", RedactSecrets(err.Error()))
+			}
+
+			if result != nil {
+				for i, c := range result.Content {
+					if tc, ok := c.(mcp.TextContent); ok {
+						tc.Text = RedactSecrets(tc.Text)
+						result.Content[i] = tc
+					}
+				}
+				// Also sanitize error strings inside the result if present
+				for i, c := range result.Content {
+					if tc, ok := c.(mcp.TextContent); ok && result.IsError {
+						tc.Text = RedactSecrets(tc.Text)
+						result.Content[i] = tc
+					}
+				}
+			}
+			return result, err
+		}
+	}
+}
+
 // ConcurrencyMiddleware limits the number of concurrent MCP tool handler
 // executions using a weighted semaphore. When all slots are occupied, incoming
 // requests block until the context is cancelled (e.g. timeout), at which point

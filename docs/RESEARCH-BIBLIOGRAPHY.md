@@ -156,3 +156,23 @@ Papers 2602.20478 (Codified Context) and MAGMA's 4-graph schema show tiered memo
 
 ### 7. Code graphs dramatically improve agent performance
 Papers 2505.16901, 2505.14394 show graph-based code understanding reduces search space from thousands to ~20 candidates, with 89.7% of fixes requiring 2+ graph hops (E2).
+
+### 8. Ecosystem Resources (Codex & Ralph Loop Patterns)
+Industry and community patterns for iterative autonomous development loops, Codex sub-agents, and state management.
+* [VoltAgent/awesome-codex-subagents](https://github.com/VoltAgent/awesome-codex-subagents)
+* [ComposioHQ/awesome-codex-skills](https://github.com/ComposioHQ/awesome-codex-skills)
+* [onurkanbakirci/awesome-codex-automations](https://github.com/onurkanbakirci/awesome-codex-automations)
+* [GitHub Topics: ralph-loop](https://github.com/topics/ralph-loop?o=asc&s=updated)
+* [abhishekbhakat/ralph-loop-for-antigravity](https://github.com/abhishekbhakat/ralph-loop-for-antigravity)
+* [JH427/ralph-codex](https://github.com/JH427/ralph-codex)
+* [umputun/ralphex](https://github.com/umputun/ralphex)
+* [iannuttall/ralph](https://github.com/iannuttall/ralph)
+* [breezewish/CodexPotter](https://github.com/breezewish/CodexPotter)
+* [ghuntley/how-to-ralph-wiggum](https://github.com/ghuntley/how-to-ralph-wiggum)
+* [DMontgomery40/Ralph audit loop](https://gist.github.com/DMontgomery40/08c1bdede08ca1cee8800db7da1cda25)
+* [kenryu42/ralph-review](https://github.com/kenryu42/ralph-review)
+* [alfredolopez80/multi-agent-ralph-loop](https://github.com/alfredolopez80/multi-agent-ralph-loop)
+* [gemini-cli-extensions/ralph](https://github.com/gemini-cli-extensions/ralph)
+* [kranthik123/Gemini-Ralph-Loop](https://github.com/kranthik123/Gemini-Ralph-Loop)
+* [AsyncFuncAI/ralph-wiggum-extension](https://github.com/AsyncFuncAI/ralph-wiggum-extension)
+* [AsyncFuncAI/ralph-wiggum-extension (GEMINI.md)](https://github.com/AsyncFuncAI/ralph-wiggum-extension/blob/main/GEMINI.md)

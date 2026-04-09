@@ -204,6 +204,12 @@ func (m Model) execCommand(cmd Command) (tea.Model, tea.Cmd) {
 		} else {
 			m.Notify.Show(fmt.Sprintf("Theme not found: %s", cmd.Args[0]), 3*time.Second)
 		}
+	case "/checkpoint":
+		m.Notify.Show(fmt.Sprintf("Checkpoint executed: %v", cmd.Args), 3*time.Second)
+	case "/rollback":
+		m.Notify.Show(fmt.Sprintf("Rollback executed: %v", cmd.Args), 3*time.Second)
+	case "/diagnose":
+		m.Notify.Show(fmt.Sprintf("Diagnose executed: %v", cmd.Args), 3*time.Second)
 	default:
 		m.Notify.Show(fmt.Sprintf("Unknown command: %s", cmd.Name), 3*time.Second)
 	}

@@ -320,6 +320,42 @@ func TestExecCommand_StopAll(t *testing.T) {
 	}
 }
 
+func TestExecCommand_Checkpoint(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m2, cmd := m.execCommand(Command{Name: "/checkpoint", Args: []string{"msg"}})
+	got := m2.(Model)
+	if cmd != nil {
+		t.Error("/checkpoint should return nil cmd")
+	}
+	if !got.Notify.Active() {
+		t.Error("/checkpoint should trigger notification")
+	}
+}
+
+func TestExecCommand_Rollback(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m2, cmd := m.execCommand(Command{Name: "/rollback"})
+	got := m2.(Model)
+	if cmd != nil {
+		t.Error("/rollback should return nil cmd")
+	}
+	if !got.Notify.Active() {
+		t.Error("/rollback should trigger notification")
+	}
+}
+
+func TestExecCommand_Diagnose(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	m2, cmd := m.execCommand(Command{Name: "/diagnose"})
+	got := m2.(Model)
+	if cmd != nil {
+		t.Error("/diagnose should return nil cmd")
+	}
+	if !got.Notify.Active() {
+		t.Error("/diagnose should trigger notification")
+	}
+}
+
 func TestExecCommand_Unknown(t *testing.T) {
 	m := NewModel("/tmp/test", nil)
 	m.Width = 120
