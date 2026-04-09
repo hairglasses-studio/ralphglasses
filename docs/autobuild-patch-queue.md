@@ -1,17 +1,18 @@
 # Ralphglasses Autobuild Patch Queue
 
-Date: 2026-04-08
+Date: 2026-04-09
 Scope: roadmap-derived queue for repo-owned automated patch selection
 
 ## Source Inputs
 
-This queue is derived from the current shipped repo surfaces plus the latest docs control-plane checkpoint:
+This queue is derived from the current shipped repo surfaces plus the latest
+docs control-plane evidence:
 
 - `ROADMAP.md`
 - `README.md`
 - `docs/CODEX-PARITY-STATUS.md`
-- `hairglasses-studio/docs/projects/agent-parity/2026-04-08-next-tranche-checkpoint.md`
-- `hairglasses-studio/docs/projects/agent-parity/2026-04-08-next-tranche-checkpoint.json`
+- `hairglasses-studio/docs/projects/agent-parity/active-fleet-investigation-2026-04-09.md`
+- `hairglasses-studio/docs/agent-parity/workspace-health-matrix.json`
 
 ## Current Stance
 
@@ -69,11 +70,14 @@ Priority: `P1`
 Why now:
 
 - The broader parity program is already seeing stale local red state masquerade as repo debt.
+- The refreshed workspace matrix now distinguishes real failures from `dirty`
+  and `not_main` worktrees, so autobuild should consume that signal directly.
 - `ralphglasses` should not burn autobuild cycles on failures that do not reproduce on remote `main`.
 
 Acceptance:
 
-- Automated patch selection requires remote-main verification metadata for a red signal.
+- Automated patch selection requires remote-main verification metadata for a
+  red signal.
 - Dirty-worktree or branch-local failures do not enter the repo-owned patch queue by default.
 
 ### 4. `generated_surface_drift_gate`
