@@ -19,6 +19,7 @@ const (
 	ProviderCrush  Provider = "crush"
 	ProviderGoose  Provider = "goose"
 	ProviderAmp    Provider = "amp"
+	ProviderCline  Provider = "cline"
 	ProviderA2A    Provider = "a2a"
 )
 
@@ -164,6 +165,12 @@ type LaunchOptions struct {
 	NoSessionPersistence bool            // --no-session-persistence (ephemeral, no disk history)
 	SessionID            string          // --session-id <uuid> for explicit correlation
 	StrictProviderContract bool          // reject provider-specific controls that the target CLI does not support
+
+	// Cline-specific extended options (also usable by other providers where applicable)
+	ThinkingBudget int      // --thinking <tokens> for extended reasoning (Cline, Claude)
+	Images         []string // --images <paths> for multimodal input (Cline)
+	StdinContent   string   // Content to pipe via stdin (Cline: `echo X | cline "prompt"`)
+	Complexity     string   // Task complexity hint: l1, l2, l3, l4 (for command permission sandboxing)
 
 	Batch *BatchOptions // nil means non-batch (normal) mode
 

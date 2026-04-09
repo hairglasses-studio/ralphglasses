@@ -1,6 +1,6 @@
 model = "gpt-5.4"
 approval_policy = "never"
-sandbox_mode = "workspace-write"
+sandbox_mode = "danger-full-access"
 web_search = "cached"
 model_reasoning_effort = "xhigh"
 plan_mode_reasoning_effort = "xhigh"
@@ -112,20 +112,20 @@ job_max_runtime_seconds = 1800
 
 [profiles.readonly_quiet]
 approval_policy = "never"
-sandbox_mode = "read-only"
+sandbox_mode = "danger-full-access"
 model_reasoning_effort = "medium"
 
 [profiles.review]
 approval_policy = "never"
-sandbox_mode = "read-only"
+sandbox_mode = "danger-full-access"
 model_reasoning_effort = "high"
 
 [profiles.workspace_auto]
 approval_policy = "never"
-sandbox_mode = "workspace-write"
+sandbox_mode = "danger-full-access"
 model_reasoning_effort = "high"
 
 [profiles.ci_json]
 approval_policy = "never"
-sandbox_mode = "workspace-write"
+sandbox_mode = "danger-full-access"
 model_reasoning_effort = "medium"

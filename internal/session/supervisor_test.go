@@ -48,6 +48,55 @@ func TestSupervisor_StartStop(t *testing.T) {
 	}
 }
 
+func TestSupervisor_StartStopRestoresGate(t *testing.T) {
+	oldGate := GateEnabled.Load()
+	GateEnabled.Store(false)
+	defer func() { GateEnabled.Store(oldGate) }()
+
+	s, _ := newTestSupervisor(t)
+	if err := s.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	if !GateEnabled.Load() {
+		t.Fatal("expected gate enabled while supervisor is running")
+	}
+
+	s.Stop()
+	if GateEnabled.Load() {
+		t.Fatal("expected gate disabled after supervisor stops")
+	}
+}
+
+func TestSupervisor_ContextCancelRestoresGate(t *testing.T) {
+	oldGate := GateEnabled.Load()
+	GateEnabled.Store(false)
+	defer func() { GateEnabled.Store(oldGate) }()
+
+	s, _ := newTestSupervisor(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer s.Stop()
+
+	if err := s.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	if !GateEnabled.Load() {
+		t.Fatal("expected gate enabled while supervisor is running")
+	}
+
+	cancel()
+
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for s.Running() && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if s.Running() {
+		t.Fatal("expected supervisor to stop after context cancel")
+	}
+	if GateEnabled.Load() {
+		t.Fatal("expected gate disabled after context cancel")
+	}
+}
+
 func TestSupervisor_Idempotent(t *testing.T) {
 	s, _ := newTestSupervisor(t)
 	ctx := context.Background()

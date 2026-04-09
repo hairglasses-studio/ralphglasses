@@ -279,15 +279,16 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		return fmt.Errorf("supervisor: RepoPath is required")
 	}
 	childCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
 	s.cancel = cancel
 	s.running = true
 	s.startedAt = time.Now()
-	s.done = make(chan struct{})
+	s.done = done
 
 	// Enable the E2E test gate at L2+ so auto-optimizer changes are validated.
-	GateEnabled.Store(true)
+	acquireSupervisorGate()
 
-	go s.run(childCtx)
+	go s.run(childCtx, done)
 	return nil
 }
 
@@ -311,9 +312,6 @@ func (s *Supervisor) Stop() {
 		}
 	}
 	s.wg.Wait()
-	s.mu.Lock()
-	s.running = false
-	s.mu.Unlock()
 }
 
 // Running returns whether the supervisor is active.
@@ -363,10 +361,16 @@ func (s *Supervisor) Status() SupervisorState {
 	return st
 }
 
-func (s *Supervisor) run(ctx context.Context) {
+func (s *Supervisor) run(ctx context.Context, done chan struct{}) {
 	ticker := time.NewTicker(s.TickInterval)
 	defer ticker.Stop()
-	defer close(s.done)
+	defer func() {
+		releaseSupervisorGate()
+		s.mu.Lock()
+		s.running = false
+		s.mu.Unlock()
+		close(done)
+	}()
 	for {
 		select {
 		case <-ctx.Done():

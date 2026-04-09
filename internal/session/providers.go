@@ -57,7 +57,7 @@ func ValidateProvider(p Provider) error {
 	}
 	bin := providerBinary(p)
 	if bin == "" {
-		return fmt.Errorf("unknown provider: %q (valid: claude, gemini, codex, crush, goose, amp, a2a)", p)
+		return fmt.Errorf("unknown provider: %q (valid: claude, gemini, codex, cline, crush, goose, amp, a2a)", p)
 	}
 	if _, err := exec.LookPath(bin); err != nil {
 		return fmt.Errorf("%s binary not found on PATH: %w", bin, err)
@@ -78,6 +78,8 @@ func providerEnvVar(p Provider) string {
 		return "GOOSE_API_KEY"
 	case ProviderAmp:
 		return "AMP_ACCESS_TOKEN"
+	case ProviderCline:
+		return "" // Cline uses WorkOS OAuth, not an env var API key
 	case ProviderA2A:
 		return "A2A_AGENT_URL" // Not a secret, but used for configuration
 	default:
@@ -89,6 +91,11 @@ func providerEnvVar(p Provider) string {
 func ValidateProviderEnv(p Provider) error {
 	// A2A is HTTP-based; agent URL is passed at session launch, not via env var.
 	if p == ProviderA2A {
+		return nil
+	}
+	// Cline manages its own auth via WorkOS OAuth (~/.cline/data/settings/providers.json).
+	// No environment variable is required.
+	if p == ProviderCline {
 		return nil
 	}
 	envVar := providerEnvVar(p)
@@ -195,6 +202,8 @@ func ProviderDefaults(p Provider) (model string) {
 		return "claude-sonnet-4-6"
 	case ProviderAmp:
 		return "amp-default"
+	case ProviderCline:
+		return "" // Cline uses its own configured model; empty means use Cline's default
 	case ProviderA2A:
 		return "a2a-remote"
 	default:
@@ -218,6 +227,8 @@ func providerBinary(p Provider) string {
 		return "goose"
 	case ProviderAmp:
 		return "amp"
+	case ProviderCline:
+		return "cline"
 	default:
 		return ""
 	}
@@ -258,6 +269,8 @@ func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, er
 		return buildGooseCmd(ctx, opts), nil
 	case ProviderAmp:
 		return buildAmpCmd(ctx, opts), nil
+	case ProviderCline:
+		return buildClineCmd(ctx, opts), nil
 	default:
 		return buildClaudeCmd(ctx, opts), nil
 	}

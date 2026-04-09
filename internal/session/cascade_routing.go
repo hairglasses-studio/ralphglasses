@@ -30,10 +30,74 @@ type ModelTier struct {
 // DefaultModelTiers returns the built-in tier list ordered by cost.
 func DefaultModelTiers() []ModelTier {
 	return []ModelTier{
+		// L4: Free tier — Cline native free models
+		{Provider: ProviderCline, Model: "minimax/minimax-m2.5", MaxComplexity: 2, CostPer1M: 0.0, Label: "free-general"},
+		{Provider: ProviderCline, Model: "z-ai/glm-5", MaxComplexity: 2, CostPer1M: 0.0, Label: "free-coder"},
+		{Provider: ProviderCline, Model: "kwaipilot/kat-coder-pro", MaxComplexity: 1, CostPer1M: 0.0, Label: "free-math"},
+		{Provider: ProviderCline, Model: "arcee-ai/trinity-large-preview:free", MaxComplexity: 1, CostPer1M: 0.0, Label: "free-moe"},
+		// L4: Free tier — OpenRouter :free models (via Cline BYOK/OpenRouter)
+		{Provider: ProviderCline, Model: "deepseek/deepseek-r1:free", MaxComplexity: 2, CostPer1M: 0.0, Label: "free-reasoning"},
+		{Provider: ProviderCline, Model: "deepseek/deepseek-chat-v3-0324:free", MaxComplexity: 2, CostPer1M: 0.0, Label: "free-impl"},
+		{Provider: ProviderCline, Model: "qwen/qwen3-235b-a22b:free", MaxComplexity: 2, CostPer1M: 0.0, Label: "free-oss"},
+		// L3: Ultra-cheap tier
 		{Provider: ProviderGemini, Model: "gemini-3.1-flash-lite", MaxComplexity: 1, CostPer1M: CostGeminiFlashLiteInput, Label: "ultra-cheap"},
+		// L2: Worker tier
 		{Provider: ProviderGemini, Model: "gemini-3.1-flash", MaxComplexity: 2, CostPer1M: CostGeminiFlashInput, Label: "worker"},
+		// L1: Frontier tier
 		{Provider: ProviderCodex, Model: "gpt-5.4", MaxComplexity: 3, CostPer1M: CostCodexInput, Label: "coding"},
 		{Provider: ProviderClaude, Model: "claude-opus", MaxComplexity: 4, CostPer1M: CostClaudeOpusInput, Label: "reasoning"},
+	}
+}
+
+// FreeModelIDs returns the model IDs available at zero cost via Cline.
+func FreeModelIDs() []string {
+	return []string{
+		// Cline native free
+		"minimax/minimax-m2.5",
+		"z-ai/glm-5",
+		"kwaipilot/kat-coder-pro",
+		"arcee-ai/trinity-large-preview:free",
+		// OpenRouter :free
+		"deepseek/deepseek-r1:free",
+		"deepseek/deepseek-chat-v3-0324:free",
+		"qwen/qwen3-235b-a22b:free",
+		"meta-llama/llama-4-maverick:free",
+	}
+}
+
+// IsFreeModel returns true if the model ID is a known zero-cost model.
+func IsFreeModel(model string) bool {
+	for _, m := range FreeModelIDs() {
+		if m == model {
+			return true
+		}
+	}
+	return strings.HasSuffix(model, ":free")
+}
+
+// ModelTierTimeout returns the recommended timeout for a model tier.
+// Free/slow models get longer timeouts based on pressure test data.
+func ModelTierTimeout(model string, provider Provider) int {
+	if IsFreeModel(model) {
+		// OpenRouter :free models are rate-limited, need longer timeouts
+		if strings.HasSuffix(model, ":free") {
+			return 300 // 5 minutes for rate-limited OpenRouter free
+		}
+		// Cline native free: MiniMax fastest, others slower
+		if strings.Contains(model, "minimax") {
+			return 120
+		}
+		return 180 // GLM-5, KAT, Trinity need more time
+	}
+	switch provider {
+	case ProviderClaude:
+		return 90
+	case ProviderCodex:
+		return 90
+	case ProviderGemini:
+		return 120
+	default:
+		return 120
 	}
 }
 

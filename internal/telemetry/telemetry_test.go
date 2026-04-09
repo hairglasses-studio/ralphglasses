@@ -10,8 +10,8 @@ import (
 
 func TestAllEventTypes(t *testing.T) {
 	types := AllEventTypes()
-	if len(types) != 5 {
-		t.Errorf("AllEventTypes() returned %d types, want 5", len(types))
+	if len(types) != 7 {
+		t.Errorf("AllEventTypes() returned %d types, want 7", len(types))
 	}
 	seen := make(map[EventType]bool)
 	for _, et := range types {

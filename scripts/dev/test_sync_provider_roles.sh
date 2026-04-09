@@ -111,7 +111,7 @@ assert_file_contains "codex projection renders override prompt" \
 
 assert_file_contains "claude projection uses default surface" \
   "${fixture}/.claude/agents/docs-researcher.md" \
-  'provider: claude'
+  'provider: claude -->'
 assert_file_contains "claude projection falls back to base summary" \
   "${fixture}/.claude/agents/docs-researcher.md" \
   'description: Base summary'
@@ -121,7 +121,7 @@ assert_file_contains "claude projection falls back to base prompt" \
 
 assert_file_contains "gemini projection uses override surface" \
   "${fixture}/.gemini/agents/docs_researcher.md" \
-  'provider: gemini'
+  'provider: gemini -->'
 assert_file_contains "gemini projection renders override model" \
   "${fixture}/.gemini/agents/docs_researcher.md" \
   'model: gemini-2.5-pro'
@@ -133,7 +133,7 @@ assert_file_contains "gemini projection renders override max turns" \
   'maxTurns: 5'
 assert_file_contains "gemini projection records source manifest" \
   "${fixture}/.gemini/agents/docs_researcher.md" \
-  'source_manifest: .agents/roles/docs-researcher.json'
+  'source_manifest: .agents/roles/docs-researcher.json -->'
 
 assert_exit "generator check passes after sync" 0 \
   "${PYTHON_BIN}" "${fixture}/scripts/sync-provider-roles.py" --check

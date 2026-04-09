@@ -84,6 +84,11 @@ func (cr *CostRates) ProviderCostRateFrom(p Provider) CostRate {
 	case ProviderAmp:
 		rate.InputPer1M = cr.lookupInput("amp", CostClaudeSonnetInput)
 		rate.OutputPer1M = cr.lookupOutput("amp", CostClaudeSonnetOutput)
+	case ProviderCline:
+		// Cline free tier: $0 cost (uses Cline's own auth/billing, not direct API).
+		// Configurable via cost_rates.json for paid models routed through Cline.
+		rate.InputPer1M = cr.lookupInput("cline", 0.0)
+		rate.OutputPer1M = cr.lookupOutput("cline", 0.0)
 	case ProviderA2A:
 		rate.InputPer1M = cr.lookupInput("a2a", CostClaudeSonnetInput)
 		rate.OutputPer1M = cr.lookupOutput("a2a", CostClaudeSonnetOutput)

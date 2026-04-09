@@ -33,7 +33,7 @@ var doctorCmd = &cobra.Command{
 configured correctly for running ralphglasses.
 
 Checks include:
-  - Provider binaries (claude, gemini, codex)
+  - Provider binaries (claude, gemini, codex, cline)
   - Git binary and version (>= 2.20 for worktree support)
   - Config file (` + ralphpath.ConfigPathDefaultDescription() + `)
   - State directory (` + ralphpath.StateDirDefaultDescription() + `) permissions
@@ -100,6 +100,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	collect(checkClaude())
 	collect(checkGemini())
 	collect(checkCodex())
+	collect(checkCline())
 
 	// --- Git ---
 	collect(checkGit())
@@ -218,6 +219,36 @@ func checkCodex() doctorResult {
 		return doctorResult{Name: "codex", Status: statusWarn, Message: "codex not found in PATH (optional)"}
 	}
 	return doctorResult{Name: "codex", Status: statusPass, Message: path}
+}
+
+// checkCline verifies the cline binary is on PATH and reports its version.
+// Cline uses WorkOS OAuth for auth (stored in ~/.cline/data/), not env var API keys.
+func checkCline() doctorResult {
+	path, err := exec.LookPath("cline")
+	if err != nil {
+		return doctorResult{Name: "cline", Status: statusWarn, Message: "cline not found in PATH (optional — free-tier fleet provider)"}
+	}
+	out, err := exec.Command("cline", "version").CombinedOutput()
+	if err != nil {
+		// Binary exists but version check failed — still usable.
+		return doctorResult{Name: "cline", Status: statusPass, Message: path}
+	}
+	ver := strings.TrimSpace(string(out))
+	if idx := strings.IndexByte(ver, '\n'); idx >= 0 {
+		ver = ver[:idx]
+	}
+
+	// Check if Cline has auth configured by looking for config directory.
+	clineDir := os.Getenv("CLINE_DIR")
+	if clineDir == "" {
+		home, _ := os.UserHomeDir()
+		clineDir = filepath.Join(home, ".cline", "data")
+	}
+	if _, statErr := os.Stat(clineDir); statErr != nil {
+		return doctorResult{Name: "cline", Status: statusWarn, Message: ver + " (no config dir — run 'cline auth' to configure)"}
+	}
+
+	return doctorResult{Name: "cline", Status: statusPass, Message: ver}
 }
 
 // checkGit verifies git is on PATH and its version is >= 2.20 (worktree support).

@@ -46,6 +46,8 @@ func Scaffold(repoPath string, opts ScaffoldOptions) (*ScaffoldResult, error) {
 		filepath.Join(repoPath, "AGENTS.md"):                     generateAgentsMD,
 		filepath.Join(repoPath, ".agents", "roles", "README.md"): generateRoleCatalogReadme,
 		filepath.Join(repoPath, ".codex", "config.toml"):       generateCodexConfig,
+		filepath.Join(repoPath, ".clinerules"):                  generateClinerules,
+		filepath.Join(repoPath, ".cline", "mcp.json"):           generateClineMCPConfig,
 		filepath.Join(ralphDir, "PROMPT.md"):                     generatePrompt,
 		filepath.Join(ralphDir, "AGENT.md"):                      generateAgent,
 		filepath.Join(ralphDir, "fix_plan.md"):                   generateFixPlan,
@@ -213,6 +215,43 @@ personality = "pragmatic"
 max_threads = 6
 max_depth = 1
 job_max_runtime_seconds = 1800
+`
+}
+
+func generateClinerules(projectName string, opts ScaffoldOptions) string {
+	build, test, vet := buildCommands(opts.ProjectType)
+	return fmt.Sprintf(`# %s — Cline Rules
+
+## Build & Verify
+
+`+"`"+`%s`+"`"+` to build, `+"`"+`%s`+"`"+` to test, `+"`"+`%s`+"`"+` to lint.
+
+## Working Rules
+
+- Read the codebase before changing it.
+- Prefer the smallest defensible change.
+- Run verification commands after edits.
+- Keep unrelated files untouched.
+- Follow AGENTS.md for shared project instructions.
+
+## Roles & Skills
+
+- Shared workflows: `+"`.agents/skills/`"+`
+- Fleet roles: `+"`.agents/roles/*.json`"+`
+- MCP tools: `+"`.cline/mcp.json`"+` (ralphglasses MCP server)
+`, projectName, build, test, vet)
+}
+
+func generateClineMCPConfig(_ string, _ ScaffoldOptions) string {
+	return `{
+  "mcpServers": {
+    "ralphglasses": {
+      "command": "ralphglasses",
+      "args": ["mcp"],
+      "disabled": false
+    }
+  }
+}
 `
 }
 

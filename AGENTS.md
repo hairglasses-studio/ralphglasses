@@ -3,14 +3,14 @@
 
 Command-and-control TUI + bootable thin client for parallel multi-LLM agent fleets.
 
-Supports **Claude Code**, **Gemini CLI**, and **OpenAI Codex CLI** as session providers.
+Supports **Claude Code**, **Gemini CLI**, **OpenAI Codex CLI**, and **Cline CLI** as session providers.
 
 ## Start Here
 
 1. Read the architecture tree below before changing module boundaries
 2. Check `~/hairglasses-studio/docs/` for existing research before starting new work
 3. Run `make ci` before every commit — this is the quality gate
-4. **Role and skill surfaces**: `.agents/skills/` is canonical for workflows; `.agents/roles/` is canonical for reusable fleet roles; native role projections live in `.codex/agents/`, `.claude/agents/`, and `.gemini/agents/`
+4. **Role and skill surfaces**: `.agents/skills/` is canonical for workflows; `.agents/roles/` is canonical for reusable fleet roles; native role projections live in `.codex/agents/`, `.claude/agents/`, `.gemini/agents/`, and `.clinerules`
 5. **Tool discovery**: `ralphglasses_tool_groups` → `ralphglasses_load_tool_group <name>` → use tools. Groups are deferred-loaded to save context tokens.
 
 ## Build & Run
@@ -81,6 +81,7 @@ The `internal/session/` package uses a provider dispatch pattern:
 | `codex` (default) | `codex` | `gpt-5.4` | `--json` (NDJSON) | Yes (`exec resume`, when supported by the installed CLI) |
 | `claude` | `claude` | `sonnet` | `stream-json` | Yes (`--resume`) |
 | `gemini` | `gemini` | `gemini-3.1-pro` | `stream-json` | Yes (`--resume`) |
+| `cline` | `cline` | Cline-managed (free tier) | `--json` (NDJSON) | Yes (`--taskId`, `--continue`) |
 
 ## Codex-Specific Notes
 

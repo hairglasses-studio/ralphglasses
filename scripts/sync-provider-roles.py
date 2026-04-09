@@ -88,9 +88,8 @@ def render_codex(config: dict) -> str:
 def render_markdown(config: dict) -> str:
     lines = [
         "---",
+        f"name: {config['name']}",
         f"description: {config['description']}",
-        f"source_manifest: .agents/roles/{config['role_name']}.json",
-        f"provider: {config['provider']}",
     ]
     if config.get("model"):
         lines.append(f"model: {config['model']}")
@@ -98,8 +97,19 @@ def render_markdown(config: dict) -> str:
         tools = ", ".join(config["tools"])
         lines.append(f"tools: [{tools}]")
     if config.get("max_turns"):
+        # Gemini CLI uses maxTurns in its validation schema for Local Agents.
         lines.append(f"maxTurns: {config['max_turns']}")
-    lines.extend(["---", "", config["prompt"].rstrip(), ""])
+    lines.append("---")
+    # Move source tracking metadata to markdown comments to keep the frontmatter clean
+    # and strictly compliant with Gemini CLI validation.
+    lines.extend([
+        "",
+        f"<!-- source_manifest: .agents/roles/{config['role_name']}.json -->",
+        f"<!-- provider: {config['provider']} -->",
+        "",
+        config["prompt"].rstrip(),
+        "",
+    ])
     return "\n".join(lines)
 
 

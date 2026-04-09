@@ -1,13 +1,15 @@
 package session
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/resource"
 )
 
-// helper creates a minimal valid repo structure in a temp dir.
 func setupValidRepo(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -21,7 +23,31 @@ func setupValidRepo(t *testing.T) string {
 	if err := os.WriteFile(filepath.Join(dir, "ROADMAP.md"), []byte(roadmap), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	stubValidationEnvironment(t)
 	return dir
+}
+
+func stubValidationEnvironment(t *testing.T) {
+	t.Helper()
+	oldClaude := validateClaudeLookPath
+	oldTmux := validateTmuxLookPath
+	oldTmuxList := validateTmuxList
+	oldGitStatus := validateGitStatus
+	oldResourceStatus := validateResourceStatus
+	validateClaudeLookPath = func() error { return errors.New("missing") }
+	validateTmuxLookPath = func() error { return errors.New("missing") }
+	validateTmuxList = func() ([]byte, error) { return nil, errors.New("inactive") }
+	validateGitStatus = func(string) ([]byte, error) { return nil, nil }
+	validateResourceStatus = func(string) resource.Status {
+		return resource.Status{DiskFreeBytes: 10 * 1024 * 1024 * 1024}
+	}
+	t.Cleanup(func() {
+		validateClaudeLookPath = oldClaude
+		validateTmuxLookPath = oldTmux
+		validateTmuxList = oldTmuxList
+		validateGitStatus = oldGitStatus
+		validateResourceStatus = oldResourceStatus
+	})
 }
 
 func TestValidateConfig_ValidRepo(t *testing.T) {
@@ -98,21 +124,60 @@ func TestValidateConfig_AllItemsChecked(t *testing.T) {
 
 func TestValidateConfig_WarningsDontPreventOK(t *testing.T) {
 	dir := setupValidRepo(t)
-	// No cost_observations.json → should produce a warning but still OK.
 	result := ValidateConfig(dir)
 	if !result.OK() {
 		t.Fatalf("expected OK despite warnings, got errors: %v", result.Errors)
 	}
-	// There should be at least the cost_observations warning.
 	if len(result.Warnings) == 0 {
 		t.Fatal("expected at least one warning")
 	}
 }
 
+func TestValidateConfig_LowDiskWarning(t *testing.T) {
+	dir := setupValidRepo(t)
+	validateResourceStatus = func(string) resource.Status {
+		return resource.Status{DiskFreeBytes: 4 * 1024 * 1024 * 1024}
+	}
+	result := ValidateConfig(dir)
+	if !result.OK() {
+		t.Fatalf("expected OK despite low disk warning, got errors: %v", result.Errors)
+	}
+	found := false
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "low disk space") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected low disk warning, got: %v", result.Warnings)
+	}
+}
+
+func TestValidateConfig_TmuxInactiveWarning(t *testing.T) {
+	dir := setupValidRepo(t)
+	validateTmuxLookPath = func() error { return nil }
+	validateTmuxList = func() ([]byte, error) { return nil, errors.New("not running") }
+	result := ValidateConfig(dir)
+	if !result.OK() {
+		t.Fatalf("expected OK despite tmux warning, got errors: %v", result.Errors)
+	}
+	found := false
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "tmux not active") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected tmux warning, got: %v", result.Warnings)
+	}
+}
+
 func TestValidateConfig_NonexistentPath(t *testing.T) {
+	stubValidationEnvironment(t)
 	result := ValidateConfig("/tmp/definitely-does-not-exist-validate-test")
 	if result.OK() {
 		t.Fatal("expected error for nonexistent path")
 	}
 }
-

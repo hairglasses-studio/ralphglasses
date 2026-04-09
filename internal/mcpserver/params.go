@@ -184,6 +184,11 @@ func (p *Params) StringSlice(key, sep string) []string {
 	return result
 }
 
+// OptionalStringList returns the string slice parameter (comma-separated string) or nil if empty.
+func (p *Params) OptionalStringList(key string) []string {
+	return p.StringSlice(key, ",")
+}
+
 // Req returns the underlying CallToolRequest for cases where direct access
 // is needed (e.g., passing to existing helpers).
 func (p *Params) Req() mcp.CallToolRequest {

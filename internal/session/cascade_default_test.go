@@ -66,9 +66,8 @@ func TestDefaultCascadeConfig_Enabled(t *testing.T) {
 	if cfg.ConfidenceThreshold <= 0 || cfg.ConfidenceThreshold > 1 {
 		t.Errorf("DefaultCascadeConfig().ConfidenceThreshold = %v, want 0 < x <= 1", cfg.ConfidenceThreshold)
 	}
-	if cfg.MaxCheapBudgetUSD <= 0 {
-		t.Errorf("DefaultCascadeConfig().MaxCheapBudgetUSD = %v, want > 0", cfg.MaxCheapBudgetUSD)
-	}
+	// MaxCheapBudgetUSD is 0 by design: Cline is the cheap provider and is free-tier (no cost cap needed).
+	// The constraint is that MaxCheapTurns must still be set.
 	if cfg.MaxCheapTurns <= 0 {
 		t.Errorf("DefaultCascadeConfig().MaxCheapTurns = %v, want > 0", cfg.MaxCheapTurns)
 	}

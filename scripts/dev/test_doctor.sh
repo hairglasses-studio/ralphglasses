@@ -62,22 +62,22 @@ assert_exit() {
 # Test 1: required tools present (go + make + git), optional tools absent (no shellcheck/bats) → exit 0
 stub_required="$(make_stub_path go make git)"
 assert_exit "exits 0 when required tools present, optional tools absent" 0 \
-  env PATH="${stub_required}" "${BASH_BIN}" "${doctor}"
+  env RG_SKIP_HOST_ENV=1 PATH="${stub_required}" "${BASH_BIN}" "${doctor}"
 
 # Test 2: make absent, go + git present → exit non-zero
 stub_no_make="$(make_stub_path go git)"
 assert_exit "exits non-zero when required tool make is absent" 1 \
-  env PATH="${stub_no_make}" "${BASH_BIN}" "${doctor}"
+  env RG_SKIP_HOST_ENV=1 PATH="${stub_no_make}" "${BASH_BIN}" "${doctor}"
 
 # Test 3: system go absent but repo-local bootstrap go still available → exit 0
 stub_no_go="$(make_stub_path make git)"
 assert_exit "exits 0 when bootstrap-managed go is available without system go" 0 \
-  env PATH="${stub_no_go}" "${BASH_BIN}" "${doctor}"
+  env RG_SKIP_HOST_ENV=1 PATH="${stub_no_go}" "${BASH_BIN}" "${doctor}"
 
 # Test 4: git absent, go + make present → exit non-zero
 stub_no_git="$(make_stub_path go make)"
 assert_exit "exits non-zero when required tool git is absent" 1 \
-  env PATH="${stub_no_git}" "${BASH_BIN}" "${doctor}"
+  env RG_SKIP_HOST_ENV=1 PATH="${stub_no_git}" "${BASH_BIN}" "${doctor}"
 
 echo ""
 echo "Results: ${pass} passed, ${fail_count} failed"

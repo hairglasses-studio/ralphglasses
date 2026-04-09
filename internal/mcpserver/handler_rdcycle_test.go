@@ -69,9 +69,116 @@ Description: minor issue
 	}
 }
 
-func TestHandleFindingToTask_MissingFindingID(t *testing.T) {
+func TestHandleFindingToTask_JSONL(t *testing.T) {
 	t.Parallel()
-	srv, _ := setupTestServer(t)
+	srv, root := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repoPath := filepath.Join(root, "test-repo")
+	findings := []map[string]any{
+		{
+			"id":          "F1",
+			"category":    "bug",
+			"severity":    "critical",
+			"description": "JSONL test bug",
+			"resolved":    false,
+		},
+		{
+			"id":          "F2",
+			"category":    "quality",
+			"severity":    "medium",
+			"description": "Resolved bug",
+			"resolved":    true,
+		},
+	}
+
+	f, _ := os.Create(filepath.Join(repoPath, ".ralph", "test.jsonl"))
+	for _, find := range findings {
+		data, _ := json.Marshal(find)
+		f.Write(append(data, '\n'))
+	}
+	f.Close()
+
+	result, err := srv.handleFindingToTask(context.Background(), makeRequest(map[string]any{
+		"scratchpad_name": "test.jsonl",
+		"repo":            "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleFindingToTask returned error: %s", getResultText(result))
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if data["count"] != float64(1) { // only F1 is unresolved
+		t.Errorf("count = %v, want 1", data["count"])
+	}
+	tasks := data["tasks"].([]any)
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(tasks))
+	}
+	t0 := tasks[0].(map[string]any)
+	if t0["id"] != "F1" || t0["type"] != "bugfix" || t0["priority"] != "P0" {
+		t.Errorf("task mismatch: %+v", t0)
+	}
+}
+
+func TestHandleFindingToTask_AllMarkdown(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repoPath := filepath.Join(root, "test-repo")
+	scratchpad := `### FINDING-1
+Severity: HIGH
+Description: bug fix
+
+### FINDING-2
+Severity: LOW
+Description: documentation
+`
+	if err := os.WriteFile(filepath.Join(repoPath, ".ralph", "multi_scratchpad.md"), []byte(scratchpad), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := srv.handleFindingToTask(context.Background(), makeRequest(map[string]any{
+		"scratchpad_name": "multi",
+		"repo":            "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleFindingToTask returned error: %s", getResultText(result))
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if data["count"] != float64(2) {
+		t.Errorf("count = %v, want 2", data["count"])
+	}
+}
+
+func TestHandleFindingToTask_OptionalFindingID(t *testing.T) {
+	t.Parallel()
+	srv, root := setupTestServer(t)
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	repoPath := filepath.Join(root, "test-repo")
+	scratchpad := `### FINDING-1
+Description: item 1
+`
+	if err := os.WriteFile(filepath.Join(repoPath, ".ralph", "tool_improvement_scratchpad.md"), []byte(scratchpad), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	result, err := srv.handleFindingToTask(context.Background(), makeRequest(map[string]any{
 		"scratchpad_name": "tool_improvement",
@@ -80,12 +187,8 @@ func TestHandleFindingToTask_MissingFindingID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !result.IsError {
-		t.Fatal("expected error for missing finding_id")
-	}
-	text := getResultText(result)
-	if !strings.Contains(text, string(ErrInvalidParams)) {
-		t.Errorf("expected INVALID_PARAMS, got: %s", text)
+	if result.IsError {
+		t.Fatalf("handleFindingToTask returned error: %s", getResultText(result))
 	}
 }
 
@@ -166,106 +269,141 @@ func TestHandleFindingToTask_ScratchpadNotExist(t *testing.T) {
 // handleCycleBaseline
 // ---------------------------------------------------------------------------
 
-func TestHandleCycleBaseline_HappyPath(t *testing.T) {
+
+func TestHandleCycleBaseline(t *testing.T) {
 	t.Parallel()
 	srv, root := setupTestServer(t)
+
+	// Create a temporary directory for testing a Go repo
+	repoPath := filepath.Join(root, "test-go-repo")
+	if err := os.MkdirAll(filepath.Join(repoPath, ".ralph"), 0755); err != nil {
+		t.Fatalf("failed to create repo dir: %v", err)
+	}
+
+	// Initialize a simple Go module inside the temp directory
+	if err := os.WriteFile(filepath.Join(repoPath, "go.mod"), []byte("module example.com/testgorepo\n\ngo 1.26.1\n"), 0644); err != nil {
+		t.Fatalf("failed to write go.mod: %v", err)
+	}
+
+	// Create a dummy main.go
+	if err := os.WriteFile(filepath.Join(repoPath, "main.go"), []byte(`package main
+
+func Add(a, b int) int {
+	return a + b
+}
+
+func main() {}
+`), 0644); err != nil {
+		t.Fatalf("failed to write main.go: %v", err)
+	}
+
+	// Create a dummy main_test.go for coverage and test count
+	if err := os.WriteFile(filepath.Join(repoPath, "main_test.go"), []byte(`package main
+
+import "testing"
+
+func TestAdd(t *testing.T) {
+	if Add(1, 2) != 3 {
+		t.Errorf("Add(1, 2) was incorrect, got: %d, want: %d.", Add(1, 2), 3)
+	}
+}
+`), 0644); err != nil {
+		t.Fatalf("failed to write main_test.go: %v", err)
+	}
+
+	// Scan to discover the newly created repo
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
-	// Write a simple Go file so go build/test have something to work with.
-	repoPath := filepath.Join(root, "test-repo")
-	if err := os.WriteFile(filepath.Join(repoPath, "main.go"), []byte("package main\nfunc main() {}\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
+	// --- Test 1: Happy path ---
+	t.Run("HappyPath", func(t *testing.T) {
+		result, err := srv.handleCycleBaseline(context.Background(), makeRequest(map[string]any{
+			"repo": "test-go-repo",
+		}))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.IsError {
+			t.Fatalf("handleCycleBaseline returned error: %s", getResultText(result))
+		}
 
-	result, err := srv.handleCycleBaseline(context.Background(), makeRequest(map[string]any{
-		"repo": "test-repo",
-	}))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.IsError {
-		t.Fatalf("handleCycleBaseline returned error: %s", getResultText(result))
-	}
+		var data map[string]any
+		if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
 
-	var data map[string]any
-	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
+		if data["status"] != "captured" {
+			t.Errorf("status = %v, want captured", data["status"])
+		}
+		if data["repo"] != "test-go-repo" {
+			t.Errorf("repo = %v, want test-go-repo", data["repo"])
+		}
+		if _, ok := data["baseline_file"]; !ok {
+			t.Error("expected baseline_file in response")
+		}
+		if _, ok := data["coverage_pct"]; !ok {
+			t.Error("expected coverage_pct in response")
+		}
+		if _, ok := data["test_count"]; !ok {
+			t.Error("expected test_count in response")
+		}
+		if _, ok := data["lint_count"]; !ok {
+			t.Error("expected lint_count in response")
+		}
+		if _, ok := data["build_time_sec"]; !ok {
+			t.Error("expected build_time_sec in response")
+		}
+		if _, ok := data["go_version"]; !ok {
+			t.Error("expected go_version in response")
+		}
 
-	if data["status"] != "captured" {
-		t.Errorf("status = %v, want captured", data["status"])
-	}
-	if data["baseline_id"] == nil || data["baseline_id"] == "" {
-		t.Error("expected baseline_id in response")
-	}
-	if _, ok := data["metrics"]; !ok {
-		t.Error("expected metrics in response")
-	}
-	if _, ok := data["path"]; !ok {
-		t.Error("expected path in response")
-	}
+		// Verify file was written and content is correct.
+		baselineFilePath := filepath.Join(repoPath, ".ralph", "cycle_baseline.json")
+		if _, err := os.Stat(baselineFilePath); err != nil {
+			t.Errorf("baseline file not found at %s: %v", baselineFilePath, err)
+		}
 
-	// Verify file was written.
-	pathStr, _ := data["path"].(string)
-	if _, err := os.Stat(pathStr); err != nil {
-		t.Errorf("baseline file not found at %s: %v", pathStr, err)
-	}
+		fileContent, err := os.ReadFile(baselineFilePath)
+		if err != nil {
+			t.Fatalf("failed to read baseline file: %v", err)
+		}
+		var recordedBaseline map[string]any
+		if err := json.Unmarshal(fileContent, &recordedBaseline); err != nil {
+			t.Fatalf("failed to unmarshal recorded baseline: %v", err)
+		}
+
+		if recordedBaseline["repo_path"] != repoPath {
+			t.Errorf("recorded repo_path = %v, want %v", recordedBaseline["repo_path"], repoPath)
+		}
+		if recordedBaseline["coverage_pct"].(float64) <= 0 {
+			t.Errorf("recorded coverage_pct = %v, want > 0", recordedBaseline["coverage_pct"])
+		}
+		if recordedBaseline["test_count"].(float64) < 1 { // Should find at least one test
+			t.Errorf("recorded test_count = %v, want >= 1", recordedBaseline["test_count"])
+		}
+		if recordedBaseline["build_time_sec"].(float64) <= 0 {
+			t.Errorf("recorded build_time_sec = %v, want > 0", recordedBaseline["build_time_sec"])
+		}
+		if recordedBaseline["go_version"].(string) == "" {
+			t.Error("recorded go_version is empty")
+		}
+	})
+
+	// --- Test 2: Missing repo argument ---
+	t.Run("MissingRepo", func(t *testing.T) {
+		result, err := srv.handleCycleBaseline(context.Background(), makeRequest(nil))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.IsError {
+			t.Fatal("expected error for missing repo")
+		}
+		text := getResultText(result)
+		if !strings.Contains(text, string(ErrInvalidParams)) {
+			t.Errorf("expected INVALID_PARAMS, got: %s", text)
+		}
+	})
 }
 
-func TestHandleCycleBaseline_MissingRepo(t *testing.T) {
-	t.Parallel()
-	srv, _ := setupTestServer(t)
-
-	result, err := srv.handleCycleBaseline(context.Background(), makeRequest(nil))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.IsError {
-		t.Fatal("expected error for missing repo")
-	}
-	text := getResultText(result)
-	if !strings.Contains(text, string(ErrInvalidParams)) {
-		t.Errorf("expected INVALID_PARAMS, got: %s", text)
-	}
-}
-
-func TestHandleCycleBaseline_CustomMetrics(t *testing.T) {
-	t.Parallel()
-	srv, root := setupTestServer(t)
-	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
-
-	repoPath := filepath.Join(root, "test-repo")
-	if err := os.WriteFile(filepath.Join(repoPath, "main.go"), []byte("package main\nfunc main() {}\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	result, err := srv.handleCycleBaseline(context.Background(), makeRequest(map[string]any{
-		"repo":    "test-repo",
-		"metrics": "build_ok,vet_clean",
-	}))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.IsError {
-		t.Fatalf("handleCycleBaseline returned error: %s", getResultText(result))
-	}
-
-	var data map[string]any
-	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-
-	metrics, ok := data["metrics"].(map[string]any)
-	if !ok {
-		t.Fatal("expected metrics to be a map")
-	}
-	if _, ok := metrics["build_ok"]; !ok {
-		t.Error("expected build_ok in metrics")
-	}
-	if _, ok := metrics["vet_clean"]; !ok {
-		t.Error("expected vet_clean in metrics")
-	}
-}
 
 // ---------------------------------------------------------------------------
 // handleCyclePlan

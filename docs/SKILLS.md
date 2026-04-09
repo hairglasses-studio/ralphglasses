@@ -1,10 +1,10 @@
 # Ralphglasses Skills
 
-> 222 tools total: 218 grouped tools across 30 tool groups plus 4 always-available management tools
+> 223 tools total: 218 grouped tools across 30 tool groups plus 5 always-available management tools
 
 ## Table of Contents
 
-- [management](#management) (4 tools) — Always-available discovery and contract tools registered ahead of deferred tool-group loading.
+- [management](#management) (5 tools) — Always-available discovery and contract tools registered ahead of deferred tool-group loading.
 - [core](#core) (20 tools) — Essential fleet management: scan, list, start, stop, pause, logs, config
 - [session](#session) (19 tools) — LLM session lifecycle: launch, list, status, resume, stop, budget, retry, output, tail, diff, compare, errors, export
 - [loop](#loop) (12 tools) — Perpetual development loops: start, status, step, stop, benchmark, baseline, gates, self-test, self-improve
@@ -107,6 +107,40 @@ Show the active ralphglasses MCP contract shape, including available tool groups
 ```json
 {
   "tool": "ralphglasses_server_health"
+}
+```
+
+### `ralphglasses_autobuild_ledger_append`
+
+Append an entry to the machine-readable autobuild execution ledger and emit telemetry.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `patch_id` | string | yes | Unique identifier for the autobuild tranche |
+| `status` | string | yes | Current status: "planned", "in_progress", "completed", "blocked", "cancelled", "deferred" |
+| `acceptance_condition` | string |  | Comma-separated list of conditions for completion |
+| `changes` | string |  | Comma-separated list of changes applied |
+| `closure_state` | string |  | Final state: "completed", "blocked", "cancelled", "deferred" |
+| `closure_summary` | string |  | High-signal outcome summary |
+| `next_recommended_patch` | string |  | ID of the next recommended patch |
+| `prevented_failure_class` | string |  | Comma-separated failure classes prevented |
+| `recommended_entry_surface` | string |  | Resource, doc, command, or tool to start with |
+| `remote_main_verified` | boolean |  | Whether the trigger signal was verified against remote main |
+| `repo_owned_scope` | string |  | Comma-separated list of items in scope |
+| `stop_condition` | string |  | Comma-separated list of boundaries for the tranche |
+| `trigger_source` | string |  | Signal source resource or path |
+| `trigger_summary` | string |  | Why this tranche was opened |
+| `trigger_type` | string |  | Signal type: "adoption", "integrity", "ci", "manual", "other" |
+
+**Example:**
+
+```json
+{
+  "arguments": {
+    "patch_id": "...",
+    "status": "..."
+  },
+  "tool": "ralphglasses_autobuild_ledger_append"
 }
 ```
 
@@ -1100,7 +1134,9 @@ Start a self-improvement loop that autonomously improves a repository — auto-m
 | `budget_usd` | number |  | Budget in USD (default: 20.0, split 1/4 planner + 3/4 worker) |
 | `duration_hours` | number |  | Maximum duration in hours (default: 4) |
 | `max_iterations` | number |  | Maximum iterations (default: 5) |
+| `planner_provider` | string |  | Planner provider (claude, gemini, codex) |
 | `trace_level` | string |  | Trace verbosity: none, summary (default), verbose |
+| `worker_provider` | string |  | Worker provider (claude, gemini, codex) |
 
 **Example:**
 
@@ -3105,16 +3141,15 @@ Convert a scratchpad finding into a structured loop task spec
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `finding_id` | string | yes | Finding ID (e.g., FINDING-240) |
 | `repo` | string | yes | Repository name or path |
-| `scratchpad_name` | string | yes | Scratchpad filename without path |
+| `scratchpad_name` | string | yes | Scratchpad filename without path; supports .md or .jsonl (default .md) |
+| `finding_id` | string |  | Finding ID (e.g., FINDING-240); if omitted, all findings in the scratchpad are converted |
 
 **Example:**
 
 ```json
 {
   "arguments": {
-    "finding_id": "...",
     "repo": "...",
     "scratchpad_name": "..."
   },
@@ -3129,7 +3164,6 @@ Snapshot current repo metrics as a cycle baseline
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `repo` | string | yes | Repository name or path |
-| `metrics` | string |  | Comma-separated metric names to capture (default: all) |
 
 **Example:**
 

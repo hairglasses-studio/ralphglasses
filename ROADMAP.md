@@ -2955,3 +2955,225 @@ This tranche applies the highest-value whiteclaw findings that fit this repo's r
 - **Fallback strategy:** Direct file reads and surgical tool edits can work in environments where mutating shell commands fail.
 - **Reference synchronization:** Local ref receipts can move past earlier GitHub-only observations and must be refreshed before work starts.
 - **Publish readiness:** Must distinguish current checkout branch from target main, especially when a repo is on a side branch.
+
+---
+
+## Cline CLI Integration — Perpetual Free-Tier R&D Orchestration `[NEW]`
+
+> **Added:** 2026-04-09
+> **Context:** Cline CLI added as 4th fleet provider, positioned as the default cheap/free-tier orchestrator for perpetual L1-L3 R&D loops. Tasks of higher complexity cascade to Claude/Codex/Gemini.
+>
+> **Design principle:** Leverage Cline's free models for perpetual autonomous development (L3 R&D), with complexity-aware routing that assigns expensive models only when task difficulty warrants it.
+
+### Phase 1: Core Provider Integration (DONE)
+
+- [x] **CLINE-1** — Register `ProviderCline` type constant and defaults `P0` `S`
+  - File: `internal/session/types.go`, `providers.go`
+  - **Status:** Complete — `ProviderCline = "cline"`, default model = `""` (Cline-managed)
+
+- [x] **CLINE-2** — Implement `buildClineCmd()` command builder `P0` `M`
+  - File: `internal/session/provider_cline.go`
+  - **Status:** Complete — maps LaunchOptions → `cline --json --yolo --taskId/--continue` flags
+
+- [x] **CLINE-3** — Implement `normalizeClineEvent()` stream normalizer `P0` `M`
+  - File: `internal/session/provider_cline.go`
+  - **Status:** Complete — parses NDJSON stream events into unified session events
+
+- [x] **CLINE-4** — Wire into cascade routing as default cheap provider `P0` `S`
+  - File: `internal/session/cascade.go`, `cascade_routing.go`
+  - **Status:** Complete — `CheapProvider: ProviderCline`, free tier (cost=$0), MaxCheapTurns=20
+
+- [x] **CLINE-5** — Full capability matrix (17 capabilities mapped) `P0` `M`
+  - File: `internal/session/provider_capabilities.go`
+  - **Status:** Complete — native: resume, permission_mode, project_instructions, MCP client, skills, hooks
+
+- [x] **CLINE-6** — Cost tracking at $0.00/1M for free tier `P0` `S`
+  - File: `internal/session/costs.go`
+  - **Status:** Complete — zero-cost rate in `getProviderCostRate()`
+
+### Phase 1.5: CLI Parity Gap Closure (Next — Discovered 2026-04-09)
+
+> **Context:** Research audit of Cline CLI 2.0 feature surface identified 16 gaps.
+> Tranches 1-2 shipped inline (doctor, scaffold, command builder). Remaining items below.
+
+- [x] **CLINE-7** — Doctor check: `checkCline()` binary + version + auth config detection `P0` `S`
+  - File: `cmd/doctor.go`
+  - **Status:** Complete — checks PATH, `cline version`, `~/.cline/data/` or `$CLINE_DIR`
+
+- [x] **CLINE-8** — Scaffold: `.clinerules` + `.cline/mcp.json` in `ralphglasses init` `P0` `S`
+  - File: `internal/repofiles/scaffold.go`
+  - **Status:** Complete — generates project rules and MCP server config
+
+- [x] **CLINE-9** — Command builder: `--thinking`, `--images`, `--config`, `--auto-approve-all`, stdin pipe, `CLINE_COMMAND_PERMISSIONS` `P0` `M`
+  - File: `internal/session/provider_cline.go`, `types.go`
+  - **Status:** Complete — 6 new flag mappings + complexity-based command sandboxing
+
+- [ ] **CLINE-9a** — Add `repo_surface_audit` Cline surface check (`.clinerules`, `.cline/mcp.json`) `P1` `S`
+  - File: `internal/mcpserver/tools_repo.go`
+  - **Acceptance:** `repo_surface_audit` reports Cline config presence/absence
+
+- [ ] **CLINE-9b** — Add `.cline/` projection target to `sync-provider-roles.py` `P1` `S`
+  - File: `scripts/sync-provider-roles.py`
+  - **Acceptance:** `python3 scripts/sync-provider-roles.py` generates `.clinerules` role hints
+
+- [ ] **CLINE-9c** — Update `docs/PROVIDER-PARITY-OBJECTIVES.md` with Cline column `P1` `S`
+  - File: `docs/PROVIDER-PARITY-OBJECTIVES.md`
+  - **Acceptance:** Parity matrix includes Cline row with all capability statuses
+
+- [ ] **CLINE-9d** — Update `docs/PROVIDER-SETUP.md` with Cline setup instructions `P1` `S`
+  - File: `docs/PROVIDER-SETUP.md`
+  - **Acceptance:** Setup guide covers `cline auth`, `CLINE_DIR`, free-tier onboarding
+
+- [ ] **CLINE-9e** — `cline history` integration for session telemetry `P2` `M`
+  - File: `internal/session/provider_cline.go`
+  - After session completion, parse `cline history --limit 1 --json` to extract task metadata
+  - **Acceptance:** Session metadata includes Cline-reported task ID and cost
+
+- [ ] **CLINE-9f** — Programmatic Cline workspace config via `--config` dirs `P2` `M`
+  - File: `internal/session/provider_cline.go`
+  - Write workspace-level Cline config (auto-approve patterns, model routing) before launch
+  - **Acceptance:** Concurrent Cline sessions use isolated config without conflicts
+
+### Phase 2: Complexity-Aware Task Routing (Next)
+
+- [ ] **CLINE-10** — Implement L1/L2/L3/L4 task complexity classifier `P0` `L`
+  - File: `internal/session/task_classifier.go` (new)
+  - Classify incoming prompts into complexity levels using heuristics + optional LLM pre-classification
+  - L1 (trivial): lint, format, classify, simple grep → Cline free tier
+  - L2 (routine): docs, refactor, simple feature → Cline free tier
+  - L3 (complex): codegen, test writing, debugging → Cline free tier OR Codex (based on confidence)
+  - L4 (expert): architecture, planning, security review → Claude/Codex only
+  - **Acceptance:** `task_classify` MCP tool returns complexity level + suggested provider with 80%+ accuracy on test corpus
+
+- [ ] **CLINE-11** — Adaptive escalation with confidence feedback loop `P1` `L`
+  - File: `internal/session/cascade.go`
+  - Track per-task-type success rates by provider; dynamically adjust escalation thresholds
+  - If Cline successfully completes L3 tasks 5+ times, promote to handling them without escalation
+  - If Cline fails L2 tasks, temporarily escalate to Codex until success rate recovers
+  - **Acceptance:** Escalation thresholds converge after 50+ cascade decisions
+
+- [ ] **CLINE-12** — Free-tier budget tracking and quota monitoring `P1` `M`
+  - File: `internal/session/budget.go`
+  - Track Cline free-tier usage: requests/day, tokens/day, rate limits hit
+  - Surface quota warnings before hitting limits
+  - Auto-switch to paid provider when free quota exhausted
+  - **Acceptance:** `fleet_analytics` shows Cline usage stats and quota remaining
+
+- [ ] **CLINE-13** — Task queue with priority-based provider assignment `P1` `L`
+  - File: `internal/session/task_queue.go` (new)
+  - Priority queue where L1-L2 tasks auto-assign to Cline, L3 tasks go to Cline with escalation fallback, L4 tasks go directly to Claude/Codex
+  - Cline sessions run perpetually, picking up L1-L3 tasks from the queue
+  - Expensive providers only activated when queue contains L4 tasks or Cline escalates
+  - **Acceptance:** Queue processes 100+ tasks with correct provider assignment and zero wasted expensive-model calls on trivial tasks
+
+### Phase 3: Perpetual Autonomous R&D Loop
+
+- [ ] **CLINE-20** — Perpetual Cline R&D daemon mode `P0` `L`
+  - File: `internal/session/perpetual.go` (new), `cmd/perpetual.go`
+  - Long-running daemon that continuously:
+    1. Pulls roadmap items tagged L1-L3
+    2. Launches Cline sessions to implement them
+    3. Runs verification (build + test)
+    4. Escalates failures to expensive providers
+    5. Records results in improvement_journal.jsonl
+    6. Loops forever until stopped
+  - **Acceptance:** Daemon runs 24h+ without intervention, completing 10+ roadmap items/day
+
+- [ ] **CLINE-21** — Self-improvement loop: Cline improves Cline integration `P1` `L`
+  - File: `internal/session/self_improve.go`
+  - Meta-loop where Cline sessions analyze their own failure modes and generate improvement patches
+  - Uses improvement_journal.jsonl patterns to identify recurring issues
+  - Proposes `.clinerules` refinements and cascade threshold adjustments
+  - **Acceptance:** Self-improvement loop generates at least 3 actionable improvements per week
+
+- [ ] **CLINE-22** — Cline-led roadmap triage and task decomposition `P2` `M`
+  - File: `internal/roadmap/triage.go`
+  - Cline sessions analyze roadmap items, estimate complexity, suggest decomposition into subtasks
+  - Pre-classify tasks before they enter the work queue
+  - **Acceptance:** `roadmap_triage` produces complexity estimates within ±1 level of human assessment
+
+- [ ] **CLINE-23** — Cross-provider session handoff: Cline → Claude/Codex `P1` `M`
+  - File: `internal/session/handoff.go`
+  - When Cline escalates, hand off full context (progress, files changed, test results) to expensive provider
+  - Expensive provider picks up where Cline left off instead of starting from scratch
+  - **Acceptance:** Escalated sessions complete 30%+ faster than cold-start on expensive provider
+
+### Phase 4: Fleet Orchestration Enhancements
+
+- [ ] **CLINE-30** — Multi-Cline parallel session pool `P1` `L`
+  - File: `internal/session/pool.go` (new)
+  - Run N concurrent Cline sessions across different repos/tasks
+  - Coordinate via shared task queue; prevent duplicate work
+  - Scale based on free-tier rate limits (auto-throttle when approaching quota)
+  - **Acceptance:** 5+ parallel Cline sessions running without conflicts or rate limit errors
+
+- [ ] **CLINE-31** — Cline session health monitoring and auto-restart `P1` `M`
+  - File: `internal/session/health.go`
+  - Monitor Cline sessions for: stuck loops, rate limit errors, context window exhaustion
+  - Auto-restart with reduced scope or different prompt on failure
+  - Circuit breaker: pause Cline if failure rate exceeds 50% over 10 sessions
+  - **Acceptance:** Cline sessions auto-recover from transient failures without operator intervention
+
+- [ ] **CLINE-32** — Provider cost dashboard: free vs paid utilization `P2` `S`
+  - File: `internal/tui/views/cost_dashboard.go`
+  - TUI view showing: Cline free-tier utilization %, tasks completed by provider, cost savings from cascade routing
+  - Compare actual spend vs hypothetical spend if all tasks used expensive providers
+  - **Acceptance:** Dashboard shows real-time cost savings from free-tier routing
+
+- [ ] **CLINE-33** — Intelligent model selection within Cline `P2` `M`
+  - File: `internal/session/provider_cline.go`
+  - When Cline supports model selection via `--model`, route to optimal free model based on task type
+  - Track per-model success rates within Cline's available models
+  - **Acceptance:** Model selection improves task completion rate by 10%+ vs random model assignment
+
+### Phase 5: Repo Surface & Developer Experience
+
+- [x] **CLINE-40** — `.cline/` repo surface scaffolding `P1` `S`
+  - File: `internal/repofiles/scaffold.go`
+  - **Status:** Complete (shipped as CLINE-8) — `ralphglasses init` generates `.clinerules` + `.cline/mcp.json`
+
+- [ ] **CLINE-41** — Cline skill projection from `.agents/skills/` `P2` `S`
+  - File: `scripts/sync-provider-roles.py`
+  - Extend role/skill sync to generate Cline-compatible skill definitions
+  - **Acceptance:** `make skill-surface` generates `.cline/skills/` from canonical `.agents/skills/`
+
+- [x] **CLINE-42** — Doctor check: Cline CLI availability and version `P1` `S`
+  - File: `cmd/doctor.go`
+  - **Status:** Complete (shipped as CLINE-7) — binary, version, `~/.cline/data/` or `$CLINE_DIR` auth check
+
+- [ ] **CLINE-43** — TUI provider filter: show/hide Cline sessions `P2` `S`
+  - File: `internal/tui/views/overview.go`
+  - Filter sessions by provider; highlight free-tier sessions differently
+  - **Acceptance:** TUI filter works for all 4 providers including Cline
+
+- [ ] **CLINE-44** — Cline-specific hooks directory for ralphglasses events `P2` `M`
+  - File: `internal/session/provider_cline.go`
+  - Generate per-session hooks dir with pre/post hooks for: task start, verification, escalation, completion
+  - Feed hook outputs back into session state
+  - **Acceptance:** `--hooks-dir` populated with working hooks that log to `.ralph/hooks.log`
+
+### Phase 6: Advanced Integration
+
+- [ ] **CLINE-50** — A2A (Agent-to-Agent) delegation: Cline ↔ Claude/Codex `P2` `L`
+  - File: `internal/session/a2a_cline.go` (new)
+  - Cline sessions can delegate sub-tasks to Claude/Codex MCP servers and vice versa
+  - Uses existing `a2a` tool group for protocol compatibility
+  - **Acceptance:** Cline can delegate a subtask to Claude and receive results back within same session
+
+- [ ] **CLINE-51** — Cline as MCP client consuming ralphglasses tools `P1` `M`
+  - File: `.cline/mcp.json` (repo config)
+  - Ensure Cline sessions launched by ralphglasses have MCP access to all 222+ ralphglasses tools
+  - Validate tool accessibility in doctor check
+  - **Acceptance:** Cline sessions can call `ralphglasses_loop_status`, `fleet_status`, etc.
+
+- [ ] **CLINE-52** — Prompt optimization for free-tier models `P2` `M`
+  - File: `internal/enhancer/cline_optimizer.go` (new)
+  - Adapt prompts for Cline's free-tier models: shorter context, more explicit instructions, structured output hints
+  - Use prompt scoring pipeline to A/B test prompt variants
+  - **Acceptance:** Optimized prompts improve Cline task completion rate by 15%+ vs unoptimized
+
+- [ ] **CLINE-53** — Fleet-wide Cline session telemetry `P2` `M`
+  - File: `internal/telemetry/telemetry.go`
+  - Track: tasks/day by complexity level, escalation rate, free-tier quota utilization, session duration distribution
+  - Export to `.ralph/telemetry/cline_fleet.json`
+  - **Acceptance:** `fleet_analytics provider=cline` returns meaningful utilization metrics

@@ -776,9 +776,9 @@ func TestHandleProviderRecommend_ColdStartBootstrap(t *testing.T) {
 	if !strings.Contains(text, `"data_source":"heuristic"`) {
 		t.Errorf("expected data_source=heuristic, got: %s", text)
 	}
-	// Lint tasks are complexity 1, should pick gemini (cheapest).
-	if !strings.Contains(text, `"provider":"gemini"`) {
-		t.Errorf("expected provider=gemini for lint task, got: %s", text)
+	// Lint tasks are complexity 1; Cline is now the default free-tier cheap provider.
+	if !strings.Contains(text, `"provider":"cline"`) {
+		t.Errorf("expected provider=cline for lint task (free tier), got: %s", text)
 	}
 	// Confidence should be low during cold start.
 	if !strings.Contains(text, `"confidence":"low"`) {

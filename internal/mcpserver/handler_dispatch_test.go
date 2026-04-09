@@ -218,8 +218,8 @@ func TestDispatch_AutoProviderSelection(t *testing.T) {
 	// is the "worker" tier (gemini). Verify auto returns a valid provider.
 	provider := srv.resolveProvider("auto")
 	switch provider {
-	case session.ProviderClaude, session.ProviderGemini, session.ProviderCodex:
-		// OK - cascade router selected a valid provider.
+	case session.ProviderClaude, session.ProviderGemini, session.ProviderCodex, session.ProviderCline:
+		// OK - cascade router selected a valid provider (Cline is the default cheap provider).
 	default:
 		t.Errorf("auto provider = %q, want a valid provider", provider)
 	}
@@ -238,7 +238,7 @@ func TestDispatch_AutoProviderSelection(t *testing.T) {
 	// Empty string should behave like auto (cascade router picks).
 	provider = srv.resolveProvider("")
 	switch provider {
-	case session.ProviderClaude, session.ProviderGemini, session.ProviderCodex:
+	case session.ProviderClaude, session.ProviderGemini, session.ProviderCodex, session.ProviderCline:
 		// OK
 	default:
 		t.Errorf("empty provider = %q, want a valid provider", provider)
@@ -260,7 +260,7 @@ func TestDispatch_AutoWithCascadeRouter(t *testing.T) {
 	provider := srv.resolveProvider("auto")
 	// The provider should be one of the valid providers (exact tier depends on config).
 	switch provider {
-	case session.ProviderClaude, session.ProviderGemini, session.ProviderCodex:
+	case session.ProviderClaude, session.ProviderGemini, session.ProviderCodex, session.ProviderCline:
 		// OK
 	default:
 		t.Errorf("auto with cascade returned unexpected provider: %q", provider)

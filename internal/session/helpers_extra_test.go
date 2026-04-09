@@ -532,7 +532,10 @@ func TestAutoOptimizerGenerateNotes_NegativePattern(t *testing.T) {
 
 func TestGateChange_Disabled(t *testing.T) {
 	ao := NewAutoOptimizer(nil, nil, nil, nil)
-	// GateEnabled is false by default
+	oldGate := GateEnabled.Load()
+	GateEnabled.Store(false)
+	defer func() { GateEnabled.Store(oldGate) }()
+
 	change := GatedChange{
 		ChangeType: "config",
 	}
@@ -545,6 +548,9 @@ func TestGateChange_Disabled(t *testing.T) {
 func TestApplyPendingNotes_NoFile(t *testing.T) {
 	ao := NewAutoOptimizer(nil, nil, nil, nil)
 	dir := t.TempDir()
+	oldGate := GateEnabled.Load()
+	GateEnabled.Store(false)
+	defer func() { GateEnabled.Store(oldGate) }()
 
 	applied, rejected, err := ao.ApplyPendingNotes(dir)
 	if err != nil {
@@ -557,6 +563,9 @@ func TestApplyPendingNotes_NoFile(t *testing.T) {
 
 func TestApplyPendingNotes_WithNotes(t *testing.T) {
 	dir := t.TempDir()
+	oldGate := GateEnabled.Load()
+	GateEnabled.Store(false)
+	defer func() { GateEnabled.Store(oldGate) }()
 
 	// Write some notes
 	note := ImprovementNote{
@@ -584,7 +593,7 @@ func TestApplyPendingNotes_WithNotes(t *testing.T) {
 		t.Fatalf("ApplyPendingNotes: %v", err)
 	}
 
-	// GateEnabled is false, so gate returns "skip" (not rolled back) => applied
+	// Gate is disabled for this test, so GateChange returns skip => applied.
 	if applied != 1 {
 		t.Errorf("applied = %d, want 1", applied)
 	}

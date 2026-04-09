@@ -2,6 +2,8 @@ package session
 
 import (
 	"math"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -55,9 +57,49 @@ func TestNormalizeSessionCostLocked(t *testing.T) {
 }
 
 func TestProviderCostRatesAllProvidersPresent(t *testing.T) {
-	for _, p := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex} {
+	for _, p := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ProviderCline} {
 		if _, ok := getProviderCostRate(p); !ok {
 			t.Errorf("missing cost rate for provider %q", p)
 		}
+	}
+}
+
+func TestLoadCostRatesFromDirIncludesCline(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "cost_rates.json")
+	data := `{
+		"input_per_m_token": {"cline": 1.25},
+		"output_per_m_token": {"cline": 2.50}
+	}`
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+		t.Fatalf("write cost_rates.json: %v", err)
+	}
+
+	costRateMu.Lock()
+	origRates := make(map[Provider]CostRate, len(ProviderCostRates))
+	for k, v := range ProviderCostRates {
+		origRates[k] = v
+	}
+	origClaudeBase := claudeBaseRate
+	costRateMu.Unlock()
+
+	t.Cleanup(func() {
+		costRateMu.Lock()
+		ProviderCostRates = origRates
+		claudeBaseRate = origClaudeBase
+		costRateMu.Unlock()
+	})
+
+	LoadCostRatesFromDir(dir)
+
+	rate, ok := getProviderCostRate(ProviderCline)
+	if !ok {
+		t.Fatal("ProviderCline missing after LoadCostRatesFromDir")
+	}
+	if rate.InputPer1M != 1.25 {
+		t.Fatalf("ProviderCline input = %v, want 1.25", rate.InputPer1M)
+	}
+	if rate.OutputPer1M != 2.50 {
+		t.Fatalf("ProviderCline output = %v, want 2.50", rate.OutputPer1M)
 	}
 }

@@ -11,6 +11,7 @@ if [[ "${1:-}" == "--strict" ]]; then
 fi
 
 repo_root="$(rg_repo_root)"
+rg_load_host_env "${repo_root}"
 failures=0
 warnings=0
 
@@ -140,6 +141,18 @@ if [[ -f "${repo_root}/.codex/config.toml" ]]; then
   fi
 else
   check ".codex/config" "warn" "file not found: .codex/config.toml"
+fi
+
+if [[ -f "${repo_root}/.codex/config.toml" ]]; then
+    if grep -q "sandbox_mode = \"danger-full-access\"" "${repo_root}/.codex/config.toml"; then
+    check ".codex/sandbox" "ok" "danger-full-access configured"
+  elif grep -q "^sandbox_mode = " "${repo_root}/.codex/config.toml"; then
+    check ".codex/sandbox" "warn" "repo-local sandbox overrides global policy; run bash ./scripts/dev/set-codex-danger-full-access.sh"
+  else
+    check ".codex/sandbox" "warn" "sandbox_mode not set in repo-local config"
+  fi
+else
+  check ".codex/sandbox" "warn" "file not found: .codex/config.toml"
 fi
 
 if [[ -f "${repo_root}/.mcp.json" ]]; then

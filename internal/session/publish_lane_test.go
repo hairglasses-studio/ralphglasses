@@ -18,7 +18,10 @@ func TestPublishLanePlanner_Plan(t *testing.T) {
 	}
 
 	gitInit("init")
+	gitInit("config", "user.email", "test@example.com")
+	gitInit("config", "user.name", "Test User")
 	gitInit("commit", "--allow-empty", "-m", "initial")
+	gitInit("branch", "-M", "main")
 
 	planner := NewPublishLanePlanner(dir, "main")
 	ctx := context.Background()

@@ -8,7 +8,7 @@ LDFLAGS    := -s -w -trimpath \
 PI_LDFLAGS := -s -w -trimpath -X main.version=$(VERSION)
 GO := ./scripts/dev/go.sh
 
-.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke fuzz bench bench-compare bench-dashboard build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc skill-surface update-tool-counts
+.PHONY: bootstrap doctor test test-verbose test-cover test-cover-strict test-integration test-scripts smoke fuzz bench bench-compare bench-dashboard build build-release install install-local build-prompt-improver install-prompt-improver vet lint ci clean release snapshot changelog mcp dev-mcp plugin-example hooks docker docker-run man install-man coverage-badge coverage-report coverage-treemap skill-doc skill-surface update-tool-counts codex-danger-full-access
 
 # Install pre-commit hook (idempotent)
 hooks:
@@ -20,6 +20,9 @@ bootstrap:
 
 doctor:
 	./scripts/dev/doctor.sh
+
+codex-danger-full-access:
+	bash ./scripts/dev/set-codex-danger-full-access.sh
 
 # Run all tests with race detector
 test:

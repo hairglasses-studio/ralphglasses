@@ -340,6 +340,31 @@ type GatedChange struct {
 // When true, Level 2+ changes are validated against the test suite.
 var GateEnabled atomic.Bool
 
+// supervisorGateLeases tracks active supervisors that require the global gate.
+// Tests may still override GateEnabled directly, but supervisor lifecycle should
+// return the package-global default to false when no supervisor is running.
+var supervisorGateLeases atomic.Int32
+
+func acquireSupervisorGate() {
+	supervisorGateLeases.Add(1)
+	GateEnabled.Store(true)
+}
+
+func releaseSupervisorGate() {
+	for {
+		current := supervisorGateLeases.Load()
+		if current <= 0 {
+			GateEnabled.Store(false)
+			return
+		}
+		next := current - 1
+		if supervisorGateLeases.CompareAndSwap(current, next) {
+			GateEnabled.Store(next > 0)
+			return
+		}
+	}
+}
+
 // testGateFunc is the function type for RunTestGate.
 type testGateFunc func(string) (string, error)
 

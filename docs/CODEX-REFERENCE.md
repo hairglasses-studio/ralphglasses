@@ -13,6 +13,8 @@ Cross-provider capability and workflow parity is tracked in `docs/PROVIDER-PARIT
 
 ## Runtime defaults
 
+- Sandbox reset helper: run `bash ./scripts/dev/set-codex-danger-full-access.sh` or `make codex-danger-full-access` to align root, operator, and repo-local Codex configs with the harness requirement.
+
 - Primary provider default: `codex`
 - Default Codex session model: `gpt-5.4`
 - Default loop planner model: `o4-mini`

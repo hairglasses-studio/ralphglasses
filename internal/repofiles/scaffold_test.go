@@ -20,12 +20,12 @@ func TestScaffold(t *testing.T) {
 		t.Fatalf("Scaffold: %v", err)
 	}
 
-	if len(result.Created) != 7 {
-		t.Errorf("expected 7 created files, got %d: %v", len(result.Created), result.Created)
+	if len(result.Created) != 9 {
+		t.Errorf("expected 9 created files, got %d: %v", len(result.Created), result.Created)
 	}
 
 	// Verify files exist
-	for _, relPath := range []string{".ralphrc", "AGENTS.md", ".agents/roles/README.md", ".codex/config.toml", ".ralph/PROMPT.md", ".ralph/AGENT.md", ".ralph/fix_plan.md"} {
+	for _, relPath := range []string{".ralphrc", "AGENTS.md", ".agents/roles/README.md", ".codex/config.toml", ".ralph/PROMPT.md", ".ralph/AGENT.md", ".ralph/fix_plan.md", ".clinerules", ".cline/mcp.json"} {
 		full := filepath.Join(dir, relPath)
 		if _, err := os.Stat(full); err != nil {
 			t.Errorf("expected %s to exist", relPath)

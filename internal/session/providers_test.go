@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"math"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -130,6 +132,70 @@ func TestBuildCodexCmd(t *testing.T) {
 	}
 	if cmd.Dir != "/tmp/repo" {
 		t.Errorf("cmd.Dir = %q, want /tmp/repo", cmd.Dir)
+	}
+}
+
+func TestBuildClineCmd_SystemPromptEmulation(t *testing.T) {
+	ctx := context.Background()
+	repoPath := t.TempDir()
+
+	cmd := buildClineCmd(ctx, LaunchOptions{
+		RepoPath:     repoPath,
+		Prompt:       "Fix the failing test",
+		SystemPrompt: "Be concise and prefer Go standard library solutions.",
+	})
+
+	if cmd.Dir != repoPath {
+		t.Fatalf("cmd.Dir = %q, want %q", cmd.Dir, repoPath)
+	}
+	if len(cmd.Args) == 0 {
+		t.Fatal("expected cline command args")
+	}
+	gotPrompt := cmd.Args[len(cmd.Args)-1]
+	if !strings.Contains(gotPrompt, "System instructions:\nBe concise and prefer Go standard library solutions.") {
+		t.Fatalf("prompt missing system instructions: %q", gotPrompt)
+	}
+	if !strings.Contains(gotPrompt, "\n\nTask:\nFix the failing test") {
+		t.Fatalf("prompt missing task body: %q", gotPrompt)
+	}
+	if _, err := os.Stat(filepath.Join(repoPath, ".clinerules-jit")); !os.IsNotExist(err) {
+		t.Fatalf("unexpected .clinerules-jit side effect, stat err=%v", err)
+	}
+}
+
+func TestBuildClinePrompt(t *testing.T) {
+	tests := []struct {
+		name         string
+		systemPrompt string
+		prompt       string
+		want         string
+	}{
+		{
+			name:         "system and task",
+			systemPrompt: "Use terse output.",
+			prompt:       "Review this diff.",
+			want:         "System instructions:\nUse terse output.\n\nTask:\nReview this diff.",
+		},
+		{
+			name:         "task only",
+			systemPrompt: "",
+			prompt:       "Review this diff.",
+			want:         "Review this diff.",
+		},
+		{
+			name:         "system only",
+			systemPrompt: "Use terse output.",
+			prompt:       "",
+			want:         "Use terse output.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := buildClinePrompt(tt.systemPrompt, tt.prompt); got != tt.want {
+				t.Fatalf("buildClinePrompt() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

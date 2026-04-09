@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,9 +20,6 @@ import (
 
 func (s *Server) handleFindingToTask(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	findingID := getStringArg(req, "finding_id")
-	if findingID == "" {
-		return codedError(ErrInvalidParams, "finding_id required"), nil
-	}
 	scratchpadName := getStringArg(req, "scratchpad_name")
 	if scratchpadName == "" {
 		return codedError(ErrInvalidParams, "scratchpad_name required"), nil
@@ -38,6 +34,33 @@ func (s *Server) handleFindingToTask(_ context.Context, req mcp.CallToolRequest)
 		return errRes, nil
 	}
 
+	// Case 1: JSONL support
+	if strings.HasSuffix(scratchpadName, ".jsonl") {
+		path := filepath.Join(repoPath, ".ralph", scratchpadName)
+		findings, err := session.ReadFindingsJSONL(path)
+		if err != nil {
+			return codedError(ErrFilesystem, fmt.Sprintf("cannot read scratchpad jsonl: %v", err)), nil
+		}
+		if findingID != "" {
+			var filtered []session.ScratchpadFinding
+			for _, f := range findings {
+				if f.ID == findingID {
+					filtered = append(filtered, f)
+					break
+				}
+			}
+			findings = filtered
+		}
+		tasks := session.FindingToTask(findings)
+		return jsonResult(map[string]any{
+			"status":     "ready",
+			"count":      len(tasks),
+			"tasks":      tasks,
+			"scratchpad": scratchpadName,
+		}), nil
+	}
+
+	// Case 2: Markdown support (legacy + enhanced)
 	scratchpadPath := filepath.Join(repoPath, ".ralph", scratchpadName+"_scratchpad.md")
 	data, err := os.ReadFile(scratchpadPath)
 	if err != nil {
@@ -45,60 +68,50 @@ func (s *Server) handleFindingToTask(_ context.Context, req mcp.CallToolRequest)
 	}
 	content := string(data)
 
-	// Find the finding by searching for finding_id text.
-	lines := strings.Split(content, "\n")
-	var findingLines []string
-	found := false
-	for i, line := range lines {
-		if strings.Contains(line, findingID) {
-			found = true
-			// Collect from this line until the next section header or end.
-			for j := i; j < len(lines); j++ {
-				if j > i && (strings.HasPrefix(lines[j], "#") || strings.Contains(lines[j], "FINDING-")) {
-					break
-				}
-				findingLines = append(findingLines, lines[j])
-			}
-			break
+	var tasks []session.TaskSpec
+	if findingID != "" {
+		// Single finding mode
+		task, err := s.parseMarkdownFinding(content, findingID)
+		if err != nil {
+			return codedError(ErrInvalidParams, err.Error()), nil
+		}
+		tasks = append(tasks, *task)
+	} else {
+		// All findings mode
+		tasks = s.parseAllMarkdownFindings(content)
+	}
+
+	// Calculate scores for compatibility with clients expecting old format
+	var result map[string]any
+	if len(tasks) == 1 && findingID != "" {
+		t := tasks[0]
+		difficulty := 0.5
+		if t.EstimatedComplexity == session.ComplexityL {
+			difficulty = 0.8
+		} else if t.EstimatedComplexity == session.ComplexityS {
+			difficulty = 0.3
+		}
+
+		result = map[string]any{
+			"finding_id":       findingID,
+			"scratchpad":       scratchpadName,
+			"title":            t.Name,
+			"description":      t.Description,
+			"difficulty_score": difficulty,
+			"provider_hint":    "codex", // simplified hint
+			"estimated_cost":   difficulty * 0.20,
+			"status":           "ready",
+			"tasks":            tasks,
+		}
+	} else {
+		result = map[string]any{
+			"status":     "ready",
+			"count":      len(tasks),
+			"tasks":      tasks,
+			"scratchpad": scratchpadName,
 		}
 	}
 
-	if !found {
-		return codedError(ErrInvalidParams, fmt.Sprintf("finding %q not found in scratchpad", findingID)), nil
-	}
-
-	title := strings.TrimSpace(findingLines[0])
-	title = strings.TrimLeft(title, "# ")
-	description := strings.TrimSpace(strings.Join(findingLines, "\n"))
-
-	// Heuristic difficulty from word count.
-	wordCount := len(strings.Fields(description))
-	var difficulty float64
-	var providerHint string
-	switch {
-	case wordCount < 50:
-		difficulty = 0.3
-		providerHint = "gemini"
-	case wordCount < 150:
-		difficulty = 0.5
-		providerHint = "codex"
-	default:
-		difficulty = 0.8
-		providerHint = "claude"
-	}
-
-	estimatedCost := difficulty * 0.20
-
-	result := map[string]any{
-		"finding_id":       findingID,
-		"scratchpad":       scratchpadName,
-		"title":            title,
-		"description":      description,
-		"difficulty_score": difficulty,
-		"provider_hint":    providerHint,
-		"estimated_cost":   estimatedCost,
-		"status":           "ready",
-	}
 	return jsonResult(result), nil
 }
 
@@ -107,109 +120,33 @@ func (s *Server) handleCycleBaseline(_ context.Context, req mcp.CallToolRequest)
 	if repo == "" {
 		return codedError(ErrInvalidParams, "repo required"), nil
 	}
-	metricsStr := getStringArg(req, "metrics")
-
-	metricNames := []string{"test_pass_rate", "coverage_pct", "vet_clean", "build_ok", "lint_score"}
-	if metricsStr != "" {
-		metricNames = strings.Split(metricsStr, ",")
-		for i := range metricNames {
-			metricNames[i] = strings.TrimSpace(metricNames[i])
-		}
-	}
 
 	repoPath, errRes := s.resolveRepoPath(repo)
 	if errRes != nil {
 		return errRes, nil
 	}
 
-	baselineID := fmt.Sprintf("baseline-%s-%d", repo, time.Now().Unix())
-	snapshot := make(map[string]float64, len(metricNames))
-	for _, m := range metricNames {
-		snapshot[m] = 0
+	baseline, err := session.RunCycleBaseline(repoPath)
+	if err != nil {
+		return codedError(ErrInternal, fmt.Sprintf("failed to run cycle baseline: %v", err)), nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	// Run go build.
-	buildCmd := exec.CommandContext(ctx, "go", "build", "./...")
-	buildCmd.Dir = repoPath
-	buildOut, buildErr := buildCmd.CombinedOutput()
-	buildOK := buildErr == nil
-	if sliceContains(metricNames, "build_ok") {
-		if buildOK {
-			snapshot["build_ok"] = 1
-		}
-	}
-
-	// Run go test with coverage.
-	testCmd := exec.CommandContext(ctx, "go", "test", "-count=1", "-coverprofile=coverage.out", "./...")
-	testCmd.Dir = repoPath
-	testOut, _ := testCmd.CombinedOutput()
-	testOutput := string(testOut)
-
-	// Parse coverage.
-	covRe := regexp.MustCompile(`coverage:\s+(\d+\.?\d*)%`)
-	var coverages []float64
-	for _, match := range covRe.FindAllStringSubmatch(testOutput, -1) {
-		if v, err := strconv.ParseFloat(match[1], 64); err == nil {
-			coverages = append(coverages, v)
-		}
-	}
-	if len(coverages) > 0 && sliceContains(metricNames, "coverage_pct") {
-		var sum float64
-		for _, c := range coverages {
-			sum += c
-		}
-		snapshot["coverage_pct"] = sum / float64(len(coverages))
-	}
-
-	// Count PASS/FAIL.
-	passCount := strings.Count(testOutput, "--- PASS")
-	failCount := strings.Count(testOutput, "--- FAIL")
-	total := passCount + failCount
-	if total > 0 && sliceContains(metricNames, "test_pass_rate") {
-		snapshot["test_pass_rate"] = float64(passCount) / float64(total) * 100
-	}
-
-	// Run go vet.
-	vetCmd := exec.CommandContext(ctx, "go", "vet", "./...")
-	vetCmd.Dir = repoPath
-	_, vetErr := vetCmd.CombinedOutput()
-	if sliceContains(metricNames, "vet_clean") {
-		if vetErr == nil {
-			snapshot["vet_clean"] = 1
-		}
-	}
-
-	// Write baseline to disk.
-	baselinesDir := filepath.Join(repoPath, ".ralph", "cycle_baselines")
-	if err := os.MkdirAll(baselinesDir, 0o755); err != nil {
-		return codedError(ErrFilesystem, fmt.Sprintf("cannot create baselines dir: %v", err)), nil
-	}
-
-	capturedAt := time.Now().UTC().Format(time.RFC3339)
-	baselineData := map[string]any{
-		"baseline_id":  baselineID,
-		"repo":         repo,
-		"metrics":      snapshot,
-		"captured_at":  capturedAt,
-		"build_output": truncate(string(buildOut), 500),
-		"test_output":  truncate(testOutput, 1000),
-	}
-	baselineJSON, _ := json.MarshalIndent(baselineData, "", "  ")
-	baselinePath := filepath.Join(baselinesDir, baselineID+".json")
-	if err := os.WriteFile(baselinePath, baselineJSON, 0o644); err != nil {
-		return codedError(ErrFilesystem, fmt.Sprintf("cannot write baseline: %v", err)), nil
+	// Output path: <repoPath>/.ralph/cycle_baseline.json
+	outputPath := filepath.Join(repoPath, ".ralph", "cycle_baseline.json")
+	if err := session.WriteCycleBaselineToFile(baseline, outputPath); err != nil {
+		return codedError(ErrFilesystem, fmt.Sprintf("failed to write cycle baseline to file: %v", err)), nil
 	}
 
 	result := map[string]any{
-		"baseline_id": baselineID,
-		"repo":        repo,
-		"metrics":     snapshot,
-		"captured_at": capturedAt,
-		"path":        baselinePath,
-		"status":      "captured",
+		"repo":             repo,
+		"status":           "captured",
+		"baseline_file":    outputPath,
+		"timestamp":        baseline.Timestamp.Format(time.RFC3339),
+		"coverage_pct":     baseline.CoveragePC,
+		"test_count":       baseline.TestCount,
+		"lint_count":       baseline.LintCount,
+		"build_time_sec":   baseline.BuildTimeSec,
+		"go_version":       baseline.GoVersion,
 	}
 	return jsonResult(result), nil
 }
@@ -1226,4 +1163,97 @@ func (s *Server) handleObservationCorrelate(_ context.Context, req mcp.CallToolR
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+func (s *Server) parseMarkdownFinding(content, findingID string) (*session.TaskSpec, error) {
+	lines := strings.Split(content, "\n")
+	var findingLines []string
+	found := false
+	for i, line := range lines {
+		if strings.Contains(line, findingID) {
+			found = true
+			for j := i; j < len(lines); j++ {
+				if j > i && (strings.HasPrefix(lines[j], "#") || strings.Contains(lines[j], "FINDING-")) {
+					break
+				}
+				findingLines = append(findingLines, lines[j])
+			}
+			break
+		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("finding %q not found in scratchpad", findingID)
+	}
+
+	return s.linesToTask(findingLines, findingID), nil
+}
+
+func (s *Server) parseAllMarkdownFindings(content string) []session.TaskSpec {
+	var tasks []session.TaskSpec
+	lines := strings.Split(content, "\n")
+
+	for i := 0; i < len(lines); i++ {
+		if strings.Contains(lines[i], "FINDING-") {
+			findingID := extractFindingID(lines[i])
+			if findingID == "" {
+				continue
+			}
+			var findingLines []string
+			for j := i; j < len(lines); j++ {
+				if j > i && (strings.HasPrefix(lines[j], "#") || strings.Contains(lines[j], "FINDING-")) {
+					break
+				}
+				findingLines = append(findingLines, lines[j])
+			}
+			tasks = append(tasks, *s.linesToTask(findingLines, findingID))
+			i += len(findingLines) - 1
+		}
+	}
+	return tasks
+}
+
+func extractFindingID(line string) string {
+	re := regexp.MustCompile(`FINDING-\d+`)
+	return re.FindString(line)
+}
+
+func (s *Server) linesToTask(lines []string, id string) *session.TaskSpec {
+	title := strings.TrimSpace(lines[0])
+	title = strings.TrimLeft(title, "# ")
+	description := strings.TrimSpace(strings.Join(lines, "\n"))
+
+	task := &session.TaskSpec{
+		ID:          id,
+		Name:        title,
+		Description: description,
+		Type:        session.TaskFeature, // default
+		Priority:    session.PriorityP2,  // default
+	}
+
+	// Heuristic classification
+	lower := strings.ToLower(description)
+	if strings.Contains(lower, "bug") || strings.Contains(lower, "crash") || strings.Contains(lower, "fix") {
+		task.Type = session.TaskBugfix
+		task.Priority = session.PriorityP1
+	} else if strings.Contains(lower, "test") || strings.Contains(lower, "coverage") {
+		task.Type = session.TaskTest
+	} else if strings.Contains(lower, "refactor") || strings.Contains(lower, "cleanup") {
+		task.Type = session.TaskRefactor
+	}
+
+	if strings.Contains(lower, "critical") || strings.Contains(lower, "severity: high") {
+		task.Priority = session.PriorityP0
+	}
+
+	wordCount := len(strings.Fields(description))
+	if wordCount > 150 {
+		task.EstimatedComplexity = session.ComplexityL
+	} else if wordCount > 50 {
+		task.EstimatedComplexity = session.ComplexityM
+	} else {
+		task.EstimatedComplexity = session.ComplexityS
+	}
+
+	return task
 }

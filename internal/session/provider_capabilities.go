@@ -52,7 +52,7 @@ type ProviderCapabilityMatrix struct {
 
 // PrimaryProviders returns the primary interactive providers in comparison order.
 func PrimaryProviders() []Provider {
-	return []Provider{ProviderClaude, ProviderCodex, ProviderGemini}
+	return []Provider{ProviderClaude, ProviderCodex, ProviderGemini, ProviderCline}
 }
 
 // ProviderCapabilityMatrices returns the capability matrix for all primary providers.
@@ -308,6 +308,86 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 				CapabilityHooks: {
 					Support: CapabilityNative,
 					Detail:  "Gemini exposes `gemini hooks`.",
+				},
+			},
+		}, true
+	case ProviderCline:
+		return ProviderCapabilityMatrix{
+			Provider:            ProviderCline,
+			Binary:              "cline",
+			DefaultModel:        ProviderDefaults(ProviderCline),
+			ProjectInstructions: ".clinerules",
+			RepoConfigPath:      ".cline/mcp.json",
+			AgentConfigPath:     ".clinerules",
+			Capabilities: map[string]ProviderCapability{
+				CapabilityBudgetUSD: {
+					Support: CapabilityEmulated,
+					Detail:  "ralphglasses enforces budget limits externally; Cline CLI has no budget flag.",
+				},
+				CapabilityMaxTurns: {
+					Support: CapabilityEmulated,
+					Detail:  "Mapped to --max-consecutive-mistakes as closest analog.",
+				},
+				CapabilityAgent: {
+					Support: CapabilityUnsupported,
+					Detail:  "Cline has no --agent flag; use .clinerules for repo-specific instructions.",
+				},
+				CapabilityAllowedTools: {
+					Support: CapabilityUnsupported,
+					Detail:  "Cline CLI does not expose an allowed-tools flag.",
+				},
+				CapabilitySystemPrompt: {
+					Support: CapabilityEmulated,
+					Detail:  "Emulated by prefixing system instructions into the task prompt because Cline has no dedicated system-prompt flag.",
+				},
+				CapabilityResume: {
+					Support: CapabilityNative,
+					Detail:  "Cline exposes --taskId for resume and --continue for continuation.",
+				},
+				CapabilityWorktree: {
+					Support: CapabilityUnsupported,
+					Detail:  "Cline CLI has no worktree support.",
+				},
+				CapabilityPermissionMode: {
+					Support: CapabilityNative,
+					Detail:  "Cline exposes --yolo (auto-approve), --plan (read-only), and --act modes.",
+					Values:  []string{"yolo", "plan", "act"},
+				},
+				CapabilityOutputSchema: {
+					Support: CapabilityUnsupported,
+					Detail:  "Cline CLI has no output-schema flag.",
+				},
+				CapabilitySandboxImage: {
+					Support: CapabilityUnsupported,
+					Detail:  "Cline CLI has no sandbox/container support.",
+				},
+				CapabilityProjectInstructions: {
+					Support: CapabilityNative,
+					Detail:  "Cline reads .clinerules and AGENTS.md from the repo root automatically.",
+				},
+				CapabilityMCPClient: {
+					Support: CapabilityNative,
+					Detail:  "Cline supports MCP servers via .cline/mcp.json and `cline mcp add`.",
+				},
+				CapabilityMCPServer: {
+					Support: CapabilityUnsupported,
+					Detail:  "Cline CLI acts as an MCP client, not an MCP server.",
+				},
+				CapabilitySkills: {
+					Support: CapabilityNative,
+					Detail:  "Cline supports skills via its skill loading mechanism.",
+				},
+				CapabilityPlugins: {
+					Support: CapabilityUnsupported,
+					Detail:  "Cline has no plugin system.",
+				},
+				CapabilitySubagents: {
+					Support: CapabilityUnsupported,
+					Detail:  "Cline CLI does not support native subagents.",
+				},
+				CapabilityHooks: {
+					Support: CapabilityNative,
+					Detail:  "Cline exposes --hooks-dir for runtime hook injection.",
 				},
 			},
 		}, true

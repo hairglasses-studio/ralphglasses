@@ -51,11 +51,11 @@ func (s *Server) handleRoadmapParse(_ context.Context, req mcp.CallToolRequest) 
 	summaryOnly := getBoolArg(req, "summary_only")
 	if summaryOnly {
 		type phaseSummary struct {
-			Name            string  `json:"name"`
-			SectionCount    int     `json:"section_count"`
-			TaskCount       int     `json:"task_count"`
-			CompletedCount  int     `json:"completed_count"`
-			CompletionPct   float64 `json:"completion_pct"`
+			Name           string  `json:"name"`
+			SectionCount   int     `json:"section_count"`
+			TaskCount      int     `json:"task_count"`
+			CompletedCount int     `json:"completed_count"`
+			CompletionPct  float64 `json:"completion_pct"`
 		}
 		type summary struct {
 			Title      string         `json:"title"`
@@ -299,7 +299,7 @@ func (s *Server) handleRoadmapExport(_ context.Context, req mcp.CallToolRequest)
 	maxTasks := int(getNumberArg(req, "max_tasks", 20))
 	respectDeps := getStringArg(req, "respect_deps") != "false"
 	statusFilter := getStringArg(req, "status")
-	if statusFilter == "" && format == "checkpoint" {
+	if statusFilter == "" && (format == "checkpoint" || format == "checkpoint_json") {
 		statusFilter = "all"
 	}
 	if statusFilter == "" {

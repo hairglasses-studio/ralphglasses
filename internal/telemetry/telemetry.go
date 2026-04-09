@@ -14,11 +14,13 @@ import (
 type EventType string
 
 const (
-	EventSessionStart EventType = "session_start"
-	EventSessionStop  EventType = "session_stop"
-	EventCrash        EventType = "crash"
-	EventBudgetHit    EventType = "budget_hit"
-	EventCircuitTrip  EventType = "circuit_trip"
+	EventSessionStart  EventType = "session_start"
+	EventSessionStop   EventType = "session_stop"
+	EventCrash         EventType = "crash"
+	EventBudgetHit     EventType = "budget_hit"
+	EventCircuitTrip   EventType = "circuit_trip"
+	EventTrancheOpen   EventType = "tranche_open"
+	EventTrancheClose  EventType = "tranche_close"
 )
 
 // Event is a single telemetry record.
@@ -39,6 +41,8 @@ func AllEventTypes() []EventType {
 		EventCrash,
 		EventBudgetHit,
 		EventCircuitTrip,
+		EventTrancheOpen,
+		EventTrancheClose,
 	}
 }
 

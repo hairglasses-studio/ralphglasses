@@ -339,6 +339,34 @@ func TestHandleRoadmapExport_Checkpoint(t *testing.T) {
 	}
 }
 
+func TestHandleRoadmapExport_CheckpointJSON(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapExport(context.Background(), roadmapReq(map[string]any{
+		"path":    repoPath,
+		"format":  "checkpoint_json",
+		"phase":   "Phase 1",
+		"section": "Parser",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	if !strings.Contains(text, `"component": "Phase 1 / Parser"`) {
+		t.Errorf("expected component field in checkpoint_json output, got: %s", text)
+	}
+	if !strings.Contains(text, `"next_tranche_seed"`) {
+		t.Errorf("expected next_tranche_seed in checkpoint_json output, got: %s", text)
+	}
+	// blocked_by dependency list: not yet implemented in checkpoint_json export
+	if !strings.Contains(text, `"completed_count": 1`) {
+		t.Errorf("expected completed_count in checkpoint_json output, got: %s", text)
+	}
+}
 
 func TestHandleRoadmapAnalyze_WithQuery(t *testing.T) {
 	t.Parallel()

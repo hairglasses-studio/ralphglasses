@@ -15,8 +15,8 @@ import (
 func TestCascadeRouterDefaultConfig(t *testing.T) {
 	cfg := session.DefaultCascadeConfig()
 
-	if cfg.CheapProvider != session.ProviderGemini {
-		t.Errorf("CheapProvider = %q, want %q", cfg.CheapProvider, session.ProviderGemini)
+	if cfg.CheapProvider != session.ProviderCline {
+		t.Errorf("CheapProvider = %q, want %q", cfg.CheapProvider, session.ProviderCline)
 	}
 	if cfg.ExpensiveProvider != session.ProviderCodex {
 		t.Errorf("ExpensiveProvider = %q, want %q", cfg.ExpensiveProvider, session.ProviderCodex)
@@ -24,11 +24,11 @@ func TestCascadeRouterDefaultConfig(t *testing.T) {
 	if cfg.ConfidenceThreshold != 0.7 {
 		t.Errorf("ConfidenceThreshold = %f, want 0.7", cfg.ConfidenceThreshold)
 	}
-	if cfg.MaxCheapBudgetUSD != 2.00 {
-		t.Errorf("MaxCheapBudgetUSD = %f, want 2.00", cfg.MaxCheapBudgetUSD)
+	if cfg.MaxCheapBudgetUSD != 0.0 {
+		t.Errorf("MaxCheapBudgetUSD = %f, want 0.0", cfg.MaxCheapBudgetUSD)
 	}
-	if cfg.MaxCheapTurns != 15 {
-		t.Errorf("MaxCheapTurns = %d, want 15", cfg.MaxCheapTurns)
+	if cfg.MaxCheapTurns != 20 {
+		t.Errorf("MaxCheapTurns = %d, want 20", cfg.MaxCheapTurns)
 	}
 }
 
@@ -88,8 +88,8 @@ func TestCascadeRouterCheapLaunchOpts(t *testing.T) {
 
 	cheap := cr.CheapLaunchOpts(base)
 
-	if cheap.Provider != session.ProviderGemini {
-		t.Errorf("CheapLaunchOpts.Provider = %q, want %q", cheap.Provider, session.ProviderGemini)
+	if cheap.Provider != session.ProviderCline {
+		t.Errorf("CheapLaunchOpts.Provider = %q, want %q", cheap.Provider, session.ProviderCline)
 	}
 	if cheap.MaxBudgetUSD != 1.50 {
 		t.Errorf("CheapLaunchOpts.MaxBudgetUSD = %f, want 1.50", cheap.MaxBudgetUSD)

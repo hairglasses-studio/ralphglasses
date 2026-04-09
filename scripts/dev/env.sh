@@ -45,6 +45,33 @@ rg_path_with_tools() {
   printf '%s:%s\n' "$(dirname "$(rg_go_bin "${repo_root}")")" "$(rg_local_bin_dir "${repo_root}")"
 }
 
+rg_load_host_env() {
+  if [[ "${RG_SKIP_HOST_ENV:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  local host_home repo_root env_file
+  host_home="${RG_HOST_USER_HOME:-/home/hg}"
+  repo_root="${1:-$(rg_repo_root)}"
+
+  if [[ -d "${host_home}/.local/bin" ]]; then
+    export PATH="${host_home}/.local/bin:${PATH}"
+  fi
+
+  for env_file in "${host_home}/hairglasses-studio/.env" "${repo_root}/.env"; do
+    if [[ -f "${env_file}" ]]; then
+      set -a
+      # shellcheck disable=SC1090
+      . "${env_file}"
+      set +a
+    fi
+  done
+
+  if [[ -n "${GOOGLE_API_KEY:-}" && -z "${GEMINI_API_KEY:-}" ]]; then
+    export GEMINI_API_KEY="${GOOGLE_API_KEY}"
+  fi
+}
+
 rg_has_matching_system_go() {
   local want
   want="${1}"

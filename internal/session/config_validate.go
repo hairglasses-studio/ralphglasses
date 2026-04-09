@@ -7,42 +7,55 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/resource"
 )
 
-// ValidationResult holds pre-flight check results.
+const validateMinDiskFreeBytes = 5 * 1024 * 1024 * 1024
+
+var (
+	validateClaudeLookPath = func() error {
+		_, err := exec.LookPath("claude")
+		return err
+	}
+	validateTmuxLookPath = func() error {
+		_, err := exec.LookPath("tmux")
+		return err
+	}
+	validateTmuxList = func() ([]byte, error) {
+		return exec.Command("tmux", "ls").Output()
+	}
+	validateGitStatus = func(repoPath string) ([]byte, error) {
+		return exec.Command("git", "-C", repoPath, "status", "--porcelain").Output()
+	}
+	validateResourceStatus = resource.Check
+)
+
 type ValidationResult struct {
-	Errors   []string // fatal — cannot proceed
-	Warnings []string // non-fatal — can proceed with caution
+	Errors   []string
+	Warnings []string
 }
 
-// OK returns true when there are no fatal errors.
 func (vr ValidationResult) OK() bool { return len(vr.Errors) == 0 }
 
-// ValidateConfig performs pre-flight checks for autonomous operation.
-// Errors are fatal (supervisor cannot start); warnings are advisory.
 func ValidateConfig(repoPath string) ValidationResult {
 	var vr ValidationResult
 
-	// --- Fatal checks ---
-
-	// 1. repoPath exists and is a directory.
 	info, err := os.Stat(repoPath)
 	if err != nil {
 		vr.Errors = append(vr.Errors, fmt.Sprintf("repo path does not exist: %s", repoPath))
-		return vr // remaining checks depend on the path existing
+		return vr
 	}
 	if !info.IsDir() {
 		vr.Errors = append(vr.Errors, fmt.Sprintf("repo path is not a directory: %s", repoPath))
 		return vr
 	}
 
-	// 2. .git directory exists (valid repo).
 	gitDir := filepath.Join(repoPath, ".git")
 	if fi, err := os.Stat(gitDir); err != nil || !fi.IsDir() {
 		vr.Errors = append(vr.Errors, fmt.Sprintf("no .git directory in %s — not a valid git repo", repoPath))
 	}
 
-	// 3. .ralph/ is writable (try creating a temp file).
 	ralphDir := filepath.Join(repoPath, ".ralph")
 	if err := os.MkdirAll(ralphDir, 0o755); err != nil {
 		vr.Errors = append(vr.Errors, fmt.Sprintf(".ralph directory not writable: %v", err))
@@ -55,7 +68,6 @@ func ValidateConfig(repoPath string) ValidationResult {
 		}
 	}
 
-	// 4. ROADMAP.md exists and has at least one unchecked item.
 	roadmap := filepath.Join(repoPath, "ROADMAP.md")
 	if f, err := os.Open(roadmap); err != nil {
 		vr.Errors = append(vr.Errors, "ROADMAP.md not found — no work items to process")
@@ -75,23 +87,28 @@ func ValidateConfig(repoPath string) ValidationResult {
 		}
 	}
 
-	// --- Warning checks ---
-
-	// 1. claude CLI available.
-	if _, err := exec.LookPath("claude"); err != nil {
+	if err := validateClaudeLookPath(); err != nil {
 		vr.Warnings = append(vr.Warnings, "claude CLI not found in PATH — Claude provider may not work")
 	}
 
-	// 2. Cost observations history.
 	costPath := filepath.Join(repoPath, ".ralph", "cost_observations.json")
 	if _, err := os.Stat(costPath); err != nil {
 		vr.Warnings = append(vr.Warnings, "no .ralph/cost_observations.json — no cost history available")
 	}
 
-	// 3. Dirty git working tree.
-	cmd := exec.Command("git", "-C", repoPath, "status", "--porcelain")
-	if out, err := cmd.Output(); err == nil && len(strings.TrimSpace(string(out))) > 0 {
+	if out, err := validateGitStatus(repoPath); err == nil && len(strings.TrimSpace(string(out))) > 0 {
 		vr.Warnings = append(vr.Warnings, "dirty git working tree — uncommitted changes present")
+	}
+
+	if err := validateTmuxLookPath(); err == nil {
+		if out, err := validateTmuxList(); err != nil || len(out) == 0 {
+			vr.Warnings = append(vr.Warnings, "tmux not active — continuity features (resurrect/continuum) may be unavailable")
+		}
+	}
+
+	status := validateResourceStatus(repoPath)
+	if status.DiskFreeBytes > 0 && status.DiskFreeBytes < validateMinDiskFreeBytes {
+		vr.Warnings = append(vr.Warnings, fmt.Sprintf("low disk space: %.1fGB available, want >5GB", float64(status.DiskFreeBytes)/(1024*1024*1024)))
 	}
 
 	return vr

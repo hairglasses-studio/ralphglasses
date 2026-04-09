@@ -11,6 +11,7 @@ CALLS_PER_HOUR="${CALLS_PER_HOUR:-80}"
 TIMEOUT_MINUTES="${TIMEOUT_MINUTES:-20}"
 CHECKPOINT_HOURS="${CHECKPOINT_HOURS:-3}"
 PROJECT_DIR="${PROJECT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
+ROADMAP_FILE="${ROADMAP_FILE:-ROADMAP.md}"
 RALPH_CMD="${RALPH_CMD:-}"
 MONITOR=false
 VERBOSE=false
@@ -47,6 +48,7 @@ Options:
   -t, --timeout NUM         Claude timeout in minutes (default: $TIMEOUT_MINUTES)
   -k, --checkpoint NUM      Git tag checkpoint interval in hours (default: $CHECKPOINT_HOURS)
   -p, --project DIR         Project directory (default: script location)
+  -r, --roadmap FILE        Roadmap file name (default: $ROADMAP_FILE)
   -m, --monitor             Start with tmux monitoring
   -v, --verbose             Verbose output
   -l, --live                Stream Claude output in real-time
@@ -82,6 +84,7 @@ while [[ $# -gt 0 ]]; do
         -t|--timeout)      TIMEOUT_MINUTES="$2";  shift 2 ;;
         -k|--checkpoint)   CHECKPOINT_HOURS="$2";  shift 2 ;;
         -p|--project)      PROJECT_DIR="$2";       shift 2 ;;
+        -r|--roadmap)      ROADMAP_FILE="$2";      shift 2 ;;
         -m|--monitor)      MONITOR=true;           shift ;;
         -v|--verbose)      VERBOSE=true;           shift ;;
         -l|--live)         LIVE=true;              shift ;;
@@ -178,6 +181,7 @@ CMD+=("--budget" "$BUDGET")
 CMD+=("--duration" "${DURATION_HOURS}h")
 CMD+=("--checkpoint-interval" "${CHECKPOINT_HOURS}h")
 CMD+=("--repo" "$PROJECT_DIR")
+CMD+=("--roadmap" "$ROADMAP_FILE")
 
 if $MONITOR; then
     echo "WARNING: --monitor is incompatible with marathon supervisor (tmux fork breaks PID tracking)." >&2

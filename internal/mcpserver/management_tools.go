@@ -28,6 +28,24 @@ func managementToolDefinitions() []mcp.Tool {
 		mcp.NewTool("ralphglasses_server_health",
 			mcp.WithDescription("Show the active ralphglasses MCP contract shape, including available tool groups, loaded groups, and resource/prompt coverage."),
 		),
+		mcp.NewTool("ralphglasses_autobuild_ledger_append",
+			mcp.WithDescription("Append an entry to the machine-readable autobuild execution ledger and emit telemetry."),
+			mcp.WithString("patch_id", mcp.Required(), mcp.Description("Unique identifier for the autobuild tranche")),
+			mcp.WithString("status", mcp.Required(), mcp.Description("Current status: \"planned\", \"in_progress\", \"completed\", \"blocked\", \"cancelled\", \"deferred\"")),
+			mcp.WithString("trigger_type", mcp.Description("Signal type: \"adoption\", \"integrity\", \"ci\", \"manual\", \"other\"")),
+			mcp.WithString("trigger_source", mcp.Description("Signal source resource or path")),
+			mcp.WithString("trigger_summary", mcp.Description("Why this tranche was opened")),
+			mcp.WithBoolean("remote_main_verified", mcp.Description("Whether the trigger signal was verified against remote main")),
+			mcp.WithString("recommended_entry_surface", mcp.Description("Resource, doc, command, or tool to start with")),
+			mcp.WithString("changes", mcp.Description("Comma-separated list of changes applied")),
+			mcp.WithString("acceptance_condition", mcp.Description("Comma-separated list of conditions for completion")),
+			mcp.WithString("stop_condition", mcp.Description("Comma-separated list of boundaries for the tranche")),
+			mcp.WithString("repo_owned_scope", mcp.Description("Comma-separated list of items in scope")),
+			mcp.WithString("closure_state", mcp.Description("Final state: \"completed\", \"blocked\", \"cancelled\", \"deferred\"")),
+			mcp.WithString("closure_summary", mcp.Description("High-signal outcome summary")),
+			mcp.WithString("prevented_failure_class", mcp.Description("Comma-separated failure classes prevented")),
+			mcp.WithString("next_recommended_patch", mcp.Description("ID of the next recommended patch")),
+		),
 	}
 }
 
@@ -56,6 +74,8 @@ func (s *Server) ManagementTools() []ToolEntry {
 			handler = s.handleSkillExport
 		case "ralphglasses_server_health":
 			handler = s.handleServerHealth
+		case "ralphglasses_autobuild_ledger_append":
+			handler = s.handleAutobuildLedgerAppend
 		default:
 			continue
 		}

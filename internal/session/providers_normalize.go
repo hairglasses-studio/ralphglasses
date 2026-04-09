@@ -19,6 +19,8 @@ func normalizeEvent(provider Provider, line []byte) (StreamEvent, error) {
 		return normalizeGeminiEvent(line)
 	case ProviderCodex:
 		return normalizeCodexEvent(line)
+	case ProviderCline:
+		return normalizeClineEvent(line)
 	case ProviderA2A:
 		return normalizeA2AEvent(line)
 	default:
@@ -164,6 +166,8 @@ func sanitizeStderr(provider Provider, raw string) string {
 		return sanitizeCodexStderr(raw)
 	case ProviderGoose:
 		return sanitizeGooseStderr(raw)
+	case ProviderCline:
+		return sanitizeClineStderr(raw)
 	case ProviderA2A:
 		return raw // A2A is HTTP-based; no stderr noise to filter
 	default:

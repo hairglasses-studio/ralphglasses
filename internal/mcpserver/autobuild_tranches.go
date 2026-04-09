@@ -14,6 +14,7 @@ type AutobuildTriggerSignal struct {
 	Type               string   `json:"type"`
 	Source             string   `json:"source"`
 	Summary            string   `json:"summary"`
+	SignalKey          string   `json:"signal_key,omitempty"`
 	RemoteMainVerified *bool    `json:"remote_main_verified,omitempty"`
 	MatchedWorkflows   []string `json:"matched_workflows,omitempty"`
 	MatchedSurfaces    []string `json:"matched_surfaces,omitempty"`
@@ -130,12 +131,37 @@ func (s *Server) autobuildTrancheSummary() AutobuildTrancheSummary {
 	for _, def := range autobuildCandidateDefs {
 		workflowMatches := matchingWorkflowCandidates(def.RelevantWorkflows, adoption.TopWorkflowCandidates)
 		surfaceMatches := matchingSurfaceCandidates(def.RelevantWorkflows, adoption.TopSurfaceCandidates)
-
-		feedbackBoost := feedback.PatchScoreBoost[def.PatchID] + feedback.TypeScoreBoost["adoption"]
-		var feedbackSummary string
-		if feedbackBoost > 0 {
-			feedbackSummary = fmt.Sprintf("Boosted by %d points from historical execution ledger feedback", feedbackBoost)
+		workflowNames := workflowCandidateNames(workflowMatches)
+		surfaceNames := surfaceCandidateNames(surfaceMatches)
+		triggerSignal := AutobuildTriggerSignal{
+			Type:             "adoption",
+			Source:           "ralph:///catalog/adoption-priorities + ralph:///catalog/discovery-adoption",
+			Summary:          buildAutobuildSignalSummary(def.RelevantWorkflows, workflowMatches, surfaceMatches, discovery),
+			MatchedWorkflows: workflowNames,
+			MatchedSurfaces:  surfaceNames,
 		}
+		triggerSignal.SignalKey = autobuildSignalKey(triggerSignal)
+
+		feedbackBoost := 0
+		feedbackReasons := make([]string, 0, 5)
+		if boost := feedback.PatchScoreBoost[def.PatchID]; boost > 0 {
+			feedbackBoost += boost
+			feedbackReasons = append(feedbackReasons, fmt.Sprintf("patch %s +%d", def.PatchID, boost))
+		}
+		if boost := feedback.TypeScoreBoost[triggerSignal.Type]; boost > 0 {
+			feedbackBoost += boost
+			feedbackReasons = append(feedbackReasons, fmt.Sprintf("signal type %s +%d", triggerSignal.Type, boost))
+		}
+		if boost := feedback.SignalKeyBoost[triggerSignal.SignalKey]; boost > 0 {
+			feedbackBoost += boost
+			feedbackReasons = append(feedbackReasons, fmt.Sprintf("signal %s +%d", triggerSignal.SignalKey, boost))
+		}
+		workflowFeedback, workflowReasons := cappedFeedbackReasons(feedback.WorkflowScoreBoost, workflowNames, 8, "workflow")
+		surfaceFeedback, surfaceReasons := cappedFeedbackReasons(feedback.SurfaceScoreBoost, surfaceNames, 6, "surface")
+		feedbackBoost += workflowFeedback + surfaceFeedback
+		feedbackReasons = append(feedbackReasons, workflowReasons...)
+		feedbackReasons = append(feedbackReasons, surfaceReasons...)
+		feedbackSummary := buildFeedbackSummary(feedbackReasons)
 
 		score := def.BaseScore + workflowMatchBoost(workflowMatches) + surfaceMatchBoost(surfaceMatches) + feedbackBoost
 		if discovery.DiscoveryTelemetryPresent {
@@ -173,13 +199,7 @@ func (s *Server) autobuildTrancheSummary() AutobuildTrancheSummary {
 			RecommendedEntrySurface: def.RecommendedEntrySurface,
 			RepoOwnedScope:          append([]string(nil), def.RepoOwnedScope...),
 			WhyNow:                  append([]string(nil), def.WhyNow...),
-			TriggerSignal: AutobuildTriggerSignal{
-				Type:             "adoption",
-				Source:           "ralph:///catalog/adoption-priorities + ralph:///catalog/discovery-adoption",
-				Summary:          buildAutobuildSignalSummary(def.RelevantWorkflows, workflowMatches, surfaceMatches, discovery),
-				MatchedWorkflows: workflowCandidateNames(workflowMatches),
-				MatchedSurfaces:  surfaceCandidateNames(surfaceMatches),
-			},
+			TriggerSignal:           triggerSignal,
 		})
 	}
 
@@ -277,6 +297,51 @@ func buildAutobuildSignalSummary(
 	}
 	return strings.Join(parts, "; ") + "."
 }
+func autobuildSignalKey(signal AutobuildTriggerSignal) string {
+	if signal.SignalKey != "" {
+		return signal.SignalKey
+	}
+	if signal.Type == "" || signal.Source == "" {
+		return ""
+	}
+	return signal.Type + "::" + signal.Source
+}
+
+func cappedFeedbackReasons(boosts map[string]int, names []string, capTotal int, kind string) (int, []string) {
+	total := 0
+	reasons := make([]string, 0, len(names))
+	seen := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		boost := boosts[name]
+		if boost <= 0 {
+			continue
+		}
+		if capTotal > 0 && total >= capTotal {
+			break
+		}
+		applied := boost
+		if capTotal > 0 && total+applied > capTotal {
+			applied = capTotal - total
+		}
+		total += applied
+		reasons = append(reasons, fmt.Sprintf("%s %s +%d", kind, name, applied))
+	}
+	return total, reasons
+}
+
+func buildFeedbackSummary(reasons []string) string {
+	if len(reasons) == 0 {
+		return ""
+	}
+	return "Historical completed tranches boosted this candidate via " + strings.Join(reasons, "; ") + "."
+}
 
 func confidenceLabel(confidence float64) string {
 	switch {
@@ -332,11 +397,29 @@ func (s *Server) activeRedSignalCandidates(feedback FeedbackBoosts) []AutobuildP
 		tTrue := true
 
 		patchID := fmt.Sprintf("integrity_crash_%s", ev.SessionID)
-		feedbackBoost := feedback.PatchScoreBoost[patchID] + feedback.TypeScoreBoost["integrity"]
-		var feedbackSummary string
-		if feedbackBoost > 0 {
-			feedbackSummary = fmt.Sprintf("Boosted by %d points from historical execution ledger feedback", feedbackBoost)
+		triggerSignal := AutobuildTriggerSignal{
+			Type:               "integrity",
+			Source:             "telemetry.EventCrash",
+			Summary:            fmt.Sprintf("Crash in session %s requires fix", ev.SessionID),
+			RemoteMainVerified: &tTrue,
 		}
+		triggerSignal.SignalKey = autobuildSignalKey(triggerSignal)
+
+		feedbackBoost := 0
+		feedbackReasons := make([]string, 0, 3)
+		if boost := feedback.PatchScoreBoost[patchID]; boost > 0 {
+			feedbackBoost += boost
+			feedbackReasons = append(feedbackReasons, fmt.Sprintf("patch %s +%d", patchID, boost))
+		}
+		if boost := feedback.TypeScoreBoost[triggerSignal.Type]; boost > 0 {
+			feedbackBoost += boost
+			feedbackReasons = append(feedbackReasons, fmt.Sprintf("signal type %s +%d", triggerSignal.Type, boost))
+		}
+		if boost := feedback.SignalKeyBoost[triggerSignal.SignalKey]; boost > 0 {
+			feedbackBoost += boost
+			feedbackReasons = append(feedbackReasons, fmt.Sprintf("signal %s +%d", triggerSignal.SignalKey, boost))
+		}
+		feedbackSummary := buildFeedbackSummary(feedbackReasons)
 
 		candidates = append(candidates, AutobuildPatchCandidate{
 			PatchID:                 patchID,
@@ -350,12 +433,7 @@ func (s *Server) activeRedSignalCandidates(feedback FeedbackBoosts) []AutobuildP
 			RecommendedEntrySurface: "ralph:///runtime/recovery",
 			RepoOwnedScope:          []string{"crash repair"},
 			WhyNow:                  []string{"Red signal on remote main requires immediate fix"},
-			TriggerSignal: AutobuildTriggerSignal{
-				Type:               "integrity",
-				Source:             "telemetry.EventCrash",
-				Summary:            fmt.Sprintf("Crash in session %s requires fix", ev.SessionID),
-				RemoteMainVerified: &tTrue,
-			},
+			TriggerSignal:           triggerSignal,
 		})
 	}
 	return candidates

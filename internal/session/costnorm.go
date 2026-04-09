@@ -27,6 +27,7 @@ var ProviderCostRates = map[Provider]CostRate{
 	ProviderGoose:  {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // goose multi-model, default to Claude rates
 	ProviderAmp:    {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // amp managed models, default to Claude rates
 	ProviderA2A:    {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // a2a remote agents, default to Claude rates (actual cost depends on remote)
+	ProviderCline:  {InputPer1M: 0.0, OutputPer1M: 0.0},                                      // cline free-tier models; BYOK models override via cost_rates.json
 }
 
 // claudeBaseRate is the reference rate used for normalization.
@@ -63,7 +64,7 @@ func LoadCostRatesFromDir(ralphDir string) {
 	defer costRateMu.Unlock()
 
 	// Apply overrides to ProviderCostRates.
-	for _, provider := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ProviderCrush, ProviderGoose, ProviderAmp, ProviderA2A} {
+	for _, provider := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ProviderCrush, ProviderGoose, ProviderAmp, ProviderCline, ProviderA2A} {
 		rate := cr.ProviderCostRateFrom(provider)
 		if rate.InputPer1M > 0 || rate.OutputPer1M > 0 {
 			ProviderCostRates[provider] = rate

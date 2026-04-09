@@ -16,6 +16,13 @@
       "type": "adoption",
       "source": "<resource, report, CI run, or human request>",
       "summary": "<why this tranche was opened>",
+      "signal_key": "<type>::<source>",
+      "matched_workflows": [
+        "<workflow-name>"
+      ],
+      "matched_surfaces": [
+        "<kind:name>"
+      ],
       "remote_main_verified": false
     },
     "repo_owned_scope": [
@@ -31,6 +38,7 @@
     "stop_condition": [
       "<when to stop instead of expanding scope>"
     ],
+    "evidence_path": "<primary durable artifact path>",
     "evidence": [
       {
         "kind": "commit",

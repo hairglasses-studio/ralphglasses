@@ -57,7 +57,7 @@ func TestShouldCascade_ReliableCheapProvider(t *testing.T) {
 		entries = append(entries, JournalEntry{
 			Timestamp:  time.Now(),
 			SessionID:  "sess-" + string(rune('a'+i)),
-			Provider:   "gemini",
+			Provider:   "cline",
 			RepoName:   "test-repo",
 			SpentUSD:   0.10,
 			TurnCount:  5,
@@ -100,7 +100,7 @@ func TestResolveProvider(t *testing.T) {
 			entries = append(entries, JournalEntry{
 				Timestamp:  time.Now(),
 				SessionID:  "s-" + string(rune('a'+i)),
-				Provider:   "gemini",
+				Provider:   "cline",
 				RepoName:   "test",
 				SpentUSD:   0.05,
 				TurnCount:  3,
@@ -113,8 +113,9 @@ func TestResolveProvider(t *testing.T) {
 		config := DefaultCascadeConfig()
 		cr := NewCascadeRouter(config, fa, nil, "")
 
-		if got := cr.ResolveProvider("feature"); got != ProviderGemini {
-			t.Errorf("expected ProviderGemini (cheap), got %s", got)
+		// Default cheap provider is now Cline (free tier).
+		if got := cr.ResolveProvider("feature"); got != ProviderCline {
+			t.Errorf("expected ProviderCline (cheap/free), got %s", got)
 		}
 	})
 
@@ -146,8 +147,8 @@ func TestCheapLaunchOpts(t *testing.T) {
 
 	cheap := cr.CheapLaunchOpts(base)
 
-	if cheap.Provider != ProviderGemini {
-		t.Errorf("expected provider=gemini, got %s", cheap.Provider)
+	if cheap.Provider != ProviderCline {
+		t.Errorf("expected provider=cline, got %s", cheap.Provider)
 	}
 	if cheap.MaxBudgetUSD != 0.50 {
 		t.Errorf("expected budget=0.50, got %f", cheap.MaxBudgetUSD)
@@ -317,24 +318,47 @@ func TestRecordResult_Persistence(t *testing.T) {
 
 func TestDefaultModelTiers(t *testing.T) {
 	tiers := DefaultModelTiers()
-	if len(tiers) != 4 {
-		t.Fatalf("expected 4 default tiers, got %d", len(tiers))
+	if len(tiers) != 11 {
+		t.Fatalf("expected 11 default tiers, got %d", len(tiers))
 	}
 
-	// Verify sorted by cost ascending
-	for i := 1; i < len(tiers); i++ {
-		if tiers[i].CostPer1M < tiers[i-1].CostPer1M {
-			t.Errorf("tiers not sorted by cost: tier[%d]=%f < tier[%d]=%f",
-				i, tiers[i].CostPer1M, i-1, tiers[i-1].CostPer1M)
+	// Verify the paid tiers are sorted by cost ascending (free tiers all at 0)
+	paidStart := -1
+	for i, tier := range tiers {
+		if tier.CostPer1M > 0 {
+			paidStart = i
+			break
+		}
+	}
+	if paidStart >= 0 {
+		for i := paidStart + 1; i < len(tiers); i++ {
+			if tiers[i].CostPer1M > 0 && tiers[i].CostPer1M < tiers[i-1].CostPer1M {
+				t.Errorf("paid tiers not sorted by cost: tier[%d]=%f < tier[%d]=%f",
+					i, tiers[i].CostPer1M, i-1, tiers[i-1].CostPer1M)
+			}
 		}
 	}
 
-	// Check labels
-	labels := []string{"ultra-cheap", "worker", "coding", "reasoning"}
-	for i, want := range labels {
-		if tiers[i].Label != want {
-			t.Errorf("tier[%d].Label = %q, want %q", i, tiers[i].Label, want)
+	// Check that key labels are present
+	labelSet := make(map[string]bool)
+	for _, tier := range tiers {
+		labelSet[tier.Label] = true
+	}
+	requiredLabels := []string{"ultra-cheap", "worker", "coding", "reasoning"}
+	for _, want := range requiredLabels {
+		if !labelSet[want] {
+			t.Errorf("missing required label %q in default tiers", want)
 		}
+	}
+	// Free tier labels should start with "free-"
+	freeTierCount := 0
+	for _, tier := range tiers {
+		if tier.CostPer1M == 0 {
+			freeTierCount++
+		}
+	}
+	if freeTierCount == 0 {
+		t.Error("expected at least one free (zero-cost) tier")
 	}
 }
 
@@ -369,9 +393,9 @@ func TestSelectTier_ByTaskType(t *testing.T) {
 		taskType  string
 		wantLabel string
 	}{
-		{"lint", "ultra-cheap"},
-		{"format", "ultra-cheap"},
-		{"classify", "ultra-cheap"},
+		{"lint", "free-general"},
+		{"format", "free-general"},
+		{"classify", "free-general"},
 		{"codegen", "coding"},
 		{"test", "coding"},
 		{"architecture", "reasoning"},
@@ -395,8 +419,8 @@ func TestSelectTier_ByComplexity(t *testing.T) {
 		complexity int
 		wantLabel  string
 	}{
-		{1, "ultra-cheap"},
-		{2, "worker"},
+		{1, "free-general"},
+		{2, "free-general"},
 		{3, "coding"},
 		{4, "reasoning"},
 	}
@@ -426,8 +450,8 @@ func TestSelectTier_TaskTypeOverridesComplexityArg(t *testing.T) {
 
 	// "lint" maps to complexity 1, so even if we pass complexity=4 it should pick ultra-cheap
 	tier := cr.SelectTier("lint", 4)
-	if tier.Label != "ultra-cheap" {
-		t.Errorf("SelectTier(\"lint\", 4): label = %q, want %q", tier.Label, "ultra-cheap")
+	if tier.Label != "free-general" {
+		t.Errorf("SelectTier(\"lint\", 4): label = %q, want %q", tier.Label, "free")
 	}
 }
 
@@ -470,8 +494,8 @@ func TestSelectTier_ProviderAlignment(t *testing.T) {
 	// Ultra-cheap and worker should be Gemini
 	for _, tt := range []string{"lint", "format"} {
 		tier := cr.SelectTier(tt, 0)
-		if tier.Provider != ProviderGemini {
-			t.Errorf("SelectTier(%q): provider = %q, want gemini", tt, tier.Provider)
+		if tier.Provider != ProviderCline {
+			t.Errorf("SelectTier(%q): provider = %q, want cline", tt, tier.Provider)
 		}
 	}
 
@@ -590,7 +614,7 @@ func TestLatencyAwareRouting_SkipsSlow(t *testing.T) {
 
 	// Record high latencies for cheap provider (gemini)
 	for range 20 {
-		cr.RecordLatency("gemini", 800*time.Millisecond)
+		cr.RecordLatency("cline", 800*time.Millisecond)
 	}
 
 	// ShouldCascade should return false (skip cheap, too slow)
@@ -611,7 +635,7 @@ func TestLatencyAwareRouting_UsesCheapWhenFast(t *testing.T) {
 
 	// Record low latencies for cheap provider
 	for range 20 {
-		cr.RecordLatency("gemini", 100*time.Millisecond)
+		cr.RecordLatency("cline", 100*time.Millisecond)
 	}
 
 	// ShouldCascade should return true (cheap is fast, try it)
@@ -627,7 +651,7 @@ func TestLatencyAwareRouting_Disabled(t *testing.T) {
 
 	// Record extremely high latencies
 	for range 20 {
-		cr.RecordLatency("gemini", 5*time.Second)
+		cr.RecordLatency("cline", 5*time.Second)
 	}
 
 	// ShouldCascade should still return true — latency routing disabled
@@ -642,10 +666,10 @@ func TestRecordLatency_SlidingWindow(t *testing.T) {
 
 	// Fill window with 100 low-latency samples
 	for range 100 {
-		cr.RecordLatency("gemini", 50*time.Millisecond)
+		cr.RecordLatency("cline", 50*time.Millisecond)
 	}
 
-	lat := cr.GetProviderLatency("gemini")
+	lat := cr.GetProviderLatency("cline")
 	if lat.Samples != 100 {
 		t.Fatalf("expected 100 samples, got %d", lat.Samples)
 	}
@@ -655,10 +679,10 @@ func TestRecordLatency_SlidingWindow(t *testing.T) {
 
 	// Add 100 more high-latency samples — old ones should be evicted
 	for range 100 {
-		cr.RecordLatency("gemini", 900*time.Millisecond)
+		cr.RecordLatency("cline", 900*time.Millisecond)
 	}
 
-	lat = cr.GetProviderLatency("gemini")
+	lat = cr.GetProviderLatency("cline")
 	if lat.Samples != 100 {
 		t.Fatalf("expected 100 samples after overflow, got %d", lat.Samples)
 	}
@@ -780,8 +804,8 @@ func TestSpeculativeLaunchOpts(t *testing.T) {
 
 	cheap, expensive := cr.SpeculativeLaunchOpts(base)
 
-	if cheap.Provider != ProviderGemini {
-		t.Errorf("cheap provider = %s, want gemini", cheap.Provider)
+	if cheap.Provider != ProviderCline {
+		t.Errorf("cheap provider = %s, want cline", cheap.Provider)
 	}
 	if cheap.SessionName != "my-session-cheap" {
 		t.Errorf("cheap session name = %s, want my-session-cheap", cheap.SessionName)
@@ -832,7 +856,7 @@ func TestSelectTier_BanditFallback(t *testing.T) {
 
 	// Should fall through to static selection since bandit returns unknown
 	tier := cr.SelectTier("lint", 0)
-	if tier.Label != "ultra-cheap" {
+	if tier.Label != "free-general" {
 		t.Errorf("expected fallback to static selection, got label=%q", tier.Label)
 	}
 }
@@ -853,7 +877,7 @@ func TestSelectTier_BanditEmptyProvider(t *testing.T) {
 	}
 
 	tier := cr.SelectTier("lint", 0)
-	if tier.Label != "ultra-cheap" {
+	if tier.Label != "free-general" {
 		t.Errorf("expected static selection for empty bandit result, got label=%q", tier.Label)
 	}
 }
@@ -1141,7 +1165,7 @@ func TestResolveProvider_LatencyHighSkipsCheap(t *testing.T) {
 
 	// Record high latencies
 	for range 20 {
-		cr.RecordLatency("gemini", 500*time.Millisecond)
+		cr.RecordLatency("cline", 500*time.Millisecond)
 	}
 
 	got := cr.ResolveProvider("feature")
@@ -1283,7 +1307,7 @@ func TestSelectTier_BanditNotEnoughHistory(t *testing.T) {
 	if called {
 		t.Error("bandit should not be consulted with < 10 history items")
 	}
-	if tier.Label != "ultra-cheap" {
+	if tier.Label != "free-general" {
 		t.Errorf("expected static selection, got label=%q", tier.Label)
 	}
 }
@@ -1317,8 +1341,8 @@ func TestRecordLatency_MultipleProviders(t *testing.T) {
 
 func TestDefaultCascadeConfig(t *testing.T) {
 	config := DefaultCascadeConfig()
-	if config.CheapProvider != ProviderGemini {
-		t.Errorf("CheapProvider = %s, want gemini", config.CheapProvider)
+	if config.CheapProvider != ProviderCline {
+		t.Errorf("CheapProvider = %s, want cline", config.CheapProvider)
 	}
 	if config.ExpensiveProvider != ProviderCodex {
 		t.Errorf("ExpensiveProvider = %s, want codex", config.ExpensiveProvider)
@@ -1326,11 +1350,11 @@ func TestDefaultCascadeConfig(t *testing.T) {
 	if config.ConfidenceThreshold != 0.7 {
 		t.Errorf("ConfidenceThreshold = %f, want 0.7", config.ConfidenceThreshold)
 	}
-	if config.MaxCheapBudgetUSD != 2.00 {
-		t.Errorf("MaxCheapBudgetUSD = %f, want 2.00", config.MaxCheapBudgetUSD)
+	if config.MaxCheapBudgetUSD != 0.0 {
+		t.Errorf("MaxCheapBudgetUSD = %f, want 0.0", config.MaxCheapBudgetUSD)
 	}
-	if config.MaxCheapTurns != 15 {
-		t.Errorf("MaxCheapTurns = %d, want 15", config.MaxCheapTurns)
+	if config.MaxCheapTurns != 20 {
+		t.Errorf("MaxCheapTurns = %d, want 20", config.MaxCheapTurns)
 	}
 	if config.TaskTypeOverrides == nil {
 		t.Error("TaskTypeOverrides should be initialized")
@@ -1394,8 +1418,8 @@ func TestDefaultCascadeFromConfig_EnabledDefaults(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected non-nil config when CASCADE_ENABLED=true")
 	}
-	if result.CheapProvider != ProviderGemini {
-		t.Errorf("CheapProvider = %q, want %q", result.CheapProvider, ProviderGemini)
+	if result.CheapProvider != ProviderCline {
+		t.Errorf("CheapProvider = %q, want %q", result.CheapProvider, ProviderCline)
 	}
 	if result.ExpensiveProvider != ProviderCodex {
 		t.Errorf("ExpensiveProvider = %q, want %q", result.ExpensiveProvider, ProviderCodex)
@@ -1403,11 +1427,11 @@ func TestDefaultCascadeFromConfig_EnabledDefaults(t *testing.T) {
 	if result.ConfidenceThreshold != 0.7 {
 		t.Errorf("ConfidenceThreshold = %f, want 0.7", result.ConfidenceThreshold)
 	}
-	if result.MaxCheapBudgetUSD != 2.00 {
-		t.Errorf("MaxCheapBudgetUSD = %f, want 2.00", result.MaxCheapBudgetUSD)
+	if result.MaxCheapBudgetUSD != 0.0 {
+		t.Errorf("MaxCheapBudgetUSD = %f, want 0.0", result.MaxCheapBudgetUSD)
 	}
-	if result.MaxCheapTurns != 15 {
-		t.Errorf("MaxCheapTurns = %d, want 15", result.MaxCheapTurns)
+	if result.MaxCheapTurns != 20 {
+		t.Errorf("MaxCheapTurns = %d, want 20", result.MaxCheapTurns)
 	}
 }
 
@@ -1449,8 +1473,8 @@ func TestDefaultCascadeFromConfig_InvalidNumericsFallback(t *testing.T) {
 	if result.ConfidenceThreshold != 0.7 {
 		t.Errorf("ConfidenceThreshold = %f, want 0.7 (default fallback)", result.ConfidenceThreshold)
 	}
-	if result.MaxCheapBudgetUSD != 2.00 {
-		t.Errorf("MaxCheapBudgetUSD = %f, want 2.00 (default fallback)", result.MaxCheapBudgetUSD)
+	if result.MaxCheapBudgetUSD != 0.0 {
+		t.Errorf("MaxCheapBudgetUSD = %f, want 0.0 (default fallback)", result.MaxCheapBudgetUSD)
 	}
 }
 
@@ -1508,8 +1532,8 @@ func TestDefaultCascadeFromConfig_NegativeBudget(t *testing.T) {
 		t.Fatal("expected non-nil config")
 	}
 	// Negative should fall back to default
-	if result.MaxCheapBudgetUSD != 2.00 {
-		t.Errorf("MaxCheapBudgetUSD = %f, want 2.00 (default for negative)", result.MaxCheapBudgetUSD)
+	if result.MaxCheapBudgetUSD != 0.0 {
+		t.Errorf("MaxCheapBudgetUSD = %f, want 0.0 (default for negative)", result.MaxCheapBudgetUSD)
 	}
 }
 

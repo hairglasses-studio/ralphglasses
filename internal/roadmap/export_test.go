@@ -481,6 +481,62 @@ func TestExport_Checkpoint_NoAcceptanceFallback(t *testing.T) {
 	}
 }
 
+func TestExport_CheckpointJSON(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	repoDir := filepath.Join(dir, "checkpoint-json-repo")
+	if err := os.MkdirAll(repoDir, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
+	}
+	path := filepath.Join(repoDir, "ROADMAP.md")
+	if err := os.WriteFile(path, []byte(testRoadmap), 0o644); err != nil {
+		t.Fatalf("write roadmap: %v", err)
+	}
+
+	rm, err := Parse(path)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	output, err := Export(rm, "checkpoint_json", "Phase 1", "Parser", 20, true)
+	if err != nil {
+		t.Fatalf("Export checkpoint_json: %v", err)
+	}
+
+	var checkpoint CheckpointExport
+	if err := json.Unmarshal([]byte(output), &checkpoint); err != nil {
+		t.Fatalf("unmarshal checkpoint_json output: %v", err)
+	}
+
+	if checkpoint.Repo != "checkpoint-json-repo" {
+		t.Fatalf("expected repo checkpoint-json-repo, got %q", checkpoint.Repo)
+	}
+	if checkpoint.Component != "Phase 1 / Parser" {
+		t.Fatalf("expected component Phase 1 / Parser, got %q", checkpoint.Component)
+	}
+	if checkpoint.Roadmap != "ROADMAP.md" {
+		t.Fatalf("expected roadmap ROADMAP.md, got %q", checkpoint.Roadmap)
+	}
+	if checkpoint.CompletedCount != 1 || checkpoint.NextWaveCount != 1 || checkpoint.BlockedCount != 1 {
+		t.Fatalf("unexpected checkpoint counts: %+v", checkpoint)
+	}
+	if len(checkpoint.Verification) == 0 || !strings.Contains(checkpoint.Verification[0], "Parser: parser handles all edge cases") {
+		t.Fatalf("expected parser acceptance criteria, got %+v", checkpoint.Verification)
+	}
+	if len(checkpoint.Completed) != 1 || checkpoint.Completed[0].ID != "1.1.3" {
+		t.Fatalf("expected completed task 1.1.3, got %+v", checkpoint.Completed)
+	}
+	if len(checkpoint.NextWave) != 1 || checkpoint.NextWave[0].ID != "1.1.1" {
+		t.Fatalf("expected next wave task 1.1.1, got %+v", checkpoint.NextWave)
+	}
+	if checkpoint.NextTrancheSeed == nil || checkpoint.NextTrancheSeed.ID != "1.1.1" {
+		t.Fatalf("expected next tranche seed 1.1.1, got %+v", checkpoint.NextTrancheSeed)
+	}
+	if len(checkpoint.Blocked) != 1 || len(checkpoint.Blocked[0].BlockedBy) != 1 || checkpoint.Blocked[0].BlockedBy[0] != "1.1.1" {
+		t.Fatalf("expected blocked task with dependency on 1.1.1, got %+v", checkpoint.Blocked)
+	}
+}
+
 func TestComputeDifficulty(t *testing.T) {
 	t.Parallel()
 

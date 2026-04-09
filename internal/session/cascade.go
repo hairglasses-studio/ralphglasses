@@ -26,13 +26,16 @@ type CascadeConfig struct {
 func DefaultCascadeConfig() CascadeConfig {
 	return CascadeConfig{
 		Enabled:             true,
-		CheapProvider:       ProviderGemini,
+		CheapProvider:       ProviderCline,
 		ExpensiveProvider:   DefaultPrimaryProvider(),
 		ConfidenceThreshold: 0.7,
 		CascadeThreshold:    0.5,
-		MaxCheapBudgetUSD:   2.00,
-		MaxCheapTurns:       15,
-		TaskTypeOverrides:   make(map[string]Provider),
+		MaxCheapBudgetUSD:   0.0, // Cline free tier: no cost cap needed
+		MaxCheapTurns:       20,
+		TaskTypeOverrides: map[string]Provider{
+			"architecture": ProviderClaude, // force expensive for L4 tasks
+			"planning":     ProviderClaude,
+		},
 	}
 }
 

@@ -174,8 +174,6 @@ func TestHandleFirstbootProfile_ValidateIssues(t *testing.T) {
 }
 
 func TestHandleFleetRuntime_CoordinatorLifecycle(t *testing.T) {
-	t.Parallel()
-
 	srv, _ := setupTestServer(t)
 	port := reserveTCPPort(t)
 	t.Cleanup(func() {
@@ -220,8 +218,6 @@ func TestHandleFleetRuntime_CoordinatorLifecycle(t *testing.T) {
 }
 
 func TestHandleFleetRuntime_WorkerLifecycle(t *testing.T) {
-	t.Parallel()
-
 	coordSrv, root := setupTestServer(t)
 	workerSrv := NewServer(root)
 	workerSrv.SessMgr.SetStateDir(filepath.Join(root, ".worker-session-state"))
