@@ -71,24 +71,6 @@
           "type": "string",
           "minLength": 1
         },
-        "signal_key": {
-          "type": "string",
-          "minLength": 1
-        },
-        "matched_workflows": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "matched_surfaces": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
         "remote_main_verified": {
           "type": "boolean"
         }
@@ -217,10 +199,6 @@
           "items": {
             "$ref": "#/$defs/evidence_item"
           }
-        },
-        "evidence_path": {
-          "type": "string",
-          "minLength": 1
         },
         "result": {
           "$ref": "#/$defs/result"

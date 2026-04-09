@@ -423,26 +423,4 @@ What this should prevent next time:
 - future queue handoffs falling back to static roadmap ordering despite live repo signals
 
 Next recommended patch:
-- `generated_surface_drift_gate`
-
----
-
-## Tranche 5: Integrity Gates (Red Signal Filter)
-
-Target repo: `ralphglasses`
-
-Scope:
-- Filter autobuild intake to actionable red signals that reproduce on remote main.
-
-What changed:
-- Added `RemoteMainVerified` metadata to `AutobuildTriggerSignal`.
-- Added `activeRedSignalCandidates` parser to find `EventCrash` failures in the telemetry log.
-- Enforced verification: branch-local failures and dirty-worktree crashes are ignored by default.
-- Injected verified red signals into the patch queue with priority P0.
-
-Evidence:
-- `5666929`
-
-What this should prevent next time:
-- Wasted autobuild cycles chasing local dirty-worktree bugs or unresolved branch state.
-- False alarms dominating the repo-owned queue.
+- `remote_main_red_signal_filter`

@@ -16,13 +16,6 @@
       "type": "adoption",
       "source": "<resource, report, CI run, or human request>",
       "summary": "<why this tranche was opened>",
-      "signal_key": "<type>::<source>",
-      "matched_workflows": [
-        "<workflow-name>"
-      ],
-      "matched_surfaces": [
-        "<kind:name>"
-      ],
       "remote_main_verified": false
     },
     "repo_owned_scope": [
@@ -38,7 +31,6 @@
     "stop_condition": [
       "<when to stop instead of expanding scope>"
     ],
-    "evidence_path": "<primary durable artifact path>",
     "evidence": [
       {
         "kind": "commit",
@@ -463,91 +455,6 @@
       "next_recommended_patch": "remote_main_red_signal_filter",
       "notes": [
         "The selector deliberately ranks repo-owned patch ids instead of raw workflows so future autobuild loops can hand off directly into implementation."
-      ]
-    },
-    {
-      "date": "2026-04-09",
-      "patch_id": "generated_surface_drift_gate",
-      "status": "completed",
-      "trigger_signal": {
-        "type": "integrity",
-        "source": "docs/autobuild-patch-queue.json",
-        "summary": "The ranked autobuild queue selected generated_surface_drift_gate to ensure docs and parity surfaces fail tests when the source contract changes without regeneration.",
-        "remote_main_verified": true
-      },
-      "repo_owned_scope": [
-        "generated runtime docs",
-        "provider-parity docs",
-        "drift verification"
-      ],
-      "recommended_entry_surface": "ralph:///catalog/provider-parity",
-      "changes": [
-        "added TestRenderTemplateData_MatchesCheckedInDoc to tools/genmcpdocs",
-        "added TestRenderSkillMarkdown_MatchesCheckedInDoc to tools/genskilldoc",
-        "added TestRenderConfigReference_MatchesCheckedInDoc to tools/genconfig",
-        "added TestRenderManpages_MatchesCheckedInTree to tools/gendoc",
-        "added TestCheckSkillSurfaces_MatchesCheckedInFiles to tools/genskillsurface"
-      ],
-      "verification_surface": [
-        {
-          "type": "test",
-          "ref": "tools/**/*_test.go",
-          "summary": "Verifies that checking in mismatched generated outputs fails CI."
-        }
-      ],
-      "result": {
-        "closure_state": "completed",
-        "summary": "Ralphglasses now properly guards generated surfaces against drift.",
-        "prevented_failure_class": [
-          "silent drift between capabilities and docs",
-          "operator confusion from stale parity references"
-        ]
-      },
-      "next_recommended_patch": "telemetry_to_patch_feedback",
-      "notes": [
-        "This patch closes the gap on generated-surface integrity, enabling trust in autobuild output."
-      ]
-    },
-    {
-      "date": "2026-04-08",
-      "patch_id": "remote_main_red_signal_filter",
-      "status": "completed",
-      "trigger_signal": {
-        "type": "integrity",
-        "source": "docs/autobuild-patch-queue.json",
-        "summary": "The ranked autobuild queue selected the red-signal filter to prevent autobuild loops from burning capacity on stale local red state that does not reproduce on remote main.",
-        "remote_main_verified": true
-      },
-      "repo_owned_scope": [
-        "red-signal intake",
-        "remote-main verification metadata",
-        "dirty-worktree filtering"
-      ],
-      "recommended_entry_surface": "internal/mcpserver/autobuild_tranches.go",
-      "changes": [
-        "added RemoteMainVerified boolean field to AutobuildTriggerSignal",
-        "added activeRedSignalCandidates function to query telemetry for EventCrash",
-        "implemented dirty-worktree and remote_main_verified filtering",
-        "injected valid red signal candidates into the autobuild TrancheSummary with P0 priority"
-      ],
-      "verification_surface": [
-        {
-          "type": "test",
-          "ref": "TestAutobuildTrancheSummary_FiltersRedSignals",
-          "summary": "Verifies that branch-local and dirty-worktree failures are ignored, while a verified red signal enters the queue at P0."
-        }
-      ],
-      "result": {
-        "closure_state": "completed",
-        "summary": "Ralphglasses now properly ingests red signals from telemetry while enforcing remote main reproduction and clean worktrees before recommending a patch.",
-        "prevented_failure_class": [
-          "wasted autobuild capacity on local-only failures",
-          "dirty-worktree false alarms"
-        ]
-      },
-      "next_recommended_patch": "generated_surface_drift_gate",
-      "notes": [
-        "This patch hardens the autobuild intake loop to only focus on actionable repo debt."
       ]
     }
   ]

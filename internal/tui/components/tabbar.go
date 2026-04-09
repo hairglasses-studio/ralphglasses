@@ -23,7 +23,11 @@ func (t *TabBar) View() string {
 			tabs = append(tabs, styles.TabInactive.Render(name))
 		}
 	}
-	return strings.Join(tabs, " ")
+	line := strings.Join(tabs, " ")
+	if t.Width > 0 {
+		return VisualTruncate(line, t.Width)
+	}
+	return line
 }
 
 // HandleMouse processes a mouse event for the tab bar.

@@ -167,6 +167,11 @@ Immediate roadmap notes captured from the Jellyfin ecosystem rollout so the perp
   - Target: `internal/roadmap/` safety heuristics + operator prompt generation
   - **Acceptance:** plans default to explicit opt-in flags or guard rails whenever an automation would shadow non-empty local paths
 
+- [x] **ATD-14** — Add medium-width TUI layout harness checks so nested frame chrome, help panels, and multi-select tables cannot exceed terminal width unnoticed `P1` `S`
+  - Target: `internal/tui/` renderer contracts + teatest coverage
+  - Shipped by truncating top-frame chrome to terminal width, wrapping help entries to the remaining line budget, accounting for multi-select prefixes in table width math, and adding medium-width Teatest assertions
+  - **Acceptance:** medium-width overview and help renders stay within terminal width and deterministic tests fail on future overflow regressions
+
 ## Perpetual Development Cycle Notes `[NEW]`
 
 Operator continuity notes captured from the Hyprland persistence rollout. These are future autopatch and autobuild follow-ups so desktop iteration can keep terminal state alive while still landing verified tranche commits continuously.

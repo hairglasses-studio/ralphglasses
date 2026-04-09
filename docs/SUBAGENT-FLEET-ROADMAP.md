@@ -42,4 +42,4 @@ This roadmap addendum tracks the work needed to turn the current research pass i
 
 - Patch the remaining runtime and docs files that still describe Gemini as commands-only.
 - Add provider-aware team templates for planner, worker, reviewer, and synthesizer lanes backed by the new canonical role catalog.
-- Add explicit write-scope enforcement tests for structured team owned-path claims and drift handling.
+- Add focused tests or fixtures for `scripts/sync-provider-roles.py`, including provider overrides and Gemini legacy fallback.
