@@ -123,5 +123,3 @@ require (
 )
 
 replace github.com/hairglasses-studio/docs => /tmp/docs-control-plane-refresh
-
-replace github.com/hairglasses-studio/mcpkit => /tmp/mcpkit-whiteclaw-reuse

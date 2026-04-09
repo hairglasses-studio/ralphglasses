@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hairglasses-studio/mcpkit/toolhooks"
 	"gopkg.in/yaml.v3"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -296,9 +295,46 @@ func (e *Executor) publishHookBlocked(repoPath, repoName, hookName, reason strin
 	})
 }
 
-func toolHookPayload(event events.Event) (toolhooks.Payload, bool) {
+type toolHookPayloadData struct {
+	HookEventName string `json:"hook_event_name"`
+	ToolName      string `json:"tool_name"`
+	ToolInputJSON string `json:"tool_input_json"`
+	ToolOutput    string `json:"tool_output,omitempty"`
+	ToolIsError   bool   `json:"tool_result_is_error"`
+}
+
+func newToolHookPayload(toolName, toolInputJSON, toolOutput string, toolIsError bool) toolHookPayloadData {
+	return toolHookPayloadData{
+		HookEventName: "PostToolUse",
+		ToolName:      toolName,
+		ToolInputJSON: toolInputJSON,
+		ToolOutput:    toolOutput,
+		ToolIsError:   toolIsError,
+	}
+}
+
+func (p toolHookPayloadData) JSON() ([]byte, error) {
+	return json.Marshal(p)
+}
+
+func (p toolHookPayloadData) Env() map[string]string {
+	isError := "0"
+	if p.ToolIsError {
+		isError = "1"
+	}
+	return map[string]string{
+		"HOOK_EVENT_NAME":    p.HookEventName,
+		"HOOK_TOOL_NAME":     p.ToolName,
+		"HOOK_TOOL_INPUT":    p.ToolInputJSON,
+		"HOOK_TOOL_INPUT_JSON": p.ToolInputJSON,
+		"HOOK_TOOL_OUTPUT":   p.ToolOutput,
+		"HOOK_TOOL_IS_ERROR": isError,
+	}
+}
+
+func toolHookPayload(event events.Event) (toolHookPayloadData, bool) {
 	if event.Type != events.ToolCalled {
-		return toolhooks.Payload{}, false
+		return toolHookPayloadData{}, false
 	}
 	toolName := hookDataString(event.Data, "tool")
 	if toolName == "" {
@@ -316,8 +352,7 @@ func toolHookPayload(event events.Event) (toolhooks.Payload, bool) {
 	if toolInputJSON == "" {
 		toolInputJSON = "{}"
 	}
-	payload := toolhooks.NewPayload(
-		toolhooks.EventPostToolUse,
+	payload := newToolHookPayload(
 		toolName,
 		toolInputJSON,
 		hookDataString(event.Data, "tool_output"),

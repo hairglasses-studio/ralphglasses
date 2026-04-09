@@ -1886,7 +1886,6 @@ func TestBuildCodexCmdSandbox(t *testing.T) {
 			t.Errorf("codex cmd %q missing --sandbox read-only", cmdStr)
 		}
 	})
-
 	t.Run("no sandbox without flags", func(t *testing.T) {
 		cmd := buildCodexCmd(ctx, LaunchOptions{
 			RepoPath: "/tmp/repo",
