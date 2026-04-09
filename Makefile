@@ -161,6 +161,9 @@ skill-doc:
 skill-surface:
 	$(GO) run ./tools/genskillsurface
 
+check-generated-surfaces:
+	bash ./scripts/dev/check-generated-surfaces.sh
+
 # Install man pages to system directory
 install-man: man
 	@MANDIR=/usr/local/share/man/man1; \

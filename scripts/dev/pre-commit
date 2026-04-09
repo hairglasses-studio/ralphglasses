@@ -6,6 +6,9 @@ echo "Running pre-commit checks..."
 echo "→ tracked artifact gate"
 bash ./scripts/dev/check-tracked-artifacts.sh
 
+echo "→ generated surface drift gate"
+bash ./scripts/dev/check-generated-surfaces.sh
+
 echo "→ go vet"
 go vet ./...
 
