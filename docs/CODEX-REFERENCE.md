@@ -74,6 +74,20 @@ Cross-provider capability and workflow parity is tracked in `docs/PROVIDER-PARIT
 - Official Anthropic docs document prompt caching behavior and invalidation rules, but as of 2026-04-04 this repo has not pinned an official Anthropic postmortem or fix notice for the recent resumed-session cache regression.
 - Treat unofficial reports as operational signal, not as authoritative product guarantees.
 
+## Community Ecosystem Sweep (2026-04-08)
+
+- New project roles: `ecosystem_researcher`, `roadmap_synthesizer`, `automation_designer`, and `review_fixer`.
+- New canonical skill: `ralph-sweep`.
+- Durable local research outputs:
+  - `docs/ralph-roadmap/17-external-ecosystem-link-index-2026-04-08.md`
+  - `docs/ralph-roadmap/32-codex-ralph-ecosystem-sweep-2026-04-08.md`
+  - `docs/ralph-roadmap/33-ecosystem-roadmap-addendum-2026-04-08.md`
+- Shared docs mirrors:
+  - `~/hairglasses-studio/docs/projects/ralphglasses/17-external-ecosystem-link-index-2026-04-08.md`
+  - `~/hairglasses-studio/docs/projects/ralphglasses/32-codex-ralph-ecosystem-sweep-2026-04-08.md`
+  - `~/hairglasses-studio/docs/projects/ralphglasses/33-ecosystem-roadmap-addendum-2026-04-08.md`
+- Highest follow-on themes: automation packs, review/fixer/verifier workflows, completion-contract docs, and recurring ecosystem sweep refreshes.
+
 ## Pinned links
 
 ### OpenAI Codex
