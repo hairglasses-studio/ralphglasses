@@ -76,6 +76,40 @@ Immediately-actionable items derived from R&D cycle findings. Each is <30 minute
 
 ---
 
+## Autonomous Tranche Delivery Notes [NEW]
+
+Immediate roadmap notes captured from the Jellyfin ecosystem rollout so the perpetual autonomous build loop can patch its own delivery workflow instead of repeating operator-side mistakes.
+
+- [ ] **ATD-1** — Add a publish-lane planner that selects `dirty checkout -> clean worktree -> detached mainline push` automatically when the canonical repo has unrelated edits `P0` `M`
+  - Target: `internal/session/` + `internal/roadmap/`
+  - **Acceptance:** publish tasks can choose a safe worktree strategy without manual operator intervention
+
+- [ ] **ATD-2** — Add a durable auth bootstrap probe that verifies `gh` keyring login, SSH key presence, `gh auth setup-git`, and org push rights before any repo push or repo-create task `P0` `M`
+  - Target: `internal/session/` + `internal/roadmap/`
+  - **Acceptance:** planner can distinguish "not logged in", "SSH not registered", "org visible but push denied", and "fully publishable"
+
+- [ ] **ATD-3** — Add host-override checkpoint capture so loops persist runtime discoveries like occupied ports, image-source fallbacks, and remote mount findings into reusable docs and machine-readable patch artifacts `P0` `M`
+  - Target: `internal/roadmap/` + docs export + autobuild patch feed
+  - **Acceptance:** a completed tranche emits both human docs updates and a machine-readable host-override record
+
+- [ ] **ATD-4** — Add wrapper-first rollout heuristics so loops prefer building bootstrap, preflight, health, backup, restore, and unit-install surfaces before expanding service count `P1` `M`
+  - Target: `internal/roadmap/` planning heuristics
+  - **Acceptance:** multi-service deployment plans rank operational control-plane work ahead of lower-leverage optional integrations
+
+- [ ] **ATD-5** — Add tranche receipt emission after every successful push, recording repo, commit SHA, verification commands, blockers cleared, and ranked next actions `P1` `S`
+  - Target: `internal/roadmap/` + docs checkpoint integration
+  - **Acceptance:** each tranche can leave a compact machine-ingestable receipt for the next autonomous loop
+
+- [ ] **ATD-6** — Add automatic docs-sync suggestions when implementation changes introduce new operator-facing commands, ports, env vars, or recovery flows `P1` `M`
+  - Target: `internal/roadmap/` + repo diff analysis
+  - **Acceptance:** loops flag doc debt before publish when command surfaces or runbooks have drifted
+
+- [ ] **ATD-7** — Add environment-secret boundary detection so loops keep implementing non-secret tranches while correctly deferring only the secret-gated surfaces such as VPN credentials or service API keys `P1` `M`
+  - Target: `internal/session/` planning + blockers model
+  - **Acceptance:** a missing secret blocks only the dependent tranche instead of freezing the full roadmap
+
+---
+
 ## Phase 0: Foundation (COMPLETE)
 
 - [x] Go module (`github.com/hairglasses-studio/ralphglasses`)
