@@ -213,6 +213,15 @@ func TestHandleAutonomyDecisions_Initialized(t *testing.T) {
 	srv, _ := setupTestServer(t)
 	stateDir := t.TempDir()
 	srv.InitSelfImprovement(stateDir, 1)
+	srv.DecisionLog.Propose(session.AutonomousDecision{
+		ID:            "dec-autonomy-1",
+		Category:      session.DecisionLaunch,
+		RequiredLevel: session.LevelFullAutonomy,
+		Action:        "launch roadmap tranche",
+		Rationale:     "ready backlog item",
+		SessionID:     "sess-autonomy-1",
+		RepoName:      "test-repo",
+	})
 
 	result, err := srv.handleAutonomyDecisions(context.Background(), makeRequest(map[string]any{
 		"limit": float64(5),
@@ -226,6 +235,15 @@ func TestHandleAutonomyDecisions_Initialized(t *testing.T) {
 	text := getResultText(result)
 	if !strings.Contains(text, "decisions") {
 		t.Errorf("expected decisions field, got: %s", text)
+	}
+	if !strings.Contains(text, "decision_summaries") {
+		t.Errorf("expected decision_summaries field, got: %s", text)
+	}
+	if !strings.Contains(text, "policy_source") {
+		t.Errorf("expected policy_source metadata, got: %s", text)
+	}
+	if !strings.Contains(text, "counterfactual") {
+		t.Errorf("expected counterfactual metadata, got: %s", text)
 	}
 }
 

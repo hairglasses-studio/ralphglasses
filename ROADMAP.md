@@ -2844,3 +2844,14 @@ Append-only cross-repo tranche notes for autonomous delivery and future auto-bui
 - Failure Patterns: Detached worktrees outside the studio tree break local `../docs` and `../mcpkit` replace paths. Future detached validation should either create sibling symlinks or stage the worktree under the studio root. Also, commit-hook truth can be stricter than a single passing `make ci` run: this tranche exposed a flaky `internal/marathon` completion path where `CloudTaskCompleted` could publish before VM termination finished, plus a port-allocation race in `internal/mcpserver/handler_cli_parity_test.go` where a reserved coordinator port could be stolen before bind.
 - Next Candidates: Tranche 2 `DecisionLog` enrichment in `internal/session/autonomy.go`; `whiteclaw` DIFF-3 and TOOL-3 artifacts.
 - Blockers: None after local replace-path resolution.
+
+### 2026-04-08 — RG-T2
+
+- Tranche: 2
+- Repo: `ralphglasses`
+- Trigger: The autonomy roadmap called for richer decision-journal context, but the live `DecisionLog` surface still lacked policy provenance, rollback metadata, risk tags, and counterfactuals. `supervisor_status` also omitted any compact decision-log context.
+- Changes: Extended `AutonomousDecision` with additive metadata fields (`policy_source`, `rollback_hint`, `undo_handle`, `risk_tags`, `counterfactual`) and centralized default population in `DecisionLog.Propose`; added compact decision summaries and metadata-aware stats/snapshots; surfaced those summaries through `ralphglasses_autonomy_decisions` and added a lightweight `decision_log` snapshot to `ralphglasses_supervisor_status`.
+- Verification: `go test ./internal/session ./internal/mcpserver -run 'TestDecisionLog_|TestHandleAutonomyDecisions_Initialized|TestHandleSupervisorStatus_'`; `make ci`.
+- Failure Patterns: Fresh clones from the bare `ralphglasses` repo do not inherit git author config, so autonomous promotion needs a local author identity before commit. Also, tranche patches must be replayed onto the latest `origin/main` before promotion because `main` can move underneath long validation runs and invalidate test assumptions.
+- Next Candidates: `whiteclaw` DIFF-3 compiled-vs-source mapping and TOOL-3 analysis schemas; `surfacekit` contradiction/evidence surfacing for repo-state truth.
+- Blockers: None.

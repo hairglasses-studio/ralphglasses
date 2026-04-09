@@ -75,6 +75,36 @@ func TestHandleSupervisorStatus_WithSupervisorProductivity(t *testing.T) {
 	}
 }
 
+func TestHandleSupervisorStatus_IncludesDecisionLogSnapshot(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	stateDir := t.TempDir()
+	srv.InitSelfImprovement(stateDir, 1)
+	srv.DecisionLog.Propose(session.AutonomousDecision{
+		ID:            "dec-supervisor-1",
+		Category:      session.DecisionBudgetAdjust,
+		RequiredLevel: session.LevelAutoOptimize,
+		Action:        "raise budget ceiling",
+		Rationale:     "protect active loop",
+		RepoName:      "test-repo",
+	})
+
+	result, err := srv.handleSupervisorStatus(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, `"decision_log"`) {
+		t.Fatalf("expected decision_log snapshot, got: %s", text)
+	}
+	if !strings.Contains(text, "rollback_hint") {
+		t.Fatalf("expected rollback_hint metadata, got: %s", text)
+	}
+	if !strings.Contains(text, "by_policy_source") {
+		t.Fatalf("expected decision stats metadata, got: %s", text)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // handleWorktreeCreate (0%)
 // ---------------------------------------------------------------------------

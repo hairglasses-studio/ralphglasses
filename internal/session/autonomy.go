@@ -123,18 +123,23 @@ const (
 
 // AutonomousDecision records a decision made (or proposed) by the system.
 type AutonomousDecision struct {
-	ID            string           `json:"id"`
-	Timestamp     time.Time        `json:"ts"`
-	Category      DecisionCategory `json:"category"`
-	RequiredLevel AutonomyLevel    `json:"required_level"`
-	ActualLevel   AutonomyLevel    `json:"actual_level"`
-	Executed      bool             `json:"executed"`  // true if action was taken
-	Rationale     string           `json:"rationale"` // why the system made this decision
-	Inputs        map[string]any   `json:"inputs"`    // data that informed the decision
-	Action        string           `json:"action"`    // what was (or would be) done
-	SessionID     string           `json:"session_id,omitempty"`
-	RepoName      string           `json:"repo_name,omitempty"`
-	Outcome       *DecisionOutcome `json:"outcome,omitempty"`
+	ID             string           `json:"id"`
+	Timestamp      time.Time        `json:"ts"`
+	Category       DecisionCategory `json:"category"`
+	RequiredLevel  AutonomyLevel    `json:"required_level"`
+	ActualLevel    AutonomyLevel    `json:"actual_level"`
+	Executed       bool             `json:"executed"`  // true if action was taken
+	Rationale      string           `json:"rationale"` // why the system made this decision
+	Inputs         map[string]any   `json:"inputs"`    // data that informed the decision
+	Action         string           `json:"action"`    // what was (or would be) done
+	PolicySource   string           `json:"policy_source,omitempty"`
+	RollbackHint   string           `json:"rollback_hint,omitempty"`
+	UndoHandle     string           `json:"undo_handle,omitempty"`
+	RiskTags       []string         `json:"risk_tags,omitempty"`
+	Counterfactual string           `json:"counterfactual,omitempty"`
+	SessionID      string           `json:"session_id,omitempty"`
+	RepoName       string           `json:"repo_name,omitempty"`
+	Outcome        *DecisionOutcome `json:"outcome,omitempty"`
 }
 
 // DecisionOutcome evaluates whether a decision was successful.
@@ -143,6 +148,26 @@ type DecisionOutcome struct {
 	Success     bool      `json:"success"`
 	Overridden  bool      `json:"overridden"` // human reversed the decision
 	Details     string    `json:"details"`
+}
+
+// AutonomousDecisionSummary is a compact decision view for MCP responses.
+type AutonomousDecisionSummary struct {
+	ID             string           `json:"id"`
+	Timestamp      time.Time        `json:"ts"`
+	Category       DecisionCategory `json:"category"`
+	Executed       bool             `json:"executed"`
+	RequiredLevel  AutonomyLevel    `json:"required_level"`
+	ActualLevel    AutonomyLevel    `json:"actual_level"`
+	Action         string           `json:"action"`
+	Rationale      string           `json:"rationale"`
+	PolicySource   string           `json:"policy_source,omitempty"`
+	RollbackHint   string           `json:"rollback_hint,omitempty"`
+	UndoHandle     string           `json:"undo_handle,omitempty"`
+	RiskTags       []string         `json:"risk_tags,omitempty"`
+	Counterfactual string           `json:"counterfactual,omitempty"`
+	SessionID      string           `json:"session_id,omitempty"`
+	RepoName       string           `json:"repo_name,omitempty"`
+	Outcome        *DecisionOutcome `json:"outcome,omitempty"`
 }
 
 // DecisionLog tracks autonomous decisions with JSONL persistence.
@@ -227,11 +252,105 @@ func (dl *DecisionLog) Propose(d AutonomousDecision) bool {
 	if d.Timestamp.IsZero() {
 		d.Timestamp = time.Now()
 	}
+	dl.decorateDecision(&d, blocked)
 	dl.decisions = append(dl.decisions, d)
 	dl.mu.Unlock()
 
 	dl.appendToFile(d)
 	return allowed
+}
+
+func (dl *DecisionLog) decorateDecision(d *AutonomousDecision, blocked bool) {
+	if d.PolicySource == "" {
+		d.PolicySource = defaultDecisionPolicySource(d.Executed, blocked)
+	}
+	if len(d.RiskTags) == 0 {
+		d.RiskTags = defaultDecisionRiskTags(d.Category)
+	}
+	if d.RollbackHint == "" {
+		d.RollbackHint = defaultRollbackHint(d.Category)
+	}
+	if d.UndoHandle == "" {
+		d.UndoHandle = defaultUndoHandle(*d)
+	}
+	if !d.Executed && d.Counterfactual == "" {
+		d.Counterfactual = defaultCounterfactual(*d, blocked)
+	}
+}
+
+func defaultDecisionPolicySource(executed bool, blocked bool) string {
+	switch {
+	case blocked:
+		return "decision-log:blocklist"
+	case executed:
+		return "decision-log:autonomy-level"
+	default:
+		return "decision-log:insufficient-level"
+	}
+}
+
+func defaultDecisionRiskTags(category DecisionCategory) []string {
+	switch category {
+	case DecisionRestart, DecisionFailover:
+		return []string{"availability", "runtime"}
+	case DecisionBudgetAdjust:
+		return []string{"cost", "budget"}
+	case DecisionProviderSelect, DecisionCascadeRoute:
+		return []string{"routing", "provider"}
+	case DecisionConfigChange:
+		return []string{"config", "workspace"}
+	case DecisionLaunch, DecisionScale:
+		return []string{"execution", "capacity"}
+	case DecisionSelfTest:
+		return []string{"verification"}
+	case DecisionReflexion, DecisionEpisodicReplay, DecisionCurriculum:
+		return []string{"learning", "state"}
+	default:
+		return []string{"operational"}
+	}
+}
+
+func defaultRollbackHint(category DecisionCategory) string {
+	switch category {
+	case DecisionRestart:
+		return "Restart the previously healthy session or restore the prior runtime process."
+	case DecisionFailover:
+		return "Switch traffic back to the prior provider and replay the interrupted work."
+	case DecisionBudgetAdjust:
+		return "Restore the previous budget or rate-limit configuration."
+	case DecisionProviderSelect, DecisionCascadeRoute:
+		return "Route the next task back through the prior provider/model pair."
+	case DecisionConfigChange:
+		return "Revert the config change or restore the previous config file values."
+	case DecisionLaunch:
+		return "Terminate the launched session or revert the launched worktree changes."
+	case DecisionScale:
+		return "Scale worker concurrency back to the previous level."
+	case DecisionSelfTest:
+		return "No rollback normally required; rerun validation after restoring the prior state."
+	case DecisionReflexion, DecisionEpisodicReplay, DecisionCurriculum:
+		return "Clear or revert the derived learning state before re-running."
+	default:
+		return "Review the affected state and restore the prior known-good values."
+	}
+}
+
+func defaultUndoHandle(d AutonomousDecision) string {
+	switch {
+	case d.SessionID != "":
+		return "session:" + d.SessionID
+	case d.RepoName != "":
+		return "repo:" + d.RepoName
+	default:
+		return "decision:" + d.ID
+	}
+}
+
+func defaultCounterfactual(d AutonomousDecision, blocked bool) string {
+	if blocked {
+		return fmt.Sprintf("Skipped because %s is blocklisted at autonomy level %s.", d.Category, d.ActualLevel.String())
+	}
+	return fmt.Sprintf("Would execute at %s or higher; current autonomy level is %s.", d.RequiredLevel.String(), d.ActualLevel.String())
 }
 
 // RecordOutcome attaches an outcome to a previously logged decision.
@@ -265,6 +384,48 @@ func (dl *DecisionLog) Recent(limit int) []AutonomousDecision {
 	return result
 }
 
+// RecentSummaries returns compact summaries for the last N decisions.
+func (dl *DecisionLog) RecentSummaries(limit int) []AutonomousDecisionSummary {
+	decisions := dl.Recent(limit)
+	summaries := make([]AutonomousDecisionSummary, len(decisions))
+	for i, d := range decisions {
+		summaries[i] = SummarizeDecision(d)
+	}
+	return summaries
+}
+
+// Snapshot returns a compact decision-log snapshot for status surfaces.
+func (dl *DecisionLog) Snapshot(limit int) map[string]any {
+	return map[string]any{
+		"level":      int(dl.Level()),
+		"level_name": dl.Level().String(),
+		"stats":      dl.Stats(),
+		"recent":     dl.RecentSummaries(limit),
+	}
+}
+
+// SummarizeDecision returns a compact, MCP-friendly view of a decision.
+func SummarizeDecision(d AutonomousDecision) AutonomousDecisionSummary {
+	return AutonomousDecisionSummary{
+		ID:             d.ID,
+		Timestamp:      d.Timestamp,
+		Category:       d.Category,
+		Executed:       d.Executed,
+		RequiredLevel:  d.RequiredLevel,
+		ActualLevel:    d.ActualLevel,
+		Action:         d.Action,
+		Rationale:      d.Rationale,
+		PolicySource:   d.PolicySource,
+		RollbackHint:   d.RollbackHint,
+		UndoHandle:     d.UndoHandle,
+		RiskTags:       append([]string(nil), d.RiskTags...),
+		Counterfactual: d.Counterfactual,
+		SessionID:      d.SessionID,
+		RepoName:       d.RepoName,
+		Outcome:        d.Outcome,
+	}
+}
+
 // Stats returns summary statistics about decisions.
 func (dl *DecisionLog) Stats() map[string]any {
 	dl.mu.Lock()
@@ -274,10 +435,18 @@ func (dl *DecisionLog) Stats() map[string]any {
 	executed := 0
 	succeeded := 0
 	overridden := 0
+	byPolicySource := make(map[string]int)
+	byRiskTag := make(map[string]int)
 
 	for _, d := range dl.decisions {
 		if d.Executed {
 			executed++
+		}
+		if d.PolicySource != "" {
+			byPolicySource[d.PolicySource]++
+		}
+		for _, tag := range d.RiskTags {
+			byRiskTag[tag]++
 		}
 		if d.Outcome != nil {
 			if d.Outcome.Success {
@@ -290,13 +459,15 @@ func (dl *DecisionLog) Stats() map[string]any {
 	}
 
 	return map[string]any{
-		"total_decisions": total,
-		"executed":        executed,
-		"would_have_done": total - executed,
-		"succeeded":       succeeded,
-		"overridden":      overridden,
-		"current_level":   dl.level,
-		"level_name":      dl.level.String(),
+		"total_decisions":  total,
+		"executed":         executed,
+		"would_have_done":  total - executed,
+		"succeeded":        succeeded,
+		"overridden":       overridden,
+		"current_level":    dl.level,
+		"level_name":       dl.level.String(),
+		"by_policy_source": byPolicySource,
+		"by_risk_tag":      byRiskTag,
 	}
 }
 
