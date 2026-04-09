@@ -49,6 +49,7 @@ type Supervisor struct {
 	tickCount           int
 	startedAt           time.Time
 	consecutiveFailures int
+	activeJob           string
 
 	// Passive background research daemon (ticks on its own internal schedule).
 	researchDaemon *ResearchDaemon
@@ -331,6 +332,7 @@ func (s *Supervisor) Status() SupervisorState {
 		LastCycleLaunch:      s.lastCycleLaunch,
 		TickCount:            s.tickCount,
 		StartedAt:            s.startedAt,
+		ActiveJob:            s.activeJob,
 		ResearchDaemonActive: s.researchDaemon != nil,
 		CrashRecoveryActive:  s.crashRecovery != nil,
 		Productivity:         EmptyProductivitySnapshot(),
@@ -583,7 +585,9 @@ func (s *Supervisor) executeCycleAsync(ctx context.Context, name, objective stri
 	dl := s.decisions
 	s.lastCycleLaunch = time.Now()
 	s.cyclesLaunched++
+	s.activeJob = fmt.Sprintf("cycle:%s", name)
 	s.mu.Unlock()
+	s.persistState()
 
 	if mgr == nil {
 		return
@@ -594,6 +598,14 @@ func (s *Supervisor) executeCycleAsync(ctx context.Context, name, objective stri
 	})
 
 	s.wg.Go(func() {
+		defer func() {
+			s.mu.Lock()
+			if s.activeJob == fmt.Sprintf("cycle:%s", name) {
+				s.activeJob = ""
+			}
+			s.mu.Unlock()
+			s.persistState()
+		}()
 		_, err := mgr.RunCycle(ctx, repoPath, name, objective, criteria, maxTasks)
 		outcome := DecisionOutcome{
 			EvaluatedAt: time.Now(),
@@ -769,4 +781,6 @@ func (s *Supervisor) recordGateFindings(repoPath string, findings []CycleFinding
 		return
 	}
 	_ = os.WriteFile(filepath.Join(dir, "gate_findings.json"), data, 0644)
+}
+ir, "gate_findings.json"), data, 0644)
 }
