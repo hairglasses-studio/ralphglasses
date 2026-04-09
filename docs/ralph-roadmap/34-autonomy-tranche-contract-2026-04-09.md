@@ -77,9 +77,8 @@ Implication:
 
 ## Next Tranche
 
-The next tranche after this note should be the ecosystem sweep reconciliation tranche:
+The ecosystem sweep reconciliation tranche already resolved the review-fixer sandbox gap, reconciled provider-mirror claims, and landed the ecosystem sweep artifacts on `main`.
 
-- close the review-fixer sandbox gap
-- reconcile provider-mirror claims
-- land the ecosystem sweep artifacts on `main`
+The next tranche after this note should be the roadmap truth reconciliation:
+- reconcile roadmap truth around shipped rdcycle capabilities versus stale roadmap notes
 - write the follow-on note before moving to rdcycle runtime wiring
