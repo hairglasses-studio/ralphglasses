@@ -1179,12 +1179,27 @@ Partially complete: `internal/session/loop.go`, `loop_worker.go`, `loop_helpers.
 - [ ] 6.1.3 — DAG visualization in TUI: show task graph with status `P2` `L`
 - **Acceptance:** ralph loop runs natively in Go, DAG visible in TUI
 
-### 6.2 — R&D cycle orchestrator `[BLOCKED BY 6.1]`
-- [x] 6.2.1 — Port perpetual improvement loop from claudekit rdcycle `P1` `L`
-- [x] 6.2.2 — Self-benchmark: coverage, lint score, build time, binary size per iteration `P1` `M`
-- [x] 6.2.3 — Regression detection: compare benchmarks, flag regressions `P0` `M`
-- [x] 6.2.4 — Auto-generate improvement tasks from benchmark regressions `P1` `L`
-- [x] 6.2.5 — Cycle dashboard: iteration history, benchmark trends `P2` `M`
+### 6.2 — R&D cycle orchestrator (rdcycle) `[PARTIALLY WIRED]`
+
+The autonomous `rdcycle` implementation is tracked across three explicit states:
+
+**Shipped Now:**
+- [x] rdcycle MCP handlers, builders, and tests
+- [x] Cycle runtime primitives and cycle state machine
+- [x] TUI cycle dashboard: iteration history, phase visibility
+
+**Already Partially Wired:**
+- [x] Supervisor trigger hooks
+- [x] Sprint planner cycle launches
+- [x] Subscription automation cycle launches
+
+**Still Remaining:**
+- [ ] Better objective selection quality `P1` `M`
+- [ ] Durable status/writeback polish `P2` `S`
+- [ ] Merge-path and batch-sprint closeout `P1` `L`
+- [ ] Scheduled marathon closeout `P1` `L`
+- [ ] Cost-aware autonomy refinement `P0` `M`
+
 - **Acceptance:** automated benchmark -> task generation cycle runs unattended
 
 ### 6.3 — Cross-session coordination `[BLOCKED BY 6.1, 2.1]`
