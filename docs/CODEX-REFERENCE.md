@@ -81,9 +81,9 @@ Cross-provider capability and workflow parity is tracked in `docs/PROVIDER-PARIT
   - `docs/ralph-roadmap/32-codex-ralph-ecosystem-sweep-2026-04-08.md`
   - `docs/ralph-roadmap/33-ecosystem-roadmap-addendum-2026-04-08.md`
 - Shared docs mirrors:
-  - `docs/projects/ralphglasses/17-external-ecosystem-link-index-2026-04-08.md`
-  - `docs/projects/ralphglasses/32-codex-ralph-ecosystem-sweep-2026-04-08.md`
-  - `docs/projects/ralphglasses/33-ecosystem-roadmap-addendum-2026-04-08.md`
+  - `~/hairglasses-studio/docs/projects/ralphglasses/17-external-ecosystem-link-index-2026-04-08.md`
+  - `~/hairglasses-studio/docs/projects/ralphglasses/32-codex-ralph-ecosystem-sweep-2026-04-08.md`
+  - `~/hairglasses-studio/docs/projects/ralphglasses/33-ecosystem-roadmap-addendum-2026-04-08.md`
 - Highest follow-on themes: automation packs, review/fixer/verifier workflows, completion-contract docs, and recurring ecosystem sweep refreshes.
 
 ## Pinned links

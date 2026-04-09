@@ -15,7 +15,7 @@ Use this skill when the task is to refresh external ecosystem intelligence for r
    - `ralphglasses_docs_search`
 2. Capture the link set and normalize it into durable indexes:
    - local project index under `docs/ralph-roadmap/`
-   - mirrored shared-docs index under `docs/projects/ralphglasses/`
+   - mirrored shared-docs index under `~/hairglasses-studio/docs/projects/ralphglasses/`
 3. Extract reusable patterns from the sources:
    - subagents and role packs
    - skills and progressive disclosure layouts
