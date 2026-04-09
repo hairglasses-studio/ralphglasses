@@ -51,6 +51,9 @@ func setupRepoWithRoadmap(t *testing.T) (scanPath, repoPath string) {
 	if err := os.WriteFile(filepath.Join(repoPath, "ROADMAP.md"), []byte(testRoadmapContent), 0644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(repoPath, ".ralphrc"), []byte("PROJECT_NAME=test-repo"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	return scanPath, repoPath
 }
 
@@ -701,5 +704,87 @@ func TestHandleRoadmapExport_StatusAll(t *testing.T) {
 	}
 	if !strings.Contains(text, "[x]") {
 		t.Errorf("status=all should include complete tasks, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapParse_UniqueTaskIDs(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapParse(context.Background(), roadmapReq(map[string]any{
+		"path": repoPath,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Check that generated IDs are present
+	if !strings.Contains(text, "Phase_2__Advanced/Phase_2__Advanced/0") {
+		t.Errorf("expected generated ID in parse output, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapPrioritize_GeneratedIDs(t *testing.T) {
+	t.Parallel()
+	scanPath, _ := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapPrioritize(context.Background(), roadmapReq(map[string]any{
+		"repo": "test-repo",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Check that generated IDs are present in prioritized items
+	if !strings.Contains(text, "Phase_2__Advanced/Phase_2__Advanced/0") {
+		t.Errorf("expected generated ID in prioritize output, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapAnalyze_GeneratedIDs(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapAnalyze(context.Background(), roadmapReq(map[string]any{
+		"path": repoPath,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Check that generated IDs are present in ready items (if any)
+	// For this test, let's just grep for the ID format in the JSON
+	if !strings.Contains(text, "Phase_2__Advanced/Phase_2__Advanced/0") {
+		t.Errorf("expected generated ID in analyze output, got: %s", text)
+	}
+}
+
+func TestHandleRoadmapExpand_GeneratedIDs(t *testing.T) {
+	t.Parallel()
+	scanPath, repoPath := setupRepoWithRoadmap(t)
+	s := newTestServer(scanPath)
+	res, err := s.handleRoadmapExpand(context.Background(), roadmapReq(map[string]any{
+		"path": repoPath,
+		"style": "conservative",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected error result: %s", extractText(t, res))
+	}
+	text := extractText(t, res)
+	// Check that generated IDs are present
+	if !strings.Contains(text, "Phase_2__Advanced/Phase_2__Advanced/0") {
+		t.Errorf("expected generated ID in expand output, got: %s", text)
 	}
 }

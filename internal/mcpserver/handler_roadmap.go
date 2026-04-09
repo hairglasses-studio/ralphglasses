@@ -30,6 +30,8 @@ func (s *Server) handleRoadmapParse(_ context.Context, req mcp.CallToolRequest) 
 		return codedError(ErrFilesystem, fmt.Sprintf("parse roadmap: %v", err)), nil
 	}
 
+	assignUniqueTaskIDs(rm)
+
 	// Phase filter: return only a specific phase
 	phaseFilter := getStringArg(req, "phase")
 	if phaseFilter != "" {
@@ -117,6 +119,8 @@ func (s *Server) handleRoadmapAnalyze(_ context.Context, req mcp.CallToolRequest
 	if err != nil {
 		return codedError(ErrFilesystem, fmt.Sprintf("parse roadmap: %v", err)), nil
 	}
+
+	assignUniqueTaskIDs(rm)
 
 	analysis, err := roadmap.Analyze(rm, path)
 	if err != nil {
@@ -223,6 +227,8 @@ func (s *Server) handleRoadmapExpand(ctx context.Context, req mcp.CallToolReques
 	if err != nil {
 		return codedError(ErrFilesystem, fmt.Sprintf("parse roadmap: %v", err)), nil
 	}
+
+	assignUniqueTaskIDs(rm)
 
 	analysis, err := roadmap.Analyze(rm, path)
 	if err != nil {
@@ -372,10 +378,20 @@ func sortRoadmapIncompleteFirst(rm *roadmap.Roadmap) {
 // creates multiple implicit sections with the same name.
 func assignUniqueTaskIDs(rm *roadmap.Roadmap) {
 	for pi := range rm.Phases {
-		pName := strings.ReplaceAll(rm.Phases[pi].Name, "/", "_")
+		pName := strings.Map(func(r rune) rune {
+			if r == '/' || r == ' ' || r == ':' || r == '(' || r == ')' {
+				return '_'
+			}
+			return r
+		}, rm.Phases[pi].Name)
 		taskIdx := 0
 		for si := range rm.Phases[pi].Sections {
-			sName := strings.ReplaceAll(rm.Phases[pi].Sections[si].Name, "/", "_")
+			sName := strings.Map(func(r rune) rune {
+				if r == '/' || r == ' ' || r == ':' || r == '(' || r == ')' {
+					return '_'
+				}
+				return r
+			}, rm.Phases[pi].Sections[si].Name)
 			for ti := range rm.Phases[pi].Sections[si].Tasks {
 				if rm.Phases[pi].Sections[si].Tasks[ti].ID == "" {
 					rm.Phases[pi].Sections[si].Tasks[ti].ID = fmt.Sprintf("%s/%s/%d", pName, sName, taskIdx)
