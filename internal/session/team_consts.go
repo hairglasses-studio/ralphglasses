@@ -34,7 +34,7 @@ const (
 	TeamTaskCompleted  = "completed"
 	TeamTaskBlocked    = "blocked"
 	TeamTaskFailed     = "failed"
-	TeamTaskNeedsRetry = "needs-retry"
+	TeamTaskNeedsRetry = "needs_retry"
 	TeamTaskCancelled  = "cancelled"
 )
 
