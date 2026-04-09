@@ -30,6 +30,8 @@ type AutobuildPatchCandidate struct {
 	RepoOwnedScope          []string               `json:"repo_owned_scope,omitempty"`
 	WhyNow                  []string               `json:"why_now,omitempty"`
 	TriggerSignal           AutobuildTriggerSignal `json:"trigger_signal"`
+	FeedbackScore           int
+	FeedbackSummary         string
 }
 
 type AutobuildTrancheSummary struct {
@@ -112,6 +114,8 @@ var autobuildCandidateDefs = []autobuildCandidateDef{
 func (s *Server) autobuildTrancheSummary() AutobuildTrancheSummary {
 	discovery := s.discoveryAdoptionSummary()
 	adoption := s.adoptionPrioritySummary()
+	ledger, _ := loadAutobuildLedger(s.ScanPath)
+	feedback := computeFeedbackBoosts(ledger)
 
 	summary := AutobuildTrancheSummary{
 		Source:                 "adoption_priority_summary + discovery_adoption_summary + autobuild candidate mapping",
@@ -122,11 +126,18 @@ func (s *Server) autobuildTrancheSummary() AutobuildTrancheSummary {
 		SurfaceCandidateCount:  adoption.SurfaceCandidateCount,
 	}
 
-	candidates := s.activeRedSignalCandidates()
+	candidates := s.activeRedSignalCandidates(feedback)
 	for _, def := range autobuildCandidateDefs {
 		workflowMatches := matchingWorkflowCandidates(def.RelevantWorkflows, adoption.TopWorkflowCandidates)
 		surfaceMatches := matchingSurfaceCandidates(def.RelevantWorkflows, adoption.TopSurfaceCandidates)
-		score := def.BaseScore + workflowMatchBoost(workflowMatches) + surfaceMatchBoost(surfaceMatches)
+
+		feedbackBoost := feedback.PatchScoreBoost[def.PatchID] + feedback.TypeScoreBoost["adoption"]
+		var feedbackSummary string
+		if feedbackBoost > 0 {
+			feedbackSummary = fmt.Sprintf("Boosted by %d points from historical execution ledger feedback", feedbackBoost)
+		}
+
+		score := def.BaseScore + workflowMatchBoost(workflowMatches) + surfaceMatchBoost(surfaceMatches) + feedbackBoost
 		if discovery.DiscoveryTelemetryPresent {
 			score += 6
 		}
@@ -155,6 +166,8 @@ func (s *Server) autobuildTrancheSummary() AutobuildTrancheSummary {
 			Priority:                def.Priority,
 			QueueRank:               def.QueueRank,
 			Score:                   score,
+			FeedbackScore:           feedbackBoost,
+			FeedbackSummary:         feedbackSummary,
 			Confidence:              confidence,
 			ConfidenceLabel:         confidenceLabel(confidence),
 			RecommendedEntrySurface: def.RecommendedEntrySurface,
@@ -289,7 +302,7 @@ func stringListsIntersect(left, right []string) bool {
 	return false
 }
 
-func (s *Server) activeRedSignalCandidates() []AutobuildPatchCandidate {
+func (s *Server) activeRedSignalCandidates(feedback FeedbackBoosts) []AutobuildPatchCandidate {
 	events, err := parity.LoadTelemetry(parity.TelemetryOptions{
 		Type: string(telemetry.EventCrash),
 		Repo: "ralphglasses",
@@ -318,11 +331,20 @@ func (s *Server) activeRedSignalCandidates() []AutobuildPatchCandidate {
 		seen[ev.SessionID] = true
 		tTrue := true
 
+		patchID := fmt.Sprintf("integrity_crash_%s", ev.SessionID)
+		feedbackBoost := feedback.PatchScoreBoost[patchID] + feedback.TypeScoreBoost["integrity"]
+		var feedbackSummary string
+		if feedbackBoost > 0 {
+			feedbackSummary = fmt.Sprintf("Boosted by %d points from historical execution ledger feedback", feedbackBoost)
+		}
+
 		candidates = append(candidates, AutobuildPatchCandidate{
-			PatchID:                 fmt.Sprintf("integrity_crash_%s", ev.SessionID),
+			PatchID:                 patchID,
 			Priority:                "P0",
 			QueueRank:               0,
-			Score:                   1000,
+			Score:                   1000 + feedbackBoost,
+			FeedbackScore:           feedbackBoost,
+			FeedbackSummary:         feedbackSummary,
 			Confidence:              1.0,
 			ConfidenceLabel:         "high",
 			RecommendedEntrySurface: "ralph:///runtime/recovery",
