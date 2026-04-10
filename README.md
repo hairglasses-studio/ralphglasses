@@ -114,6 +114,10 @@ Local prompt-improver evals can now be regression-tested from the repo root with
 ~/hairglasses-studio/dotfiles/scripts/hg-promptfoo.sh . eval -c promptfoo/promptfooconfig.yaml
 ```
 
+That promptfoo suite is intentionally fast and deterministic. It exercises the
+local prompt-enhancement lane, while the Ollama-backed improvement path stays
+covered by the Go tests in `internal/enhancer` and `cmd/prompt-improver`.
+
 When you want those prompt-improver evals or CLI runs to emit traces to an OTLP
 collector or Langfuse, export either the standard OTLP env vars or the
 Langfuse-native trio before running `ralphglasses` or `go run ./cmd/prompt-improver`:

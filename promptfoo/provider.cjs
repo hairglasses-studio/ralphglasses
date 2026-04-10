@@ -26,6 +26,12 @@ function ensureBuiltBinary(repoRoot, name, pkgPath) {
   return binPath;
 }
 
+function resolveTimeoutMs() {
+  const raw = process.env.PROMPTFOO_PROVIDER_TIMEOUT_MS || '90000';
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 90000;
+}
+
 class RalphglassesPromptImproverProvider {
   constructor(options) {
     this.providerId = options.id || 'ralphglasses-prompt-improver';
@@ -56,7 +62,11 @@ class RalphglassesPromptImproverProvider {
       case 'improve_ollama':
         env.PROMPT_IMPROVER_LLM = '1';
         env.PROMPT_IMPROVER_PROVIDER = 'claude';
-        env.PROMPT_IMPROVER_MODEL = process.env.OLLAMA_CODE_MODEL || process.env.OLLAMA_CHAT_MODEL || 'code-primary';
+        env.PROMPT_IMPROVER_MODEL =
+          process.env.OLLAMA_FAST_MODEL ||
+          process.env.OLLAMA_CODE_MODEL ||
+          process.env.OLLAMA_CHAT_MODEL ||
+          'code-primary';
         env.PROMPT_IMPROVER_BASE_URL = env.OLLAMA_BASE_URL;
         env.PROMPT_IMPROVER_API_KEY_ENV = 'OLLAMA_API_KEY';
         args = ['improve', '--quiet', '--provider', 'claude', '--type', taskType, prompt];
@@ -70,8 +80,12 @@ class RalphglassesPromptImproverProvider {
       env,
       encoding: 'utf8',
       maxBuffer: 10 * 1024 * 1024,
+      timeout: resolveTimeoutMs(),
     });
 
+    if (result.error) {
+      throw result.error;
+    }
     if (result.status !== 0) {
       throw new Error((result.stderr || result.stdout || `command failed with exit ${result.status}`).trim());
     }

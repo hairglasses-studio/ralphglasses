@@ -75,7 +75,7 @@ ConcurrencyMiddleware(32 slots)
 1. **No per-tool rate limiting** -- global 32-slot semaphore only. One slow tool can consume all slots.
 2. **No panic recovery at middleware level** -- SDK-level `WithRecovery()` catches panics but does not emit structured error events to the event bus.
 3. **Free-text fields unchecked** -- `ValidationMiddleware` only validates `repo` and `path`. Prompt (up to 200KB), YAML workflow definitions, and content fields are not length-checked in middleware.
-4. **Tracing not end-to-end** -- `TraceMiddleware` generates trace IDs but there is no correlation with outgoing LLM API calls. OTel only used if `OTEL_EXPORTER_OTLP_ENDPOINT` is set.
+4. **Tracing only partially end-to-end** -- `TraceMiddleware` now correlates with outgoing prompt-improver LLM spans and OTLP/Langfuse-ready export, but session-provider and broader fleet paths still do not emit the same child-span coverage.
 
 ### 1.4 Test Coverage by Blast Radius
 

@@ -145,7 +145,7 @@ ConcurrencyMiddleware(32)
 
 4. **`DeferredLoading` is never activated in production.** `Server.DeferredLoading` defaults to `false`. `cmd/mcp.go` calls `rg.Register(srv)` which falls into `RegisterAllTools`. The entire 166-tool surface is loaded eagerly. The documented deferred loading model is only exercised in tests. This means the startup cost savings described in CLAUDE.md are not realized in production.
 
-5. **Tracing is not end-to-end.** `TraceMiddleware` generates trace IDs and injects them into responses, but there is no correlation between the trace ID in the MCP response and any outgoing LLM API calls made by handlers. The OpenTelemetry provider is initialized in `setupMCP` but only used if `OTEL_EXPORTER_OTLP_ENDPOINT` is set.
+5. **Tracing is only partially end-to-end.** `TraceMiddleware` now correlates with outgoing prompt-improver LLM spans and OTLP/Langfuse-ready export, but broader session-provider and fleet paths still lack the same child-span coverage.
 
 ---
 

@@ -331,7 +331,7 @@ Baseline: 503/1,143 tasks complete (44.0%). 640 remaining across 30 phases. Velo
 - **04 found the default target provider is OpenAI** (`config.go:236`) when neither `LLM.Provider` nor `TargetProvider` is set -- surprising for Claude-first users.
 - **04 found `FormatContextBlockMarkdown()` is defined but never called** from the pipeline -- the knowledge injector always uses XML format regardless of target provider.
 - **04 found FINDING-240 score inflation** was addressed through baseline constant adjustments, but no runtime calibration test enforces the <1.2x target.
-- **02 found tracing is not end-to-end** -- `TraceMiddleware` generates trace IDs but there is no correlation with outgoing LLM API calls. OTel is initialized but only used if `OTEL_EXPORTER_OTLP_ENDPOINT` is set.
+- **02 found tracing is only partially end-to-end** -- `TraceMiddleware` now correlates with outgoing prompt-improver LLM calls and OTLP/Langfuse-ready export, but session-provider and broader fleet paths still need the same child-span coverage.
 - **11 found prompt caching saves 40-60% on input tokens** across all 3 providers (Claude cache_control, Gemini cachedContents, OpenAI prefix caching) -- partially implemented.
 - **04 found 11+ lint rules** with varying false-positive rates; `vague-quantifier` rule flags "good" and "nice" as vague (high FP rate).
 
@@ -340,7 +340,7 @@ Baseline: 503/1,143 tasks complete (44.0%). 640 remaining across 30 phases. Velo
 1. Fix default target provider to match LLM provider (Claude when using Claude API).
 2. Wire `FormatContextBlockMarkdown()` into the pipeline for Gemini/OpenAI targets.
 3. Add runtime calibration test for scoring (<1.2x inflation check).
-4. Complete OTel integration: correlate MCP trace IDs with outgoing LLM API call spans.
+4. Complete the remaining OTel integration: extend today’s MCP-to-prompt-improver correlation to the rest of the session-provider and fleet LLM call paths.
 5. Activate prompt caching for all 3 providers in the session launch path.
 6. Begin evaluation harness (Phase 21.2): SWE-bench, tau-bench, pass@k measurement.
 7. Tune lint rule false-positive rates (lower threshold for `vague-quantifier`, `decomposition-needed`).

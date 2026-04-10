@@ -74,6 +74,11 @@ run from the repo root with:
 ~/hairglasses-studio/dotfiles/scripts/hg-promptfoo.sh . eval -c promptfoo/promptfooconfig.yaml
 ```
 
+That suite is intentionally fast and deterministic. It validates the local
+prompt-enhancement lane; the slower Ollama-backed improvement path remains
+covered by the Go unit and integration tests in `internal/enhancer` and
+`cmd/prompt-improver`.
+
 If you want prompt-improver runs to export spans, `ralphglasses` now accepts
 either standard OTLP env vars or Langfuse-native env vars:
 
