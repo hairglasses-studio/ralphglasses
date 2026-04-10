@@ -283,8 +283,8 @@ func TestNewLLMClient_LocalOllamaUsesDummyKey(t *testing.T) {
 	if client.APIKey != "ollama" {
 		t.Fatalf("client.APIKey = %q, want %q", client.APIKey, "ollama")
 	}
-	if client.Model != "qwen3:8b" {
-		t.Fatalf("client.Model = %q, want %q", client.Model, "qwen3:8b")
+	if client.Model != "code-primary" {
+		t.Fatalf("client.Model = %q, want %q", client.Model, "code-primary")
 	}
 }
 

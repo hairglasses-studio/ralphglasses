@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/observability"
 )
 
 // GeminiClient calls the Google AI Gemini API to improve prompts using a meta-prompt.
@@ -90,8 +92,9 @@ type geminiThinking struct {
 }
 
 type geminiResponse struct {
-	Candidates []geminiCandidate `json:"candidates"`
-	Error      *geminiError      `json:"error,omitempty"`
+	Candidates    []geminiCandidate    `json:"candidates"`
+	UsageMetadata *geminiUsageMetadata `json:"usageMetadata,omitempty"`
+	Error         *geminiError         `json:"error,omitempty"`
 }
 
 type geminiCandidate struct {
@@ -102,6 +105,12 @@ type geminiError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Status  string `json:"status"`
+}
+
+type geminiUsageMetadata struct {
+	PromptTokenCount     int `json:"promptTokenCount"`
+	CandidatesTokenCount int `json:"candidatesTokenCount"`
+	TotalTokenCount      int `json:"totalTokenCount"`
 }
 
 // Improve sends the prompt to Gemini with a meta-prompt and returns the improved version.
@@ -142,41 +151,67 @@ func (c *GeminiClient) Improve(ctx context.Context, prompt string, opts ImproveO
 		}
 	}
 
+	call := observability.LLMCallInfo{
+		Operation: "prompt_improver.improve",
+		Provider:  string(c.Provider()),
+		System:    observability.ResolveGenAISystem(c.BaseURL, "gemini"),
+		Model:     c.Model,
+		BaseURL:   c.BaseURL,
+		MaxTokens: reqBody.GenerationConfig.MaxOutputTokens,
+	}
+	ctx, span, started := observability.StartLLMCallSpan(ctx, call)
+	var finishErr error
+	defer func() {
+		observability.FinishLLMCallSpan(span, started, call, finishErr)
+	}()
+
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
+		finishErr = err
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
 	url := fmt.Sprintf("%s/v1beta/models/%s:generateContent?key=%s", c.BaseURL, c.Model, c.APIKey)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
 	if err != nil {
+		finishErr = err
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
+		finishErr = err
 		return nil, fmt.Errorf("api call: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
+		finishErr = err
 		return nil, fmt.Errorf("read response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		finishErr = fmt.Errorf("api error (status %d): %s", resp.StatusCode, string(respBody))
 		return nil, fmt.Errorf("api error (status %d): %s", resp.StatusCode, string(respBody))
 	}
 
 	var apiResp geminiResponse
 	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		finishErr = err
 		return nil, fmt.Errorf("unmarshal response: %w", err)
 	}
 
 	if apiResp.Error != nil {
-		return nil, fmt.Errorf("api error: %s: %s", apiResp.Error.Status, apiResp.Error.Message)
+		finishErr = fmt.Errorf("api error: %s: %s", apiResp.Error.Status, apiResp.Error.Message)
+		return nil, finishErr
 	}
+	if apiResp.UsageMetadata != nil {
+		call.InputTokens = int64(apiResp.UsageMetadata.PromptTokenCount)
+		call.OutputTokens = int64(apiResp.UsageMetadata.CandidatesTokenCount)
+	}
+	call.CostUSD = observability.EstimateLLMCostUSD(call.System, c.Model, call.InputTokens, call.OutputTokens)
 
 	// Extract text from first candidate's parts
 	var enhanced strings.Builder

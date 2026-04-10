@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hairglasses-studio/ralphglasses/internal/observability"
 )
 
 // OpenAIClient calls the OpenAI Responses API to improve prompts using a meta-prompt.
@@ -156,13 +158,29 @@ func (c *OpenAIClient) Improve(ctx context.Context, prompt string, opts ImproveO
 		Reasoning:          &reasoningConfig{Effort: effort},
 	}
 
+	call := observability.LLMCallInfo{
+		Operation: "prompt_improver.improve",
+		Provider:  string(c.Provider()),
+		System:    observability.ResolveGenAISystem(c.BaseURL, "openai"),
+		Model:     c.Model,
+		BaseURL:   c.BaseURL,
+		MaxTokens: reqBody.MaxOutputTokens,
+	}
+	ctx, span, started := observability.StartLLMCallSpan(ctx, call)
+	var finishErr error
+	defer func() {
+		observability.FinishLLMCallSpan(span, started, call, finishErr)
+	}()
+
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
+		finishErr = err
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+"/v1/responses", bytes.NewReader(bodyBytes))
 	if err != nil {
+		finishErr = err
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
@@ -171,26 +189,31 @@ func (c *OpenAIClient) Improve(ctx context.Context, prompt string, opts ImproveO
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
+		finishErr = err
 		return nil, fmt.Errorf("api call: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
+		finishErr = err
 		return nil, fmt.Errorf("read response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		finishErr = fmt.Errorf("api error (status %d): %s", resp.StatusCode, string(respBody))
 		return nil, fmt.Errorf("api error (status %d): %s", resp.StatusCode, string(respBody))
 	}
 
 	var apiResp responsesResponse
 	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		finishErr = err
 		return nil, fmt.Errorf("unmarshal response: %w", err)
 	}
 
 	if apiResp.Error != nil {
-		return nil, fmt.Errorf("api error: %s: %s", apiResp.Error.Type, apiResp.Error.Message)
+		finishErr = fmt.Errorf("api error: %s: %s", apiResp.Error.Type, apiResp.Error.Message)
+		return nil, finishErr
 	}
 
 	// Track the response ID for multi-turn chaining via previous_response_id.
@@ -199,6 +222,12 @@ func (c *OpenAIClient) Improve(ctx context.Context, prompt string, opts ImproveO
 		c.LastResponseID = apiResp.ID
 		c.mu.Unlock()
 	}
+	call.ResponseID = apiResp.ID
+	if apiResp.Usage != nil {
+		call.InputTokens = int64(apiResp.Usage.InputTokens)
+		call.OutputTokens = int64(apiResp.Usage.OutputTokens)
+	}
+	call.CostUSD = observability.EstimateLLMCostUSD(call.System, c.Model, call.InputTokens, call.OutputTokens)
 
 	enhanced := extractResponseText(apiResp.Output)
 

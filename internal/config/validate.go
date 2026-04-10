@@ -103,7 +103,11 @@ var validModelPrefixes = map[string][]string{
 	"gemini": {"gemini-"},
 	"codex":  {"gpt-", "o1-", "o3-", "o4-", "codex-"},
 	"openai": {"gpt-", "o1-", "o3-", "o4-", "codex-"},
-	"ollama": {"llama", "mistral", "codellama", "deepseek", "phi", "qwen", "gemma", "starcoder"},
+	"ollama": {"llama", "mistral", "codellama", "deepseek", "phi", "qwen", "gemma", "starcoder", "devstral", "nomic", "glm", "kimi", "minimax"},
+	"crush":  {"sonnet", "claude-", "gpt-", "gemini-"},
+	"goose":  {"claude-", "sonnet", "gpt-", "gemini-"},
+	"amp":    {"amp-", "claude-", "gpt-", "gemini-"},
+	"a2a":    {"a2a-"},
 }
 
 // durationRe matches Go-style duration strings like "10s", "5m30s", "1h".
@@ -178,11 +182,11 @@ func ruleCostRateMultiplier(cfg *Config, r *ValidationResult) {
 func ruleProviderNames(cfg *Config, r *ValidationResult) {
 	if cfg.DefaultProvider != "" && !validProviders[cfg.DefaultProvider] {
 		r.addError("default_provider",
-			fmt.Sprintf("unknown provider %q (valid: claude, gemini, codex, antigravity, openai, ollama)", cfg.DefaultProvider))
+			fmt.Sprintf("unknown provider %q (valid: claude, gemini, codex, ollama, antigravity, openai, crush, goose, amp, a2a)", cfg.DefaultProvider))
 	}
 	if cfg.WorkerProvider != "" && !validProviders[cfg.WorkerProvider] {
 		r.addError("worker_provider",
-			fmt.Sprintf("unknown provider %q (valid: claude, gemini, codex, antigravity, openai, ollama)", cfg.WorkerProvider))
+			fmt.Sprintf("unknown provider %q (valid: claude, gemini, codex, ollama, antigravity, openai, crush, goose, amp, a2a)", cfg.WorkerProvider))
 	}
 }
 
@@ -262,7 +266,7 @@ func ValidateProviderName(name string) error {
 		return nil
 	}
 	if !validProviders[name] {
-		return fmt.Errorf("unknown provider %q (valid: claude, gemini, codex, openai, ollama)", name)
+		return fmt.Errorf("unknown provider %q (valid: claude, gemini, codex, ollama, antigravity, openai, crush, goose, amp, a2a)", name)
 	}
 	return nil
 }

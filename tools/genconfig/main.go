@@ -253,6 +253,19 @@ func renderConfigReference() string {
 	fmt.Fprintln(w, "| `ANTHROPIC_API_KEY` | Anthropic API key for Claude provider (optional -- Claude Code uses OAuth if missing) |")
 	fmt.Fprintln(w, "| `GEMINI_API_KEY` | Google Gemini API key for Gemini provider |")
 	fmt.Fprintln(w, "| `OPENAI_API_KEY` | OpenAI API key for Codex/OpenAI provider |")
+	fmt.Fprintln(w, "| `OLLAMA_BASE_URL` | Base URL for local Ollama runtime (default `http://127.0.0.1:11434`) |")
+	fmt.Fprintln(w, "| `OLLAMA_API_KEY` | Optional Ollama API key; defaults to `ollama` for local compatibility endpoints |")
+	fmt.Fprintln(w, "| `OLLAMA_CHAT_MODEL` | Shared local chat/default lightweight model |")
+	fmt.Fprintln(w, "| `OLLAMA_FAST_MODEL` | Shared fast local coding lane for verify/report/reflection work |")
+	fmt.Fprintln(w, "| `OLLAMA_CODE_MODEL` | Shared local code model used by Ollama session launches |")
+	fmt.Fprintln(w, "| `OLLAMA_HEAVY_CODE_MODEL` | Shared heavier local code model |")
+	fmt.Fprintln(w, "| `OLLAMA_HIGH_CONTEXT_CODE_MODEL` | Shared high-context local code model |")
+	fmt.Fprintln(w, "| `OLLAMA_CLOUD_CODE_MODEL` | Shared cloud coding lane exposed through Ollama-compatible tooling when auth is available |")
+	fmt.Fprintln(w, "| `OLLAMA_CLOUD_VERIFIED_CODE_MODEL` | Shared verified/fallback cloud coding lane |")
+	fmt.Fprintln(w, "| `OLLAMA_MULTILINGUAL_CODE_MODEL` | Shared multilingual cloud coding lane |")
+	fmt.Fprintln(w, "| `OLLAMA_THINKING_CODE_MODEL` | Shared deep-thinking cloud coding lane |")
+	fmt.Fprintln(w, "| `OLLAMA_EMBED_MODEL` | Shared local embedding model |")
+	fmt.Fprintln(w, "| `OLLAMA_KEEP_ALIVE` | Model keep-alive duration passed through to Ollama-aware surfaces |")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "---")
 	fmt.Fprintln(w)
@@ -264,7 +277,9 @@ func renderConfigReference() string {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "### Recognized Providers")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "`claude`, `gemini`, `codex`, `openai`, `ollama`")
+	fmt.Fprintln(w, "`claude`, `gemini`, `codex`, `ollama`, `antigravity`, `crush`, `goose`, `amp`, `a2a`")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "`openai` remains accepted as a deprecated alias for `codex` in config and natural-language routing.")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "### Model Prefix Validation")
 	fmt.Fprintln(w)
@@ -274,7 +289,11 @@ func renderConfigReference() string {
 	fmt.Fprintln(w, "| `gemini` | `gemini-` |")
 	fmt.Fprintln(w, "| `codex` | `gpt-`, `o1-`, `o3-`, `o4-`, `codex-` |")
 	fmt.Fprintln(w, "| `openai` | `gpt-`, `o1-`, `o3-`, `o4-`, `codex-` |")
-	fmt.Fprintln(w, "| `ollama` | `llama`, `mistral`, `codellama`, `deepseek`, `phi`, `qwen`, `gemma`, `starcoder` |")
+	fmt.Fprintln(w, "| `ollama` | `llama`, `mistral`, `codellama`, `deepseek`, `phi`, `qwen`, `gemma`, `starcoder`, `devstral`, `nomic`, `glm`, `kimi`, `minimax` |")
+	fmt.Fprintln(w, "| `crush` | `sonnet`, `claude-`, `gpt-`, `gemini-` |")
+	fmt.Fprintln(w, "| `goose` | `claude-`, `sonnet`, `gpt-`, `gemini-` |")
+	fmt.Fprintln(w, "| `amp` | `amp-`, `claude-`, `gpt-`, `gemini-` |")
+	fmt.Fprintln(w, "| `a2a` | `a2a-` |")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "---")
 	fmt.Fprintln(w)
@@ -313,7 +332,7 @@ func friendlyType(t reflect.Type) string {
 func structFieldDescription(f reflect.StructField) string {
 	descriptions := map[string]string{
 		"ScanPaths":           "Directories to scan for ralph-enabled repos",
-		"DefaultProvider":     "Default LLM provider (claude, gemini, codex, openai, ollama)",
+		"DefaultProvider":     "Default LLM provider (claude, gemini, codex, ollama, antigravity, crush, goose, amp, a2a; openai is a deprecated codex alias)",
 		"WorkerProvider":      "Default provider for worker/delegate tasks",
 		"MaxWorkers":          "Maximum concurrent worker sessions (0-50)",
 		"DefaultBudgetUSD":    "Default per-session budget in USD (0-10000)",

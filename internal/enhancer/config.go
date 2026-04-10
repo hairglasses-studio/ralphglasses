@@ -204,6 +204,14 @@ func ResolveConfig(projectDir string) Config {
 		cfg.LLM.Model = m
 	}
 
+	if baseURL := os.Getenv("PROMPT_IMPROVER_BASE_URL"); baseURL != "" {
+		cfg.LLM.BaseURL = baseURL
+	}
+
+	if apiKeyEnv := os.Getenv("PROMPT_IMPROVER_API_KEY_ENV"); apiKeyEnv != "" {
+		cfg.LLM.APIKeyEnv = apiKeyEnv
+	}
+
 	if t := os.Getenv("PROMPT_IMPROVER_TIMEOUT"); t != "" {
 		if d, err := time.ParseDuration(t); err == nil {
 			cfg.LLM.Timeout = d

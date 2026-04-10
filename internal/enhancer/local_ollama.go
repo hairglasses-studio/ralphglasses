@@ -7,7 +7,7 @@ import (
 )
 
 const defaultLocalOllamaBaseURL = "http://127.0.0.1:11434"
-const defaultLocalOllamaChatModel = "qwen3:8b"
+const defaultLocalOllamaChatModel = "code-primary"
 
 func resolveProviderBaseURL(cfg LLMConfig, defaultBaseURL string) string {
 	baseURL := strings.TrimSpace(cfg.BaseURL)

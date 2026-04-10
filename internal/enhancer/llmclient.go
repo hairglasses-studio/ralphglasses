@@ -10,6 +10,7 @@ import (
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
+	"github.com/hairglasses-studio/ralphglasses/internal/observability"
 )
 
 // LLMClient calls the Claude Messages API to improve prompts using the official Anthropic Go SDK.
@@ -169,10 +170,27 @@ func (c *LLMClient) Improve(ctx context.Context, prompt string, opts ImproveOpti
 		}
 	}
 
+	call := observability.LLMCallInfo{
+		Operation: "prompt_improver.improve",
+		Provider:  string(c.Provider()),
+		System:    observability.ResolveGenAISystem(c.BaseURL, "anthropic"),
+		Model:     c.Model,
+		BaseURL:   c.BaseURL,
+		MaxTokens: 4096,
+	}
+	ctx, span, started := observability.StartLLMCallSpan(ctx, call)
+
 	resp, err := c.sdk.Messages.New(ctx, params)
+	defer func() {
+		observability.FinishLLMCallSpan(span, started, call, err)
+	}()
 	if err != nil {
 		return nil, fmt.Errorf("api call: %w", err)
 	}
+	call.ResponseID = resp.ID
+	call.InputTokens = int64(resp.Usage.InputTokens)
+	call.OutputTokens = int64(resp.Usage.OutputTokens)
+	call.CostUSD = observability.EstimateLLMCostUSD(call.System, c.Model, call.InputTokens, call.OutputTokens)
 
 	// Extract text from content blocks
 	var enhanced strings.Builder

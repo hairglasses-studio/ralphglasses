@@ -36,6 +36,9 @@ var version = "dev"
 var hybridEngine *enhancer.HybridEngine
 
 func main() {
+	cleanupObservability := initObservability()
+	defer cleanupObservability()
+
 	args := os.Args[1:]
 
 	// If no args and stdin has data, read from stdin (pipe mode)

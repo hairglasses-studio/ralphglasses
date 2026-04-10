@@ -105,6 +105,7 @@ func ValidateProviderEnv(p Provider) error {
 	if p == ProviderCline {
 		return nil
 	}
+	// Local Ollama defaults are synthesized when the env var is missing.
 	if p == ProviderOllama {
 		return nil
 	}

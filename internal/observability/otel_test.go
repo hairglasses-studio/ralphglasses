@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"encoding/base64"
 	"testing"
 )
 
@@ -99,5 +100,46 @@ func TestNewProvider_ExplicitEndpoint(t *testing.T) {
 
 	if p.IsNoop() {
 		t.Error("expected noop=false when explicit endpoint is given")
+	}
+}
+
+func TestResolveTraceExporterConfig_PrefersTraceSpecificEnv(t *testing.T) {
+	t.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "https://collector.example/v1/traces")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317")
+	t.Setenv("OTEL_EXPORTER_OTLP_TRACES_HEADERS", "authorization=Bearer trace-token")
+	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "authorization=Bearer shared-token")
+
+	cfg := resolveTraceExporterConfig("")
+	if cfg.Endpoint != "https://collector.example/v1/traces" {
+		t.Fatalf("Endpoint = %q, want trace-specific endpoint", cfg.Endpoint)
+	}
+	if cfg.Protocol != "http" {
+		t.Fatalf("Protocol = %q, want http", cfg.Protocol)
+	}
+	if got := cfg.Headers["authorization"]; got != "Bearer trace-token" {
+		t.Fatalf("trace-specific header = %q, want %q", got, "Bearer trace-token")
+	}
+}
+
+func TestResolveTraceExporterConfig_LangfuseFallback(t *testing.T) {
+	t.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+	t.Setenv("OTEL_EXPORTER_OTLP_TRACES_HEADERS", "")
+	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
+	t.Setenv("LANGFUSE_HOST", "https://langfuse.example")
+	t.Setenv("LANGFUSE_PUBLIC_KEY", "pk-test")
+	t.Setenv("LANGFUSE_SECRET_KEY", "sk-test")
+
+	cfg := resolveTraceExporterConfig("")
+	if cfg.Endpoint != "https://langfuse.example/api/public/otel" {
+		t.Fatalf("Endpoint = %q, want Langfuse OTLP endpoint", cfg.Endpoint)
+	}
+	if cfg.Protocol != "http" {
+		t.Fatalf("Protocol = %q, want http", cfg.Protocol)
+	}
+
+	wantAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte("pk-test:sk-test"))
+	if got := cfg.Headers["Authorization"]; got != wantAuth {
+		t.Fatalf("Authorization = %q, want %q", got, wantAuth)
 	}
 }

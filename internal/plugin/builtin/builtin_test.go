@@ -138,8 +138,8 @@ func TestNewOllamaProviderDefaults(t *testing.T) {
 	if provider.endpoint != "http://127.0.0.1:11434" {
 		t.Fatalf("provider.endpoint = %q, want %q", provider.endpoint, "http://127.0.0.1:11434")
 	}
-	if provider.model != "qwen3:8b" {
-		t.Fatalf("provider.model = %q, want %q", provider.model, "qwen3:8b")
+	if provider.model != "code-primary" {
+		t.Fatalf("provider.model = %q, want %q", provider.model, "code-primary")
 	}
 }
 

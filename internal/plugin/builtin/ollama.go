@@ -23,14 +23,14 @@ import (
 // operation on this workstation.
 type OllamaProvider struct {
 	endpoint string // default http://127.0.0.1:11434
-	model    string // default "qwen3:8b"
+	model    string // default "code-primary"
 	client   *http.Client
 }
 
 // OllamaConfig configures the Ollama provider.
 type OllamaConfig struct {
 	Endpoint string        `json:"endpoint" yaml:"endpoint"` // default http://127.0.0.1:11434
-	Model    string        `json:"model" yaml:"model"`       // default qwen3:8b
+	Model    string        `json:"model" yaml:"model"`       // default code-primary
 	Timeout  time.Duration `json:"timeout" yaml:"timeout"`   // default 5m
 }
 
@@ -40,7 +40,7 @@ func NewOllamaProvider(cfg OllamaConfig) *OllamaProvider {
 		cfg.Endpoint = "http://127.0.0.1:11434"
 	}
 	if cfg.Model == "" {
-		cfg.Model = "qwen3:8b"
+		cfg.Model = "code-primary"
 	}
 	timeout := cfg.Timeout
 	if timeout == 0 {

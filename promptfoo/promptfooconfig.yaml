@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: ralphglasses prompt-improver local Ollama regression suite
+
+prompts:
+  - '{{prompt}}'
+
+providers:
+  - id: file://provider.cjs
+    label: ralphglasses-prompt-improver
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://assert.js:validatePromptImproverOutput
+
+tests:
+  - description: local enhancement keeps code prompts structured
+    vars:
+      action: enhance_local
+      task_type: code
+      prompt: fix the login timeout bug and add regression tests for expired sessions
+      required_terms: login, tests, sessions
+
+  - description: Ollama-backed improvement keeps concrete requirements
+    vars:
+      action: improve_ollama
+      task_type: code
+      prompt: rewrite this request so the agent debugs the login timeout and adds tests for expired sessions
+      required_terms: login, tests, expired

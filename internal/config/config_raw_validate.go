@@ -31,8 +31,8 @@ type keySpec struct {
 // expected types and valid ranges.
 var canonicalKeys = map[string]keySpec{
 	"scan_paths":            {Type: "[]string"},
-	"default_provider":      {Type: "string", AllowedStr: []string{"claude", "gemini", "codex", "antigravity", "openai", "ollama"}},
-	"worker_provider":       {Type: "string", AllowedStr: []string{"claude", "gemini", "codex", "antigravity", "openai", "ollama"}},
+	"default_provider":      {Type: "string", AllowedStr: []string{"claude", "gemini", "codex", "ollama", "antigravity", "openai", "crush", "goose", "amp", "a2a"}},
+	"worker_provider":       {Type: "string", AllowedStr: []string{"claude", "gemini", "codex", "ollama", "antigravity", "openai", "crush", "goose", "amp", "a2a"}},
 	"max_workers":           {Type: "int", MinInt: 0, MaxInt: 50},
 	"default_budget_usd":    {Type: "float"},
 	"cost_rate_multiplier":  {Type: "float"},
@@ -43,7 +43,7 @@ var canonicalKeys = map[string]keySpec{
 	"scan_interval":         {Type: "int", MinInt: 1, MaxInt: 3600},
 	"log_level":             {Type: "string", AllowedStr: []string{"debug", "info", "warn", "error"}},
 	"auto_restart":          {Type: "bool"},
-	"provider":              {Type: "string", AllowedStr: []string{"claude", "gemini", "codex", "antigravity", "openai", "ollama"}},
+	"provider":              {Type: "string", AllowedStr: []string{"claude", "gemini", "codex", "ollama", "antigravity", "openai", "crush", "goose", "amp", "a2a"}},
 	"notify_desktop":        {Type: "bool"},
 	"notify_sound":          {Type: "bool"},
 	"telemetry_enabled":     {Type: "bool"},

@@ -8,7 +8,11 @@ import (
 )
 
 func (m *Manager) applyResumeCompaction(ctx context.Context, opts *LaunchOptions) {
-	if opts == nil || opts.Resume == "" || opts.Provider == ProviderClaude {
+	if opts == nil || opts.Resume == "" {
+		return
+	}
+	provider := normalizeSessionProvider(opts.Provider)
+	if provider == ProviderClaude || provider == ProviderOllama {
 		return
 	}
 
