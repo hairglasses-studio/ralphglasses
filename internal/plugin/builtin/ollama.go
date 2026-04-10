@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -67,9 +68,10 @@ func (p *OllamaProvider) ProviderName() string { return "ollama" }
 // Complete sends a prompt to the Ollama API and returns the response.
 func (p *OllamaProvider) Complete(ctx context.Context, prompt string, opts map[string]any) (string, error) {
 	reqBody := ollamaRequest{
-		Model:  p.model,
-		Prompt: prompt,
-		Stream: false,
+		Model:     p.model,
+		Prompt:    prompt,
+		Stream:    false,
+		KeepAlive: defaultOllamaKeepAlive(),
 	}
 
 	// Apply options
@@ -140,10 +142,11 @@ func (p *OllamaProvider) checkAvailable() error {
 // --- Ollama API types ---
 
 type ollamaRequest struct {
-	Model   string        `json:"model"`
-	Prompt  string        `json:"prompt"`
-	Stream  bool          `json:"stream"`
-	Options ollamaOptions `json:"options"`
+	Model     string        `json:"model"`
+	Prompt    string        `json:"prompt"`
+	Stream    bool          `json:"stream"`
+	KeepAlive string        `json:"keep_alive,omitempty"`
+	Options   ollamaOptions `json:"options"`
 }
 
 type ollamaOptions struct {
@@ -155,4 +158,11 @@ type ollamaResponse struct {
 	Model    string `json:"model"`
 	Response string `json:"response"`
 	Done     bool   `json:"done"`
+}
+
+func defaultOllamaKeepAlive() string {
+	if value := strings.TrimSpace(os.Getenv("OLLAMA_KEEP_ALIVE")); value != "" {
+		return value
+	}
+	return "15m"
 }

@@ -93,9 +93,15 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_API_KEY=ollama
 OLLAMA_CHAT_MODEL=qwen3:8b
 OLLAMA_EMBED_MODEL=nomic-embed-text:v1.5
+OLLAMA_KEEP_ALIVE=15m
 ```
 
 That local path is non-session only. Ralph's session runtime still targets `codex`, `claude`, `gemini`, and launch-only `antigravity`.
+
+The workstation-standard Ollama service is tuned for a single active coding lane:
+Flash Attention is enabled, the K/V cache uses `q8_0`, and concurrent model
+loads stay capped at one. Use `~/hairglasses-studio/dotfiles/scripts/hg-ollama-full-test.sh`
+to validate that local path end to end.
 
 ## Fleet Role Surfaces
 

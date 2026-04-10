@@ -142,3 +142,11 @@ func TestNewOllamaProviderDefaults(t *testing.T) {
 		t.Fatalf("provider.model = %q, want %q", provider.model, "qwen3:8b")
 	}
 }
+
+func TestDefaultOllamaKeepAliveUsesEnvOverride(t *testing.T) {
+	t.Setenv("OLLAMA_KEEP_ALIVE", "20m")
+
+	if got := defaultOllamaKeepAlive(); got != "20m" {
+		t.Fatalf("defaultOllamaKeepAlive() = %q, want %q", got, "20m")
+	}
+}

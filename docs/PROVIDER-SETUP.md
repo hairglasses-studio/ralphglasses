@@ -48,9 +48,19 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_API_KEY=ollama
 OLLAMA_CHAT_MODEL=qwen3:8b
 OLLAMA_EMBED_MODEL=nomic-embed-text:v1.5
+OLLAMA_KEEP_ALIVE=15m
 ```
 
 That local path does not change Ralph's managed session providers. Claude, Gemini, Codex, and Antigravity remain the only session runtimes in this pass.
+
+The shared workstation service uses a single-user latency profile: Flash
+Attention enabled, `q8_0` K/V cache, one loaded model, and one parallel request
+lane. Validate it with:
+
+```bash
+~/hairglasses-studio/dotfiles/scripts/hg-ollama-smoke.sh
+~/hairglasses-studio/dotfiles/scripts/hg-ollama-full-test.sh
+```
 
 ## Orchestration Pattern
 
