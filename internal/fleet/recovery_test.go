@@ -140,7 +140,7 @@ func TestFleetRecoveryOrchestrator_UsesOriginalProvider(t *testing.T) {
 		SessionsToResume: []session.RecoverableSession{
 			{SessionID: "s1", RepoPath: "/tmp/r1", RepoName: "r1", Priority: 1, Provider: session.ProviderCodex, ResumePrompt: "p1"},
 			{SessionID: "s2", RepoPath: "/tmp/r2", RepoName: "r2", Priority: 2, Provider: session.ProviderGemini, ResumePrompt: "p2"},
-			{SessionID: "s3", RepoPath: "/tmp/r3", RepoName: "r3", Priority: 3, ResumePrompt: "p3"}, // empty provider → default
+			{SessionID: "s3", RepoPath: "/tmp/r3", RepoName: "r3", Priority: 3, ResumePrompt: "p3"}, // empty provider → runtime selection
 		},
 	}
 
@@ -164,7 +164,7 @@ func TestFleetRecoveryOrchestrator_UsesOriginalProvider(t *testing.T) {
 	if providersByRepo["r2"] != session.ProviderGemini {
 		t.Errorf("r2: expected gemini, got %s", providersByRepo["r2"])
 	}
-	if providersByRepo["r3"] != session.DefaultPrimaryProvider() {
-		t.Errorf("r3: expected %s (default), got %s", session.DefaultPrimaryProvider(), providersByRepo["r3"])
+	if providersByRepo["r3"] != "" {
+		t.Errorf("r3: expected empty provider for runtime selection, got %s", providersByRepo["r3"])
 	}
 }

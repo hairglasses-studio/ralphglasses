@@ -144,6 +144,19 @@ func TestResolveConfig_LocalOllamaOverrides(t *testing.T) {
 	}
 }
 
+func TestResolveConfig_OllamaProviderDefaultsTargetToOpenAI(t *testing.T) {
+	t.Setenv("PROMPT_IMPROVER_PROVIDER", "ollama")
+	t.Setenv("PROMPT_IMPROVER_TARGET", "")
+
+	cfg := ResolveConfig(t.TempDir())
+	if cfg.LLM.Provider != "ollama" {
+		t.Fatalf("LLM.Provider = %q, want %q", cfg.LLM.Provider, "ollama")
+	}
+	if cfg.TargetProvider != ProviderOpenAI {
+		t.Fatalf("TargetProvider = %q, want %q", cfg.TargetProvider, ProviderOpenAI)
+	}
+}
+
 func TestConfig_LoadConfig_ValidYAML(t *testing.T) {
 	cfg := Config{
 		Preamble:        "Test project preamble.",

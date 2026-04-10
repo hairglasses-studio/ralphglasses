@@ -206,10 +206,6 @@ func (w *WorkerAgent) executeWork(ctx context.Context, item *WorkItem) {
 		SandboxImage:   item.SandboxImage,
 	}
 
-	if opts.Provider == "" {
-		opts.Provider = session.DefaultPrimaryProvider()
-	}
-
 	sess, err := w.sessMgr.Launch(ctx, opts)
 	if err != nil {
 		if cErr := w.client.CompleteWork(ctx, WorkCompletePayload{
@@ -570,7 +566,12 @@ func emptyIfSame(value, repoPath string) string {
 
 func (w *WorkerAgent) discoverProviders() []session.Provider {
 	var providers []session.Provider
-	for _, p := range []session.Provider{session.ProviderCodex, session.ProviderGemini, session.ProviderClaude} {
+	for _, p := range []session.Provider{
+		session.ProviderCodex,
+		session.ProviderGemini,
+		session.ProviderClaude,
+		session.ProviderOllama,
+	} {
 		if err := session.ValidateProvider(p); err == nil {
 			providers = append(providers, p)
 		}

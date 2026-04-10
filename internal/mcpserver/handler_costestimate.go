@@ -39,18 +39,34 @@ type CostEstimateBreak struct {
 	Iterations    int     `json:"iterations,omitempty"`
 }
 
-// defaultModels maps provider names to their default model identifiers.
-var defaultModels = map[string]string{
-	"claude": "claude-sonnet-4-6",
-	"gemini": "gemini-3.1-flash",
-	"codex":  "gpt-5.4",
+func defaultModelForProvider(provider string) string {
+	switch provider {
+	case "claude":
+		return session.ProviderDefaults(session.ProviderClaude)
+	case "gemini":
+		return "gemini-3.1-flash"
+	case "codex":
+		return session.ProviderDefaults(session.ProviderCodex)
+	case "ollama":
+		return session.ProviderDefaults(session.ProviderOllama)
+	default:
+		return ""
+	}
 }
 
-// providerRateKeys maps provider names to the CostRates map key used for lookup.
-var providerRateKeys = map[string]string{
-	"claude": "claude_sonnet",
-	"gemini": "gemini_flash",
-	"codex":  "codex",
+func providerRateKey(provider string) string {
+	switch provider {
+	case "claude":
+		return "claude_sonnet"
+	case "gemini":
+		return "gemini_flash"
+	case "codex":
+		return "codex"
+	case "ollama":
+		return "ollama"
+	default:
+		return ""
+	}
 }
 
 // estimateSessionCost computes a CostEstimate from the given parameters.
@@ -63,16 +79,16 @@ func estimateSessionCost(
 	historicalAvg *float64,
 ) CostEstimate {
 	if model == "" {
-		model = defaultModels[provider]
+		model = defaultModelForProvider(provider)
 	}
 	if mode == "" {
 		mode = "session"
 	}
 
 	// Look up rates for the provider.
-	rateKey := providerRateKeys[provider]
+	rateKey := providerRateKey(provider)
 	inputRate := rates.InputPerMToken[rateKey]   // USD per 1M tokens
-	outputRate := rates.OutputPerMToken[rateKey]  // USD per 1M tokens
+	outputRate := rates.OutputPerMToken[rateKey] // USD per 1M tokens
 
 	// Total tokens across all turns.
 	totalInputTokens := promptTokens * turns
@@ -154,8 +170,8 @@ func (s *Server) handleCostEstimate(_ context.Context, req mcp.CallToolRequest) 
 	if errResult != nil {
 		return errResult, nil
 	}
-	if _, ok := providerRateKeys[provider]; !ok {
-		return codedError(ErrInvalidParams, "provider must be one of: claude, gemini, codex"), nil
+	if providerRateKey(provider) == "" {
+		return codedError(ErrInvalidParams, "provider must be one of: claude, gemini, codex, ollama"), nil
 	}
 
 	model := pp.StringOpt("model", "")

@@ -610,6 +610,32 @@ func TestCheckModelRegistry(t *testing.T) {
 	}
 }
 
+func TestInferProviderFromModel(t *testing.T) {
+	tests := []struct {
+		name         string
+		model        string
+		wantProvider Provider
+		wantOK       bool
+	}{
+		{name: "registry codex", model: "gpt-5.4", wantProvider: ProviderCodex, wantOK: true},
+		{name: "registry ollama", model: "code-primary", wantProvider: ProviderOllama, wantOK: true},
+		{name: "prefix claude", model: "claude-opus-4-6", wantProvider: ProviderClaude, wantOK: true},
+		{name: "prefix gemini", model: "gemini-3.1-flash", wantProvider: ProviderGemini, wantOK: true},
+		{name: "unknown", model: "mystery-model", wantProvider: "", wantOK: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := InferProviderFromModel(tt.model)
+			if ok != tt.wantOK {
+				t.Fatalf("ok = %v, want %v", ok, tt.wantOK)
+			}
+			if got != tt.wantProvider {
+				t.Fatalf("provider = %q, want %q", got, tt.wantProvider)
+			}
+		})
+	}
+}
+
 func TestLoopValidationWarning_String(t *testing.T) {
 	w := LoopValidationWarning{Field: "model", Message: "mismatch"}
 	got := w.String()

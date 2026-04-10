@@ -39,6 +39,21 @@ func TestResolveLaunchProviderSelection_InferOllamaFromModel(t *testing.T) {
 	}
 }
 
+func TestResolveLaunchProviderSelection_InferCodexFromExplicitModel(t *testing.T) {
+	t.Parallel()
+
+	selection := resolveLaunchProviderSelection(context.Background(), LaunchOptions{
+		Model:  "gpt-5.4",
+		Prompt: "plan and summarize the next repo-health report",
+	})
+	if selection.Provider != ProviderCodex {
+		t.Fatalf("provider = %q, want %q", selection.Provider, ProviderCodex)
+	}
+	if !selection.AutoSelected {
+		t.Fatal("explicit model inference should be marked auto-selected")
+	}
+}
+
 func TestResolveLaunchProviderSelection_LowRiskPromptUsesOllamaWhenInventoryReady(t *testing.T) {
 	orig := discoverHybridRoutingOllamaInventory
 	discoverHybridRoutingOllamaInventory = func(context.Context, time.Duration) OllamaInventory {

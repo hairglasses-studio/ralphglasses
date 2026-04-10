@@ -449,7 +449,7 @@ Transfer session state to a new session, optionally switching providers. Include
 | `handoff_reason` | string | optional | Reason for handoff (tracked in handoff record) |
 | `include_context` | boolean | optional | Include observation context in handoff (default: true) |
 | `stop_source` | boolean | optional | Stop the source session after handoff (default: false) |
-| `target_provider` | string | optional | Target provider: claude, gemini, codex, antigravity (default: same as source) |
+| `target_provider` | string | optional | Target provider: omit/auto for runtime selection, or claude, gemini, codex, ollama, antigravity (default: same as source) |
 
 
 
@@ -461,21 +461,21 @@ Launch a headless LLM CLI session (claude/gemini/codex) for a repo with a `promp
 |-----------|------|----------|-------------|
 | `prompt` | string | **required** | Prompt/task to send |
 | `repo` | string | **required** | Repo name |
-| `agent` | string | optional | Agent/subagent name. Native for Claude only. |
-| `allowed_tools` | string | optional | Comma-separated allowed tools (e.g. Bash,Read,Edit). Supported by Claude and Gemini; unsupported by Codex and Antigravity. |
+| `agent` | string | optional | Agent/subagent name. Native for Claude/Ollama only. |
+| `allowed_tools` | string | optional | Comma-separated allowed tools (e.g. Bash,Read,Edit). Supported by Claude, Ollama, and Gemini; unsupported by Codex and Antigravity. |
 | `bare` | boolean | optional | Skip hooks/plugins for faster scripted startup |
-| `budget_usd` | number | optional | Budget in USD — maximum spend for this session. Native for Claude; externally enforced by ralphglasses for Codex, Gemini, and Antigravity. |
+| `budget_usd` | number | optional | Budget in USD — maximum spend for this session. Native for Claude/Ollama; externally enforced by ralphglasses for Codex, Gemini, and Antigravity. |
 | `effort` | string | optional | Thinking effort level: low, medium, high, max |
 | `enhance_prompt` | string | optional | Auto-enhance the prompt before launch: local (deterministic), llm (Claude API), auto (try LLM, fallback). Omit to skip enhancement |
 | `fallback_model` | string | optional | Auto-fallback model on overload |
-| `max_turns` | number | optional | Maximum conversation turns. Native for Claude only. |
+| `max_turns` | number | optional | Maximum conversation turns. Native for Claude/Ollama only. |
 | `model` | string | optional | Model to use |
 | `no_journal` | string | optional | Skip improvement journal injection: true/false (default: false) |
 | `output_schema` | string | optional | JSON schema for structured output validation (Claude: --json-schema, Codex: --output-schema) |
-| `provider` | string | optional | LLM provider: codex (default), claude, gemini, antigravity. Antigravity opens an external interactive handoff instead of a managed streaming session. |
+| `provider` | string | optional | LLM provider: omit/auto for runtime selection, or codex, claude, gemini, ollama, antigravity. Antigravity opens an external interactive handoff instead of a managed streaming session. |
 | `session_name` | string | optional | Human-readable session name |
-| `system_prompt` | string | optional | Additional system prompt to append. Native for Claude only; use GEMINI.md or AGENTS.md plus .agents/rules/.agents/workflows for Gemini, Codex, and Antigravity repo instructions. |
-| `target_provider` | string | optional | Target LLM provider for prompt enhancement: claude, gemini, openai (defaults to session provider) |
+| `system_prompt` | string | optional | Additional system prompt to append. Native for Claude/Ollama only; use GEMINI.md or AGENTS.md plus .agents/rules/.agents/workflows for Gemini, Codex, and Antigravity repo instructions. |
+| `target_provider` | string | optional | Target LLM provider for prompt enhancement: claude, gemini, openai, or ollama (ollama uses the openai-compatible prompt structure style; defaults to the session provider lane) |
 | `tenant_id` | string | optional | Workspace tenant ID (default: _default) |
 | `worktree` | string | optional | Git worktree isolation (true for auto, or branch name). Supported by Claude and Gemini; unsupported for Codex and Antigravity. |
 
@@ -488,7 +488,7 @@ List all tracked LLM sessions with status, cost, and turns
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `include_ended` | boolean | optional | Include historical ended sessions from the persistent store when available |
-| `provider` | string | optional | Filter by provider: claude, gemini, codex, antigravity (omit for all) |
+| `provider` | string | optional | Filter by provider: claude, gemini, codex, ollama, antigravity (omit for all) |
 | `repo` | string | optional | Filter by repo name (omit for all) |
 | `status` | string | optional | Filter by status: running, completed, errored, stopped |
 | `tenant_id` | string | optional | Workspace tenant ID (default: _default) |
@@ -528,7 +528,7 @@ Resume a previous LLM CLI session for `repo` using `session_id`
 | `repo` | string | **required** | Repo name |
 | `session_id` | string | **required** | Provider session ID to resume (from session status) |
 | `prompt` | string | optional | Follow-up prompt (optional) |
-| `provider` | string | optional | LLM provider: codex (default), claude, gemini. Antigravity is launch-only and cannot be resumed through ralphglasses. |
+| `provider` | string | optional | LLM provider: omit/auto for runtime selection, or codex, claude, gemini, ollama. Antigravity is launch-only and cannot be resumed through ralphglasses. |
 | `tenant_id` | string | optional | Workspace tenant ID (default: _default) |
 
 
@@ -686,15 +686,15 @@ Create a multi-provider planner/worker perpetual development loop for a repo
 | `max_concurrent_workers` | number | optional | Maximum concurrent workers (currently only 1 supported) |
 | `max_iterations` | number | optional | Maximum loop iterations (0 = unlimited) |
 | `planner_model` | string | optional | Planner model (default: gpt-5.4) |
-| `planner_provider` | string | optional | Planner provider: claude, gemini, codex (default: codex) |
+| `planner_provider` | string | optional | Planner provider: claude, gemini, codex, ollama (default: codex) |
 | `retry_limit` | number | optional | Maximum consecutive failed iterations before step is refused |
 | `self_improvement` | boolean | optional | Enable self-improvement mode with autonomous acceptance gate |
 | `trace_level` | string | optional | Trace verbosity: none, summary (default), verbose |
 | `verifier_model` | string | optional | Verifier model metadata (default: gpt-5.4) |
-| `verifier_provider` | string | optional | Verifier provider: claude, gemini, codex (default: codex) |
+| `verifier_provider` | string | optional | Verifier provider: claude, gemini, codex, ollama (default: codex) |
 | `verify_commands` | string | optional | SECURITY: Privileged input. Newline-separated bash commands (default: ./scripts/dev/ci.sh) |
 | `worker_model` | string | optional | Worker model (default: gpt-5.4) |
-| `worker_provider` | string | optional | Worker provider: claude, gemini, codex (default: codex) |
+| `worker_provider` | string | optional | Worker provider: claude, gemini, codex, ollama (default: codex) |
 | `worktree_policy` | string | optional | Worktree isolation policy (default: git) |
 
 
@@ -739,9 +739,9 @@ Start a self-improvement loop that autonomously improves a repository — auto-m
 | `budget_usd` | number | optional | Budget in USD (default: 20.0, split 1/4 planner + 3/4 worker) |
 | `duration_hours` | number | optional | Maximum duration in hours (default: 4) |
 | `max_iterations` | number | optional | Maximum iterations (default: 5) |
-| `planner_provider` | string | optional | Planner provider (claude, gemini, codex) |
+| `planner_provider` | string | optional | Planner provider (claude, gemini, codex, ollama) |
 | `trace_level` | string | optional | Trace verbosity: none, summary (default), verbose |
-| `worker_provider` | string | optional | Worker provider (claude, gemini, codex) |
+| `worker_provider` | string | optional | Worker provider (claude, gemini, codex, ollama) |
 
 
 
@@ -774,7 +774,7 @@ A/B test two prompts by scoring them across 10 quality dimensions. Returns winne
 | `prompt_a` | string | **required** | First prompt to compare |
 | `prompt_b` | string | **required** | Second prompt to compare |
 | `repo` | string | optional | Repo name for result storage |
-| `target_provider` | string | optional | Target provider for scoring: openai (default), claude, gemini |
+| `target_provider` | string | optional | Target provider for scoring: openai or ollama (default openai-style), claude, gemini |
 
 
 
@@ -785,7 +785,7 @@ Score a prompt across 10 quality dimensions (clarity, specificity, structure, ex
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `prompt` | string | **required** | The prompt text to analyze |
-| `target_provider` | string | optional | Target model provider for scoring suggestions: openai (default), claude, gemini |
+| `target_provider` | string | optional | Target model provider for scoring suggestions: openai or ollama (default openai-style), claude, gemini |
 | `task_type` | string | optional | Override auto-detection: code, troubleshooting, analysis, creative, workflow, general |
 
 
@@ -809,7 +809,7 @@ Run the 13-stage prompt enhancement pipeline (specificity, positive reframing, X
 | `prompt` | string | **required** | The prompt text to enhance |
 | `mode` | string | optional | Enhancement mode: local (default, deterministic), llm (Claude/Gemini/OpenAI or local Ollama-compatible API), auto (try LLM, fallback to local) |
 | `repo` | string | optional | Repo name to load .prompt-improver.yaml config from |
-| `target_provider` | string | optional | Target model provider — controls structure style and scoring: openai (default), claude, gemini |
+| `target_provider` | string | optional | Target model provider — controls structure style and scoring: openai or ollama (default openai-style), claude, gemini |
 | `task_type` | string | optional | Override auto-detection: code, troubleshooting, analysis, creative, workflow, general |
 | `trace_level` | string | optional | Trace verbosity: none, summary (default), verbose |
 
@@ -823,7 +823,7 @@ LLM-powered prompt improvement using Claude, Gemini, OpenAI, or local Ollama-com
 |-----------|------|----------|-------------|
 | `prompt` | string | **required** | The prompt text to improve |
 | `feedback` | string | optional | Optional feedback to guide the improvement direction |
-| `provider` | string | optional | LLM provider for improvement: openai (default; may also target local Ollama-compatible base URLs), claude, gemini |
+| `provider` | string | optional | LLM provider for improvement: openai (default), ollama (local OpenAI-compatible lane), claude, gemini |
 | `task_type` | string | optional | Override auto-detection: code, troubleshooting, analysis, creative, workflow, general |
 | `thinking_enabled` | boolean | optional | Include thinking scaffolding in the improved prompt |
 
@@ -984,7 +984,7 @@ Submit work for `repo` with `prompt` to the distributed fleet queue. Requires a 
 | `repo` | string | **required** | Repo name |
 | `budget_usd` | number | optional | Budget in USD (default: 5.0) |
 | `priority` | number | optional | Priority 0-10 (default: 5, higher = first) |
-| `provider` | string | optional | codex (default), claude, gemini |
+| `provider` | string | optional | LLM provider for the queued task: omit/auto for runtime selection, or codex, claude, gemini, ollama |
 
 
 
@@ -1248,7 +1248,7 @@ Create a composite agent by layering multiple existing agent definitions
 | `name` | string | **required** | Name for the composite agent |
 | `repo` | string | **required** | Repo name |
 | `model` | string | optional | Override model for composite agent |
-| `provider` | string | optional | Provider: codex (default), claude, gemini |
+| `provider` | string | optional | Provider: codex (default), claude, gemini, ollama |
 
 
 
@@ -1264,7 +1264,7 @@ Create or update an agent definition for a repo (supports all providers)
 | `description` | string | optional | Agent description |
 | `max_turns` | number | optional | Max turns for this agent |
 | `model` | string | optional | Model override (sonnet, opus, haiku) |
-| `provider` | string | optional | Target provider: codex (default, .codex/agents/*.toml), claude (.claude/agents/), gemini (.gemini/agents/*.md) |
+| `provider` | string | optional | Target provider: codex (default, .codex/agents/*.toml), claude or ollama (.claude/agents/), gemini (.gemini/agents/*.md) |
 | `tools` | string | optional | Comma-separated allowed tools |
 
 
@@ -1276,7 +1276,7 @@ List available agent definitions for a repo (supports all providers)
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `repo` | string | **required** | Repo name |
-| `provider` | string | optional | Filter by provider: codex (default), claude, gemini, or 'all' |
+| `provider` | string | optional | Filter by provider: codex (default), claude, gemini, ollama, or 'all' |
 
 
 
@@ -1298,11 +1298,11 @@ Create an agent team by `name` for `repo`; Codex teams use the structured autono
 | `max_concurrency` | number | optional | Maximum concurrent worker tasks (default 2) |
 | `max_retries` | number | optional | Maximum retries per task (default 2) |
 | `model` | string | optional | Model for lead session |
-| `provider` | string | optional | LLM provider for lead: codex (default), claude, gemini |
+| `provider` | string | optional | LLM provider for lead: codex (default), claude, gemini, ollama |
 | `target_branch` | string | optional | Repo branch to reconcile/promote into (default main) |
 | `tenant_id` | string | optional | Workspace tenant ID (default: _default) |
 | `worker_model` | string | optional | Model override for worker sessions |
-| `worker_provider` | string | optional | Default LLM provider for worker tasks: codex (default), claude, gemini |
+| `worker_provider` | string | optional | Default LLM provider for worker tasks: codex (default), claude, gemini, ollama |
 | `worktree_policy` | string | optional | Worker isolation mode: per_worker (default for Codex) or shared |
 
 
@@ -1315,7 +1315,7 @@ Add a new task to an existing team
 |-----------|------|----------|-------------|
 | `name` | string | **required** | Team name |
 | `task` | string | **required** | Task description to delegate |
-| `provider` | string | optional | LLM provider override for this task: claude, gemini, codex |
+| `provider` | string | optional | LLM provider override for this task: claude, gemini, codex, ollama |
 | `tenant_id` | string | optional | Workspace tenant ID (default: _default) |
 
 
@@ -1787,7 +1787,7 @@ Pre-launch cost estimate for a session or loop
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `provider` | string | **required** | Provider: claude, gemini, or codex |
+| `provider` | string | **required** | Provider: claude, gemini, codex, or ollama |
 | `iterations` | number | optional | Loop iterations for mode=loop (default 3) |
 | `mode` | string | optional | 'session' or 'loop' (default session) |
 | `model` | string | optional | Model name (uses provider default if omitted) |
@@ -2226,7 +2226,7 @@ Generate an optimized audit prompt using the 13-stage enhancer pipeline. Returns
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `custom_prompt` | string | optional | Custom base prompt instead of built-in template. Will be enhanced through the pipeline. |
-| `target_provider` | string | optional | Target model provider for structure style: openai (default), claude, gemini |
+| `target_provider` | string | optional | Target model provider for structure style: openai or ollama (default openai-style), claude, gemini |
 | `task_type` | string | optional | Task type for prompt template: audit (default), fix, review, improve |
 
 
@@ -2239,14 +2239,15 @@ Launch an enhanced prompt against multiple repos as parallel sessions. Returns a
 |-----------|------|----------|-------------|
 | `prompt` | string | **required** | The prompt to run (use sweep_generate output or provide your own). Use REPO_PLACEHOLDER for repo name substitution. |
 | `allowed_tools` | string | optional | Comma-separated allowed tools (default: read-only tools for plan mode) |
-| `budget_usd` | number | optional | Per-session budget in USD (default: 5.0) |
+| `budget_usd` | number | optional | Per-session budget in USD (default: 0.5, auto-sized upward when omitted and estimates require more headroom) |
 | `effort` | string | optional | Effort level: low, medium, high, max |
 | `enhance_prompt` | string | optional | Enhance each repo's prompt before launch: local (default), llm, auto, none |
 | `limit` | number | optional | Max repos to launch against (default 10) |
 | `max_sweep_budget_usd` | number | optional | Total sweep budget cap in USD (default 100). Rejects launch if estimated cost exceeds this. |
 | `max_turns` | number | optional | Max turns per session (default 50). Prevents runaway sessions. |
-| `model` | string | optional | Model to use: opus (default), sonnet, haiku |
-| `permission_mode` | string | optional | Claude permission mode: plan (default, read-only), auto, default |
+| `model` | string | optional | Optional model override. Leave empty to use the selected provider default or runtime-selected lane. Examples: gpt-5.4, claude-sonnet-4-6, gemini-3.1-flash, code-primary |
+| `permission_mode` | string | optional | Permission mode passed through when the selected provider supports it: plan (default, read-only), auto, default |
+| `provider` | string | optional | LLM provider for each repo session: omit/auto for runtime selection, or codex, claude, gemini, ollama |
 | `repos` | string | optional | JSON array of repo names, or "active" for recently-active repos, or "all". Default: active |
 | `session_persistence` | boolean | optional | Persist session history to disk (default false for sweeps). |
 | `sweep_concurrency` | number | optional | Max simultaneous session launches (default 10). Use 1 for serial, higher for large idle machines. |

@@ -142,7 +142,7 @@ func (s *Server) handleSweepGenerate(_ context.Context, req mcp.CallToolRequest)
 	// Run through the enhancer pipeline.
 	cfg := enhancer.Config{}
 	mode := enhancer.ModeLocal
-	tp := enhancer.ProviderName(targetProvider)
+	tp := normalizePromptTargetProvider(targetProvider)
 	eResult := enhancer.EnhanceHybrid(context.Background(), basePrompt, enhancer.TaskType(taskType), cfg, s.getEngine(), mode, tp)
 
 	// Score the result.
@@ -171,7 +171,11 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 
 	reposParam := p.OptionalString("repos", "active")
 	limit := int(p.OptionalNumber("limit", 10))
-	model := p.OptionalString("model", session.ProviderDefaults(session.ProviderCodex))
+	provider, _, err := parseOptionalLaunchProvider(p.OptionalString("provider", ""))
+	if err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid provider: %v", err)), nil
+	}
+	model := p.OptionalString("model", "")
 	permMode := p.OptionalString("permission_mode", "plan")
 	enhanceMode := p.OptionalString("enhance_prompt", "local")
 	budgetUSD := p.OptionalNumber("budget_usd", 0.50)
@@ -201,26 +205,40 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 		return codedError(ErrInvalidParams, "no repos matched"), nil
 	}
 
-	// Validate model name against known provider prefixes.
-	for _, w := range session.ValidateLoopConfig(session.LoopConfig{
-		Provider: session.ProviderCodex, Model: model,
-	}) {
-		if w.Field == "model" {
-			return codedError(ErrInvalidParams, fmt.Sprintf("model validation: %s", w.Message)), nil
+	validationProvider := provider
+	if validationProvider == "" && strings.TrimSpace(model) != "" {
+		if inferred, ok := session.InferProviderFromModel(model); ok {
+			validationProvider = inferred
+		}
+	}
+
+	// Validate model name against the explicit or inferred provider lane.
+	if validationProvider != "" && strings.TrimSpace(model) != "" {
+		for _, w := range session.ValidateLoopConfig(session.LoopConfig{
+			Provider: validationProvider,
+			Model:    model,
+		}) {
+			if w.Field == "model" {
+				return codedError(ErrInvalidParams, fmt.Sprintf("model validation: %s", w.Message)), nil
+			}
 		}
 	}
 
 	// Pre-launch cost estimation.
 	repoCount := len(targetRepos)
 	estimatedPerSession := 1.0
+	estimationProvider := validationProvider
+	if estimationProvider == "" {
+		estimationProvider = session.DefaultPrimaryProvider()
+	}
 
 	if s.SessMgr != nil && s.SessMgr.HasCostPredictor() {
-		estimatedPerSession = s.SessMgr.GetCostPredictor().Predict("sweep", "codex")
+		estimatedPerSession = s.SessMgr.GetCostPredictor().Predict("sweep", string(estimationProvider))
 	}
 	if estimatedPerSession <= 1.0 {
-		pc := config.DefaultProviderCosts()
-		inRate := pc.InputPerMToken["codex"]
-		outRate := pc.OutputPerMToken["codex"]
+		rate := session.DefaultCostRates().ProviderCostRateFrom(estimationProvider)
+		inRate := rate.InputPer1M
+		outRate := rate.OutputPer1M
 		estTurns := float64(maxTurns) * 0.6
 		tokPerTurn := 8000.0
 		estimatedPerSession = (tokPerTurn * estTurns / 1_000_000) * (inRate + outRate)
@@ -294,7 +312,7 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 				repoPrompt = strings.ReplaceAll(repoPrompt, "REPO_PLACEHOLDER", repo.Name)
 
 				opts := session.LaunchOptions{
-					Provider:             session.DefaultPrimaryProvider(),
+					Provider:             provider,
 					RepoPath:             repo.Path,
 					Prompt:               repoPrompt,
 					Model:                model,
@@ -318,7 +336,7 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 						if m == "" {
 							m = enhancer.ModeLocal
 						}
-						eResult := enhancer.EnhanceHybrid(ctx, repoPrompt, "", cfg, s.getEngine(), m, enhancer.ProviderOpenAI)
+						eResult := enhancer.EnhanceHybrid(ctx, repoPrompt, "", cfg, s.getEngine(), m, mapSessionProvider(estimationProvider))
 						opts.Prompt = eResult.Enhanced
 					}
 				}
@@ -347,10 +365,21 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 				}
 				continue
 			}
+			res.sess.Lock()
+			launchedStatus := res.sess.Status
+			launchedProvider := res.sess.Provider
+			launchedModel := res.sess.Model
+			launchedAutoSelected := res.sess.ProviderAutoSelected
+			launchedReason := res.sess.ProviderSelectionReason
+			res.sess.Unlock()
 			launched = append(launched, map[string]any{
-				"session_id": res.sess.ID,
-				"repo":       res.repoName,
-				"status":     res.sess.Status,
+				"session_id":                res.sess.ID,
+				"repo":                      res.repoName,
+				"status":                    launchedStatus,
+				"provider":                  launchedProvider,
+				"model":                     launchedModel,
+				"provider_auto_selected":    launchedAutoSelected,
+				"provider_selection_reason": launchedReason,
 			})
 		}
 
@@ -374,6 +403,8 @@ func (s *Server) handleSweepLaunch(_ context.Context, req mcp.CallToolRequest) (
 		"sweep_id":              sweepID,
 		"repos":                 len(targetRepos),
 		"status":                "launching",
+		"provider":              firstNonBlank(string(provider), "auto"),
+		"model":                 firstNonBlank(model, "provider_default"),
 		"estimated_per_session": estimatedPerSession,
 		"estimated_total":       totalEstimated,
 		"budget_per_session":    budgetUSD,
@@ -487,6 +518,7 @@ func (s *Server) handleSweepNudge(_ context.Context, req mcp.CallToolRequest) (*
 		repoPath := sess.RepoPath
 		prompt := sess.Prompt
 		model := sess.Model
+		provider := sess.Provider
 		sessID := sess.ID
 		budget := sess.BudgetUSD
 		permMode := sess.PermissionMode
@@ -502,7 +534,7 @@ func (s *Server) handleSweepNudge(_ context.Context, req mcp.CallToolRequest) (*
 			_ = s.SessMgr.Stop(sessID)
 
 			newOpts := session.LaunchOptions{
-				Provider:       session.DefaultPrimaryProvider(),
+				Provider:       provider,
 				RepoPath:       repoPath,
 				Prompt:         prompt,
 				Model:          model,
@@ -521,11 +553,15 @@ func (s *Server) handleSweepNudge(_ context.Context, req mcp.CallToolRequest) (*
 			}
 			nudged++
 			details = append(details, map[string]any{
-				"repo":           repo,
-				"action":         "restarted",
-				"old_session_id": sessID,
-				"new_session_id": newSess.ID,
-				"idle_min":       int(idle.Minutes()),
+				"repo":                      repo,
+				"action":                    "restarted",
+				"old_session_id":            sessID,
+				"new_session_id":            newSess.ID,
+				"idle_min":                  int(idle.Minutes()),
+				"provider":                  newSess.Provider,
+				"model":                     newSess.Model,
+				"provider_auto_selected":    newSess.ProviderAutoSelected,
+				"provider_selection_reason": newSess.ProviderSelectionReason,
 			})
 
 		case "skip":

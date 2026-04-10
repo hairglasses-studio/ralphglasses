@@ -1,6 +1,9 @@
 package enhancer
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 // ProviderName identifies which LLM API backend to use for prompt improvement.
 type ProviderName string
@@ -10,6 +13,32 @@ const (
 	ProviderGemini ProviderName = "gemini"
 	ProviderOpenAI ProviderName = "openai"
 )
+
+func normalizeLLMProviderAlias(provider string) string {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "", "claude", "gemini", "openai":
+		return strings.ToLower(strings.TrimSpace(provider))
+	case "codex", "ollama":
+		return "openai"
+	default:
+		return strings.ToLower(strings.TrimSpace(provider))
+	}
+}
+
+// NormalizeTargetProviderName resolves user-facing provider aliases down to the
+// prompt-enhancer's structural provider families.
+func NormalizeTargetProviderName(provider string) ProviderName {
+	switch normalizeLLMProviderAlias(provider) {
+	case "claude":
+		return ProviderClaude
+	case "gemini":
+		return ProviderGemini
+	case "openai":
+		return ProviderOpenAI
+	default:
+		return ""
+	}
+}
 
 // PromptImprover is implemented by each LLM API client for prompt improvement.
 type PromptImprover interface {
@@ -27,25 +56,17 @@ func DefaultTargetProviderForLLM(provider string) ProviderName {
 }
 
 func defaultTargetProviderForLLM(provider string) ProviderName {
-	switch provider {
-	case "claude":
-		return ProviderClaude
-	case "gemini":
-		return ProviderGemini
-	case "codex", "openai":
-		return ProviderOpenAI
-	default:
-		return ProviderOpenAI
+	if target := NormalizeTargetProviderName(provider); target != "" {
+		return target
 	}
+	return ProviderOpenAI
 }
 
 func normalizeTargetProvider(provider ProviderName) ProviderName {
-	switch provider {
-	case ProviderClaude, ProviderGemini, ProviderOpenAI:
-		return provider
-	default:
-		return ProviderOpenAI
+	if normalized := NormalizeTargetProviderName(string(provider)); normalized != "" {
+		return normalized
 	}
+	return ProviderOpenAI
 }
 
 // NewPromptImprover creates the appropriate client for the configured provider.
@@ -60,6 +81,22 @@ func NewPromptImprover(cfg LLMConfig) PromptImprover {
 		}
 		return nil
 	}
+
+	switch strings.ToLower(strings.TrimSpace(cfg.Provider)) {
+	case "ollama":
+		if strings.TrimSpace(cfg.BaseURL) == "" {
+			cfg.BaseURL = defaultLocalOllamaBaseURL
+		}
+		if strings.TrimSpace(cfg.APIKeyEnv) == "" {
+			cfg.APIKeyEnv = "OLLAMA_API_KEY"
+		}
+		if strings.TrimSpace(cfg.Model) == "" {
+			cfg.Model = defaultLocalOllamaChatModelName()
+		}
+	case "codex":
+		// Codex uses the OpenAI-compatible prompt improver client.
+	}
+	cfg.Provider = normalizeLLMProviderAlias(cfg.Provider)
 
 	switch cfg.Provider {
 	case "gemini":

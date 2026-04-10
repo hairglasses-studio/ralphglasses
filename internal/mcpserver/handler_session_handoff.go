@@ -51,6 +51,7 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 	budgetUSD := src.BudgetUSD
 	maxTurns := src.MaxTurns
 	provider := src.Provider
+	model := src.Model
 	teamName := src.TeamName
 
 	// Build handoff context from observations and scratchpad.
@@ -88,25 +89,12 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 	}
 
 	// Determine target provider.
-	var tp session.Provider
-	if targetProvider != "" {
-		switch strings.ToLower(targetProvider) {
-		case "claude":
-			tp = session.ProviderClaude
-		case "gemini":
-			tp = session.ProviderGemini
-		case "codex":
-			tp = session.ProviderCodex
-		case "antigravity":
-			tp = session.ProviderAntigravity
-		default:
-			return codedError(ErrInvalidParams, fmt.Sprintf("unknown provider: %s", targetProvider)), nil
-		}
-	} else {
-		tp = provider // same provider
+	tp, _, err := parseOptionalLaunchProvider(targetProvider)
+	if err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("unknown provider: %s", targetProvider)), nil
 	}
 	if tp == "" {
-		tp = session.DefaultPrimaryProvider()
+		tp = provider // same provider when known; otherwise allow runtime selection
 	}
 	rerouteReason := ""
 	tp, rerouteReason = s.rerouteClaudeProviderForCacheHealth(repoPath, tp, explicitTargetProvider)
@@ -129,10 +117,13 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 		Provider:     tp,
 		RepoPath:     repoPath,
 		Prompt:       handoffPrompt,
-		Model:        session.ProviderDefaults(tp),
+		Model:        model,
 		MaxBudgetUSD: remaining,
 		MaxTurns:     maxTurns,
 		TeamName:     teamName,
+	}
+	if opts.Provider != "" && strings.TrimSpace(opts.Model) == "" {
+		opts.Model = session.ProviderDefaults(opts.Provider)
 	}
 
 	// Stop source if requested.
@@ -152,7 +143,7 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 		"new_session_id":       newSession.ID,
 		"source_session_id":    sourceID,
 		"source_stopped":       sourceStopped,
-		"target_provider":      string(tp),
+		"target_provider":      string(newSession.Provider),
 		"transferred_context":  includeContext,
 		"context_size_bytes":   len(contextPayload),
 		"remaining_budget":     remaining,
@@ -160,6 +151,15 @@ func (s *Server) handleSessionHandoff(ctx context.Context, req mcp.CallToolReque
 		"handoff_reason":       handoffReason,
 		"handoff_at":           time.Now().UTC().Format(time.RFC3339),
 		"cache_reroute_reason": rerouteReason,
+	}
+	if explicitTargetProvider {
+		result["requested_target_provider"] = strings.ToLower(strings.TrimSpace(targetProvider))
+	}
+	if newSession.ProviderAutoSelected {
+		result["provider_auto_selected"] = true
+	}
+	if strings.TrimSpace(newSession.ProviderSelectionReason) != "" {
+		result["provider_selection_reason"] = newSession.ProviderSelectionReason
 	}
 
 	// Save handoff record.

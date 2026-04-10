@@ -28,7 +28,7 @@ func (s *Server) buildFleetGroup() ToolGroup {
 				mcp.WithDescription(descriptions.DescRalphglassesFleetSubmit),
 				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
 				mcp.WithString("prompt", mcp.Required(), mcp.Description("Task prompt")),
-				mcp.WithString("provider", mcp.Description("codex (default), claude, gemini")),
+				mcp.WithString("provider", mcp.Description("LLM provider for the queued task: omit/auto for runtime selection, or codex, claude, gemini, ollama")),
 				mcp.WithNumber("budget_usd", mcp.Description("Budget in USD (default: 5.0)")),
 				mcp.WithNumber("priority", mcp.Description("Priority 0-10 (default: 5, higher = first)")),
 			), s.handleFleetSubmit},

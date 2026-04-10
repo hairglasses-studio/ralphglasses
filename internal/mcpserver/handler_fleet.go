@@ -89,7 +89,10 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 	if errResult != nil {
 		return errResult, nil
 	}
-	provider := p.OptionalString("provider", "")
+	provider, _, err := parseOptionalLaunchProvider(p.OptionalString("provider", ""))
+	if err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid provider: %v", err)), nil
+	}
 	budget := p.OptionalNumber("budget_usd", 5)
 	priority := int(p.OptionalNumber("priority", 5))
 
@@ -97,7 +100,7 @@ func (s *Server) handleFleetSubmit(_ context.Context, req mcp.CallToolRequest) (
 		Type:         fleet.WorkTypeSession,
 		RepoName:     repo,
 		Prompt:       prompt,
-		Provider:     session.Provider(provider),
+		Provider:     provider,
 		MaxBudgetUSD: budget,
 		Priority:     priority,
 		MaxRetries:   2,

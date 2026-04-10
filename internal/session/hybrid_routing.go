@@ -27,6 +27,15 @@ func resolveLaunchProviderSelection(ctx context.Context, opts LaunchOptions) lau
 		}
 	}
 
+	if inferredProvider, ok := InferProviderFromModel(opts.Model); ok {
+		return launchProviderSelection{
+			Provider:     inferredProvider,
+			Model:        firstNonBlankModel(opts.Model, ProviderDefaults(inferredProvider)),
+			AutoSelected: true,
+			Reason:       fmt.Sprintf("inferred provider %q from model %q", inferredProvider, strings.TrimSpace(opts.Model)),
+		}
+	}
+
 	if modelTargetsOllamaLane(opts.Model) {
 		return launchProviderSelection{
 			Provider:     ProviderOllama,

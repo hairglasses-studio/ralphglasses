@@ -49,8 +49,8 @@ func TestHandleCostEstimateClaude(t *testing.T) {
 	if est.Provider != "claude" {
 		t.Errorf("provider = %q, want %q", est.Provider, "claude")
 	}
-	if est.Model != "claude-sonnet-4-6" {
-		t.Errorf("model = %q, want %q", est.Model, "claude-sonnet-4-6")
+	if est.Model != session.ProviderDefaults(session.ProviderClaude) {
+		t.Errorf("model = %q, want %q", est.Model, session.ProviderDefaults(session.ProviderClaude))
 	}
 	if est.Mode != "session" {
 		t.Errorf("mode = %q, want %q", est.Mode, "session")
@@ -151,10 +151,10 @@ func TestHandleCostEstimateCustomTokens(t *testing.T) {
 	srv, _ := setupTestServer(t)
 
 	result, err := srv.handleCostEstimate(context.Background(), makeRequest(map[string]any{
-		"provider":             "claude",
-		"prompt_tokens":        float64(10000),
+		"provider":               "claude",
+		"prompt_tokens":          float64(10000),
 		"output_tokens_per_turn": float64(4000),
-		"turns":                float64(10),
+		"turns":                  float64(10),
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -226,6 +226,35 @@ func TestHandleCostEstimateCodex(t *testing.T) {
 	}
 	if est.Provider != "codex" {
 		t.Errorf("provider = %q, want codex", est.Provider)
+	}
+}
+
+func TestHandleCostEstimateOllama(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	result, err := srv.handleCostEstimate(context.Background(), makeRequest(map[string]any{
+		"provider": "ollama",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+
+	var est CostEstimate
+	if err := json.Unmarshal([]byte(getResultText(result)), &est); err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+	if est.Provider != "ollama" {
+		t.Fatalf("provider = %q, want ollama", est.Provider)
+	}
+	if est.Model != session.ProviderDefaults(session.ProviderOllama) {
+		t.Fatalf("model = %q, want %q", est.Model, session.ProviderDefaults(session.ProviderOllama))
+	}
+	if est.Estimate.MidUSD != 0 {
+		t.Fatalf("mid estimate = %f, want 0", est.Estimate.MidUSD)
 	}
 }
 

@@ -238,6 +238,27 @@ func CheckModelRegistry(provider Provider, model string) string {
 	return ""
 }
 
+// InferProviderFromModel returns the most likely provider for an explicit model
+// identifier using the built-in registry first and provider prefix heuristics as
+// a fallback. It returns false when the model does not imply a known provider.
+func InferProviderFromModel(model string) (Provider, bool) {
+	model = strings.TrimSpace(model)
+	if model == "" {
+		return "", false
+	}
+	if info := LookupModel(model); info != nil {
+		return normalizeSessionProvider(info.Provider), true
+	}
+	for provider, prefixes := range knownModelPrefixes {
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(model, prefix) {
+				return normalizeSessionProvider(provider), true
+			}
+		}
+	}
+	return "", false
+}
+
 // ValidateLoopProfile checks a LoopProfile for invalid settings before loop execution.
 // Returns an error describing the first invalid field found, or nil if valid.
 func ValidateLoopProfile(p LoopProfile) error {

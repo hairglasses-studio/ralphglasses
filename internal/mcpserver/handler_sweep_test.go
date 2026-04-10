@@ -265,7 +265,7 @@ func TestSweepLaunch_BudgetCapExceeded(t *testing.T) {
 	}
 }
 
-func TestSweepLaunch_InvalidModel(t *testing.T) {
+func TestSweepLaunch_InfersProviderFromExplicitModel(t *testing.T) {
 	s := &Server{
 		Tasks:   NewTaskRegistry(),
 		SessMgr: session.NewManager(),
@@ -276,7 +276,31 @@ func TestSweepLaunch_InvalidModel(t *testing.T) {
 	req.Params.Arguments = map[string]any{
 		"prompt": "Audit this repo",
 		"repos":  `["test"]`,
-		"model":  "claude-opus", // wrong provider prefix for codex
+		"model":  "claude-opus",
+	}
+
+	result, err := s.handleSweepLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected explicit model provider inference to succeed, got: %s", sweepExtractText(result))
+	}
+}
+
+func TestSweepLaunch_InvalidModelForExplicitProvider(t *testing.T) {
+	s := &Server{
+		Tasks:   NewTaskRegistry(),
+		SessMgr: session.NewManager(),
+		Repos:   []*model.Repo{{Name: "test", Path: "/tmp/test"}},
+	}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"prompt":   "Audit this repo",
+		"repos":    `["test"]`,
+		"provider": "codex",
+		"model":    "claude-opus",
 	}
 
 	result, err := s.handleSweepLaunch(context.Background(), req)
@@ -373,6 +397,122 @@ func TestSweepLaunch_ReplacesPromptPlaceholders(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("timed out waiting for sweep launch")
+	}
+}
+
+func TestSweepLaunch_AllowsExplicitOllamaProvider(t *testing.T) {
+	repoPath := filepath.Join(t.TempDir(), "demo")
+	if err := os.MkdirAll(repoPath, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	sessMgr := session.NewManager()
+	launches := make(chan session.LaunchOptions, 1)
+	sessMgr.SetHooksForTesting(func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+		launches <- opts
+		now := time.Now()
+		return &session.Session{
+			ID:                      "sess-demo",
+			Provider:                opts.Provider,
+			Model:                   firstNonBlank(opts.Model, session.ProviderDefaults(opts.Provider)),
+			ProviderAutoSelected:    false,
+			ProviderSelectionReason: "",
+			RepoPath:                opts.RepoPath,
+			RepoName:                filepath.Base(opts.RepoPath),
+			Status:                  session.StatusRunning,
+			Prompt:                  opts.Prompt,
+			LaunchedAt:              now,
+			LastActivity:            now,
+		}, nil
+	}, nil)
+
+	s := &Server{
+		Tasks:   NewTaskRegistry(),
+		SessMgr: sessMgr,
+		Repos:   []*model.Repo{{Name: "demo", Path: repoPath}},
+	}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"prompt":   "Inspect demo",
+		"repos":    `["demo"]`,
+		"provider": "ollama",
+	}
+
+	result, err := s.handleSweepLaunch(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", sweepExtractText(result))
+	}
+
+	select {
+	case launch := <-launches:
+		if launch.Provider != session.ProviderOllama {
+			t.Fatalf("launch provider = %q, want %q", launch.Provider, session.ProviderOllama)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for sweep launch")
+	}
+}
+
+func TestSweepNudge_RestartPreservesOriginalProvider(t *testing.T) {
+	srv, root := setupTestServer(t)
+	repoPath := filepath.Join(root, "test-repo")
+	if err := os.MkdirAll(repoPath, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	stalledID := injectTestSession(t, srv, repoPath, func(s *session.Session) {
+		s.ID = "sess-stalled"
+		s.Provider = session.ProviderOllama
+		s.Model = "code-primary"
+		s.RepoName = "test-repo"
+		s.SweepID = "sweep-test"
+		s.Status = session.StatusRunning
+		s.LastActivity = time.Now().Add(-10 * time.Minute)
+	})
+
+	var captured session.LaunchOptions
+	srv.SessMgr.SetHooksForTesting(
+		func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+			captured = opts
+			now := time.Now()
+			return &session.Session{
+				ID:           "sess-restarted",
+				Provider:     opts.Provider,
+				Model:        opts.Model,
+				RepoPath:     opts.RepoPath,
+				RepoName:     "test-repo",
+				SweepID:      "sweep-test",
+				Status:       session.StatusRunning,
+				LaunchedAt:   now,
+				LastActivity: now,
+			}, nil
+		},
+		func(_ context.Context, _ *session.Session) error { return nil },
+	)
+
+	result, err := srv.handleSweepNudge(context.Background(), makeRequest(map[string]any{
+		"sweep_id":            "sweep-test",
+		"action":              "restart",
+		"stale_threshold_min": float64(1),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", sweepExtractText(result))
+	}
+	if captured.Provider != session.ProviderOllama {
+		t.Fatalf("restart provider = %q, want %q", captured.Provider, session.ProviderOllama)
+	}
+	if captured.Model != "code-primary" {
+		t.Fatalf("restart model = %q, want %q", captured.Model, "code-primary")
+	}
+	if _, ok := srv.SessMgr.Get(stalledID); !ok {
+		t.Fatalf("expected original stalled session %q to remain queryable after test hook restart path", stalledID)
 	}
 }
 

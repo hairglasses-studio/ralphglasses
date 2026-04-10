@@ -31,14 +31,20 @@ func (s *Server) getEngine() *enhancer.HybridEngine {
 
 // hasAPIKeyForProvider checks whether the environment has an API key for the given provider.
 func hasAPIKeyForProvider(provider string) bool {
-	switch provider {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
 	case "gemini":
 		return os.Getenv("GOOGLE_API_KEY") != "" || os.Getenv("GEMINI_API_KEY") != ""
+	case "ollama":
+		return true
 	case "openai":
 		return os.Getenv("OPENAI_API_KEY") != ""
 	default:
 		return os.Getenv("ANTHROPIC_API_KEY") != ""
 	}
+}
+
+func normalizePromptTargetProvider(raw string) enhancer.ProviderName {
+	return enhancer.NormalizeTargetProviderName(raw)
 }
 
 func (s *Server) handlePromptAnalyze(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -53,7 +59,7 @@ func (s *Server) handlePromptAnalyze(_ context.Context, req mcp.CallToolRequest)
 	}
 	// Re-score with target provider if specified
 	if tp := p.OptionalString("target_provider", ""); tp != "" {
-		targetProvider := enhancer.ProviderName(tp)
+		targetProvider := normalizePromptTargetProvider(tp)
 		lints := enhancer.Lint(prompt)
 		report := enhancer.Score(prompt, result.TaskType, lints, &result, targetProvider)
 		result.ScoreReport = report
@@ -89,7 +95,7 @@ func (s *Server) handlePromptEnhance(ctx context.Context, req mcp.CallToolReques
 
 	// Apply target provider if specified
 	if tp := p.OptionalString("target_provider", ""); tp != "" {
-		cfg.TargetProvider = enhancer.ProviderName(tp)
+		cfg.TargetProvider = normalizePromptTargetProvider(tp)
 	}
 
 	var result enhancer.EnhanceResult
@@ -154,10 +160,10 @@ func (s *Server) handlePromptImprove(ctx context.Context, req mcp.CallToolReques
 	// If a specific provider is requested, create a one-off client for it
 	providerStr := p.OptionalString("provider", "")
 	var client enhancer.PromptImprover
-	if providerStr != "" && providerStr != "openai" {
+	if providerStr != "" {
 		client = enhancer.NewPromptImprover(enhancer.LLMConfig{
 			Enabled:  true,
-			Provider: providerStr,
+			Provider: strings.ToLower(strings.TrimSpace(providerStr)),
 		})
 	} else {
 		engine := s.getEngine()
@@ -175,6 +181,8 @@ func (s *Server) handlePromptImprove(ctx context.Context, req mcp.CallToolReques
 			apiHint = "GOOGLE_API_KEY"
 		case "claude":
 			apiHint = "ANTHROPIC_API_KEY"
+		case "ollama":
+			apiHint = "OLLAMA_API_KEY (or a reachable local Ollama at OLLAMA_BASE_URL)"
 		}
 		return codedError(ErrProviderUnavailable, fmt.Sprintf("LLM not available: set %s", apiHint)), nil
 	}
@@ -380,7 +388,7 @@ func mapSessionProvider(p session.Provider) enhancer.ProviderName {
 	switch p {
 	case session.ProviderGemini:
 		return enhancer.ProviderGemini
-	case session.ProviderCodex:
+	case session.ProviderCodex, session.ProviderOllama:
 		return enhancer.ProviderOpenAI
 	default:
 		return enhancer.ProviderClaude

@@ -109,6 +109,53 @@ func TestHandleFleetSubmit_ValidCoordinator(t *testing.T) {
 	}
 }
 
+func TestHandleFleetSubmit_AllowsOllamaProvider(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	coord := fleet.NewCoordinator("test-node", "localhost", 0, "test", nil, nil)
+	srv.FleetCoordinator = coord
+
+	result, err := srv.handleFleetSubmit(context.Background(), makeRequest(map[string]any{
+		"repo":     "test-repo",
+		"prompt":   "implement feature X",
+		"provider": "ollama",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "work_item_id") {
+		t.Errorf("expected work_item_id in result, got: %s", text)
+	}
+}
+
+func TestHandleFleetSubmit_RejectsInvalidProvider(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+
+	coord := fleet.NewCoordinator("test-node", "localhost", 0, "test", nil, nil)
+	srv.FleetCoordinator = coord
+
+	result, err := srv.handleFleetSubmit(context.Background(), makeRequest(map[string]any{
+		"repo":     "test-repo",
+		"prompt":   "implement feature X",
+		"provider": "bogus",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.IsError {
+		t.Fatalf("expected invalid provider error, got: %s", getResultText(result))
+	}
+	if !strings.Contains(getResultText(result), "INVALID_PARAMS") {
+		t.Fatalf("expected INVALID_PARAMS, got: %s", getResultText(result))
+	}
+}
+
 // --- handleFleetStatus ---
 
 func TestHandleFleetStatus_Basic(t *testing.T) {

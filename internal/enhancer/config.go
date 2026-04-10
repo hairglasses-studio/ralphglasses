@@ -278,12 +278,19 @@ func ValidateConfig(cfg Config) []string {
 		warnings = append(warnings, "LLM is enabled but model name is empty — will use default")
 	}
 
-	validProviders := map[string]bool{"claude": true, "gemini": true, "openai": true, "": true}
-	if !validProviders[cfg.LLM.Provider] {
-		warnings = append(warnings, fmt.Sprintf("unknown LLM provider %q (valid: claude, gemini, openai)", cfg.LLM.Provider))
+	validProviders := map[string]bool{
+		"":       true,
+		"claude": true,
+		"gemini": true,
+		"openai": true,
+		"codex":  true,
+		"ollama": true,
 	}
-	if cfg.TargetProvider != "" && !validProviders[string(cfg.TargetProvider)] {
-		warnings = append(warnings, fmt.Sprintf("unknown target provider %q (valid: claude, gemini, openai)", cfg.TargetProvider))
+	if !validProviders[strings.ToLower(strings.TrimSpace(cfg.LLM.Provider))] {
+		warnings = append(warnings, fmt.Sprintf("unknown LLM provider %q (valid: claude, gemini, openai, codex, ollama)", cfg.LLM.Provider))
+	}
+	if cfg.TargetProvider != "" && !validProviders[strings.ToLower(strings.TrimSpace(string(cfg.TargetProvider)))] {
+		warnings = append(warnings, fmt.Sprintf("unknown target provider %q (valid: claude, gemini, openai, codex, ollama)", cfg.TargetProvider))
 	}
 
 	validEffort := map[string]bool{"low": true, "medium": true, "high": true, "max": true, "": true}
