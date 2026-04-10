@@ -236,6 +236,95 @@ func TestHandleTeamCreate_DryRunDefaults(t *testing.T) {
 	}
 }
 
+func TestHandleTeamCreate_DryRunInfersOllamaFromModel(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, err := srv.handleScan(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("scan failed: %v", err)
+	}
+
+	result, err := srv.handleTeamCreate(context.Background(), makeRequest(map[string]any{
+		"repo":    "test-repo",
+		"name":    "ollama-team",
+		"tasks":   "summarize the latest rollout drift",
+		"model":   "code-primary",
+		"dry_run": true,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", getResultText(result))
+	}
+
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &parsed); err != nil {
+		t.Fatalf("failed to parse dry_run result: %v", err)
+	}
+
+	if prov, _ := parsed["provider"].(string); prov != "ollama" {
+		t.Fatalf("provider = %q, want ollama", prov)
+	}
+	if wp, _ := parsed["worker_provider"].(string); wp != "ollama" {
+		t.Fatalf("worker_provider = %q, want ollama", wp)
+	}
+	if runtime, _ := parsed["runtime"].(string); runtime != "legacy_lead" {
+		t.Fatalf("runtime = %q, want legacy_lead", runtime)
+	}
+	if policy, _ := parsed["worktree_policy"].(string); policy != "shared" {
+		t.Fatalf("worktree_policy = %q, want shared", policy)
+	}
+	if autostart, ok := parsed["autostart"].(bool); !ok || autostart {
+		t.Fatalf("autostart = %v, want false", parsed["autostart"])
+	}
+	if selected, ok := parsed["provider_auto_selected"].(bool); !ok || !selected {
+		t.Fatalf("provider_auto_selected = %v, want true", parsed["provider_auto_selected"])
+	}
+}
+
+func TestHandleTeamCreate_DryRunInfersWorkerProviderFromWorkerModel(t *testing.T) {
+	t.Parallel()
+	srv, _ := setupTestServer(t)
+	_, err := srv.handleScan(context.Background(), makeRequest(nil))
+	if err != nil {
+		t.Fatalf("scan failed: %v", err)
+	}
+
+	result, err := srv.handleTeamCreate(context.Background(), makeRequest(map[string]any{
+		"repo":         "test-repo",
+		"name":         "hybrid-team",
+		"tasks":        "implement the next refactor",
+		"provider":     "claude",
+		"worker_model": "code-fast",
+		"dry_run":      true,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", getResultText(result))
+	}
+
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &parsed); err != nil {
+		t.Fatalf("failed to parse dry_run result: %v", err)
+	}
+
+	if prov, _ := parsed["provider"].(string); prov != "claude" {
+		t.Fatalf("provider = %q, want claude", prov)
+	}
+	if wp, _ := parsed["worker_provider"].(string); wp != "ollama" {
+		t.Fatalf("worker_provider = %q, want ollama", wp)
+	}
+	if wm, _ := parsed["worker_model"].(string); wm != "code-fast" {
+		t.Fatalf("worker_model = %q, want code-fast", wm)
+	}
+	if policy, _ := parsed["worktree_policy"].(string); policy != "shared" {
+		t.Fatalf("worktree_policy = %q, want shared", policy)
+	}
+}
+
 func TestHandleTeamCreate_DryRunA2AConfig(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)

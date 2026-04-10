@@ -47,9 +47,9 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 		return nil, err
 	}
 
-	if config.Provider == ProviderCodex {
-		return m.launchStructuredCodexTeam(ctx, config)
-	}
+	backendConfigured := m.StructuredTeamBackend() != nil
+	resolved := ResolveTeamConfig(ctx, config, TeamResolveOptions{BackendConfigured: backendConfigured})
+	config = resolved.Config
 
 	// Build a lead prompt that instructs the lead to use agent teams
 	var taskList strings.Builder
@@ -57,12 +57,8 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 		taskList.WriteString(fmt.Sprintf("%d. %s\n", i+1, t))
 	}
 
-	workerProvider := config.WorkerProvider
-	if workerProvider == "" {
-		workerProvider = config.Provider
-	}
-	if workerProvider == "" {
-		workerProvider = DefaultPrimaryProvider()
+	if resolved.Runtime == TeamRuntimeStructuredCodex {
+		return m.launchStructuredCodexTeam(ctx, config, resolved)
 	}
 
 	leadPrompt := fmt.Sprintf(
@@ -80,15 +76,15 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 
 ## Provider capabilities
 
-| Parameter       | claude (all) | gemini         | codex          |
-|-----------------|-------------|----------------|----------------|
-| prompt          | yes         | yes            | yes            |
-| model           | yes         | yes            | yes            |
-| resume          | yes         | yes            | no             |
-| system_prompt   | yes         | no (ignored)   | no (ignored)   |
-| max_budget_usd  | yes         | no (ignored)   | no (ignored)   |
-| agent           | yes         | no (ignored)   | no (ignored)   |
-| allowed_tools   | yes         | no (ignored)   | no (ignored)   |
+| Parameter       | claude (all) | gemini         | codex          | ollama                |
+|-----------------|--------------|----------------|----------------|-----------------------|
+| prompt          | yes          | yes            | yes            | yes                   |
+| model           | yes          | yes            | yes            | yes                   |
+| resume          | yes          | yes            | no             | yes                   |
+| system_prompt   | yes          | no (ignored)   | no (ignored)   | yes                   |
+| max_budget_usd  | yes          | no (ignored)   | no (ignored)   | yes                   |
+| agent           | yes          | no (ignored)   | no (ignored)   | yes                   |
+| allowed_tools   | yes          | no (ignored)   | no (ignored)   | yes                   |
 
 ## Workflow
 
@@ -99,8 +95,8 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 5. Report final status summarizing all task outcomes
 
 Default worker provider: %s.
-Provider strengths: claude (complex architecture), gemini (fast bulk generation), codex (focused refactoring).`,
-		taskList.String(), workerProvider, workerProvider,
+Provider strengths: claude (complex architecture), gemini (fast bulk generation), codex (focused refactoring), ollama (local planning, docs, and low-risk coordination when inventory is ready).`,
+		taskList.String(), config.WorkerProvider, config.WorkerProvider,
 	)
 
 	// Enhance team lead prompt for its target provider
@@ -144,19 +140,29 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 	}
 
 	team := &TeamStatus{
-		Name:           config.Name,
-		TenantID:       config.TenantID,
-		RepoPath:       config.RepoPath,
-		LeadID:         s.ID,
-		Status:         StatusRunning,
-		Tasks:          tasks,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
-		Provider:       firstNonBlankProvider(config.Provider, s.Provider),
-		WorkerProvider: workerProvider,
-		Model:          firstNonBlankString(config.Model, s.Model),
-		WorkerModel:    config.WorkerModel,
-		MaxBudgetUSD:   config.MaxBudgetUSD,
+		Name:                    config.Name,
+		TenantID:                config.TenantID,
+		RepoPath:                config.RepoPath,
+		LeadID:                  s.ID,
+		Status:                  StatusRunning,
+		Tasks:                   tasks,
+		CreatedAt:               time.Now(),
+		UpdatedAt:               time.Now(),
+		Provider:                firstNonBlankProvider(config.Provider, s.Provider),
+		WorkerProvider:          config.WorkerProvider,
+		Model:                   firstNonBlankString(config.Model, s.Model),
+		WorkerModel:             config.WorkerModel,
+		ProviderAutoSelected:    resolved.ProviderAutoSelected,
+		ProviderSelectionReason: resolved.ProviderSelectionReason,
+		Runtime:                 resolved.Runtime,
+		ExecutionBackend:        config.ExecutionBackend,
+		WorktreePolicy:          config.WorktreePolicy,
+		TargetBranch:            config.TargetBranch,
+		AutoStart:               config.AutoStart,
+		MaxBudgetUSD:            config.MaxBudgetUSD,
+		MaxConcurrency:          config.MaxConcurrency,
+		MaxTaskRetries:          config.MaxRetries,
+		A2AAgentURL:             config.A2AAgentURL,
 	}
 	key := m.teamKey(config.Name, config.TenantID)
 
@@ -178,8 +184,8 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 	return team, nil
 }
 
-func (m *Manager) launchStructuredCodexTeam(ctx context.Context, config TeamConfig) (*TeamStatus, error) {
-	team := newStructuredCodexTeam(config)
+func (m *Manager) launchStructuredCodexTeam(ctx context.Context, config TeamConfig, resolved ResolvedTeamConfig) (*TeamStatus, error) {
+	team := newStructuredCodexTeam(config, resolved)
 	key := m.teamKey(config.Name, config.TenantID)
 
 	m.workersMu.Lock()

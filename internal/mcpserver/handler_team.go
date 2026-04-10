@@ -52,44 +52,38 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 	teamProvider := session.Provider(pp.OptionalString("provider", ""))
 	workerProvider := session.Provider(pp.String("worker_provider"))
 	leadAgent := pp.String("lead_agent")
-	validationProvider := teamProvider
-	if validationProvider == "" {
-		validationProvider = session.DefaultPrimaryProvider()
+	dryRun := pp.Bool("dry_run")
+	backendConfigured := s.SessMgr.StructuredTeamBackend() != nil || s.FleetCoordinator != nil || s.FleetClient != nil
+	config := session.TeamConfig{
+		Name:                teamName,
+		TenantID:            session.NormalizeTenantID(pp.String("tenant_id")),
+		Provider:            teamProvider,
+		WorkerProvider:      workerProvider,
+		RepoPath:            r.Path,
+		LeadAgent:           leadAgent,
+		Tasks:               tasks,
+		Model:               pp.String("model"),
+		WorkerModel:         pp.String("worker_model"),
+		MaxBudgetUSD:        pp.FloatOr("budget_usd", 0),
+		MaxConcurrency:      int(pp.FloatOr("max_concurrency", 0)),
+		MaxRetries:          int(pp.FloatOr("max_retries", 0)),
+		ExecutionBackend:    strings.TrimSpace(pp.String("execution_backend")),
+		WorktreePolicy:      strings.TrimSpace(pp.String("worktree_policy")),
+		TargetBranch:        strings.TrimSpace(pp.String("target_branch")),
+		AutoStart:           pp.OptionalBool("autostart", false),
+		AutoStartConfigured: pp.Has("autostart"),
+		A2AAgentURL:         strings.TrimSpace(pp.String("a2a_agent_url")),
 	}
+	resolved := session.ResolveTeamConfig(ctx, config, session.TeamResolveOptions{
+		BackendConfigured: backendConfigured,
+	})
+	config = resolved.Config
+	validationProvider := config.Provider
 	if validationProvider == session.ProviderCodex && strings.TrimSpace(leadAgent) != "" {
 		return codedError(ErrInvalidParams, "lead_agent is not supported for codex teams"), nil
 	}
 	if err := session.ValidateLaunchAgent(validationProvider, leadAgent); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("lead_agent: %v", err)), nil
-	}
-
-	config := session.TeamConfig{
-		Name:             teamName,
-		TenantID:         session.NormalizeTenantID(pp.String("tenant_id")),
-		Provider:         teamProvider,
-		WorkerProvider:   workerProvider,
-		RepoPath:         r.Path,
-		LeadAgent:        leadAgent,
-		Tasks:            tasks,
-		Model:            pp.String("model"),
-		WorkerModel:      pp.String("worker_model"),
-		MaxBudgetUSD:     pp.FloatOr("budget_usd", 0),
-		MaxConcurrency:   int(pp.FloatOr("max_concurrency", 0)),
-		MaxRetries:       int(pp.FloatOr("max_retries", 0)),
-		ExecutionBackend: strings.TrimSpace(pp.String("execution_backend")),
-		WorktreePolicy:   strings.TrimSpace(pp.String("worktree_policy")),
-		TargetBranch:     strings.TrimSpace(pp.String("target_branch")),
-		AutoStart:        pp.OptionalBool("autostart", validationProvider == session.ProviderCodex),
-		A2AAgentURL:      strings.TrimSpace(pp.String("a2a_agent_url")),
-	}
-	dryRun := pp.Bool("dry_run")
-	backendConfigured := s.SessMgr.StructuredTeamBackend() != nil || s.FleetCoordinator != nil || s.FleetClient != nil
-	if config.ExecutionBackend == "" && validationProvider == session.ProviderCodex {
-		if backendConfigured {
-			config.ExecutionBackend = session.TeamExecutionBackendFleet
-		} else {
-			config.ExecutionBackend = session.TeamExecutionBackendLocal
-		}
 	}
 	if config.ExecutionBackend == session.TeamExecutionBackendA2A {
 		if config.A2AAgentURL == "" {
@@ -102,70 +96,41 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 	if config.ExecutionBackend == session.TeamExecutionBackendFleet && !backendConfigured {
 		return fleetNotConfiguredResult(), nil
 	}
-	if config.WorktreePolicy == "" && validationProvider == session.ProviderCodex {
-		config.WorktreePolicy = session.TeamWorktreePolicyPerWorker
-	}
 
 	if dryRun {
-		// Apply the same default resolution as the real launch path so the
-		// preview shows effective values instead of zero/empty defaults.
-		effectiveProvider := config.Provider
-		if effectiveProvider == "" {
-			effectiveProvider = session.DefaultPrimaryProvider()
-		}
-		effectiveWorkerProvider := config.WorkerProvider
-		if effectiveWorkerProvider == "" {
-			effectiveWorkerProvider = effectiveProvider
-		}
-		effectiveModel := config.Model
-		if effectiveModel == "" {
-			switch effectiveProvider {
-			case session.ProviderGemini:
-				effectiveModel = "gemini-3.1-flash"
-			case session.ProviderCodex:
-				effectiveModel = session.ProviderDefaults(session.ProviderCodex)
-			default:
-				effectiveModel = "claude-sonnet-4-6"
-			}
-		}
 		effectiveBudget := config.MaxBudgetUSD
 		if effectiveBudget <= 0 {
 			effectiveBudget = 5.0
 		}
-		effectiveWorkerModel := config.WorkerModel
-		if effectiveWorkerModel == "" {
-			effectiveWorkerModel = session.ProviderDefaults(effectiveWorkerProvider)
-		}
-		effectiveWorktreePolicy := config.WorktreePolicy
-		if effectiveWorktreePolicy == "" {
-			if effectiveWorkerProvider == session.ProviderCodex || effectiveWorkerProvider == session.ProviderGemini {
-				effectiveWorktreePolicy = session.TeamWorktreePolicyPerWorker
-			} else {
-				effectiveWorktreePolicy = session.TeamWorktreePolicyShared
-			}
-		}
-		return jsonResult(map[string]any{
+		result := map[string]any{
 			"dry_run":           true,
-			"runtime":           teamRuntimeForProvider(effectiveProvider),
+			"runtime":           resolved.Runtime,
 			"name":              config.Name,
 			"tenant_id":         config.TenantID,
 			"repo":              repoName,
-			"provider":          string(effectiveProvider),
-			"worker_provider":   string(effectiveWorkerProvider),
+			"provider":          string(config.Provider),
+			"worker_provider":   string(config.WorkerProvider),
 			"lead_agent":        config.LeadAgent,
-			"model":             effectiveModel,
-			"worker_model":      effectiveWorkerModel,
+			"model":             config.Model,
+			"worker_model":      config.WorkerModel,
 			"budget_usd":        effectiveBudget,
-			"max_concurrency":   maxInt(config.MaxConcurrency, 2),
-			"max_retries":       maxInt(config.MaxRetries, 2),
-			"execution_backend": firstNonBlank(config.ExecutionBackend, session.TeamExecutionBackendLocal),
-			"worktree_policy":   effectiveWorktreePolicy,
-			"target_branch":     firstNonBlank(config.TargetBranch, "main"),
+			"max_concurrency":   config.MaxConcurrency,
+			"max_retries":       config.MaxRetries,
+			"execution_backend": config.ExecutionBackend,
+			"worktree_policy":   config.WorktreePolicy,
+			"target_branch":     config.TargetBranch,
 			"autostart":         config.AutoStart,
 			"a2a_agent_url":     config.A2AAgentURL,
 			"tasks":             config.Tasks,
 			"task_count":        len(config.Tasks),
-		}), nil
+		}
+		if resolved.ProviderAutoSelected {
+			result["provider_auto_selected"] = true
+		}
+		if strings.TrimSpace(resolved.ProviderSelectionReason) != "" {
+			result["provider_selection_reason"] = resolved.ProviderSelectionReason
+		}
+		return jsonResult(result), nil
 	}
 
 	team, err := s.SessMgr.LaunchTeam(ctx, config)
@@ -189,31 +154,33 @@ func (s *Server) handleTeamStatus(_ context.Context, req mcp.CallToolRequest) (*
 
 	// Enrich with lead session info
 	result := map[string]any{
-		"name":                  team.Name,
-		"tenant_id":             team.TenantID,
-		"repo":                  team.RepoPath,
-		"provider":              team.Provider,
-		"worker_provider":       team.WorkerProvider,
-		"status":                team.Status,
-		"run_state":             team.RunState,
-		"runtime":               team.Runtime,
-		"tasks":                 team.Tasks,
-		"created":               team.CreatedAt,
-		"updated":               team.UpdatedAt,
-		"planner_session_id":    team.PlannerSessionID,
-		"last_planner_summary":  team.LastPlannerSummary,
-		"pending_question":      team.PendingQuestion,
-		"step_count":            team.StepCount,
-		"execution_backend":     team.ExecutionBackend,
-		"worktree_policy":       team.WorktreePolicy,
-		"autostart":             team.AutoStart,
-		"controller_running":    team.ControllerRunning,
-		"last_controller_error": team.LastControllerError,
-		"target_branch":         team.TargetBranch,
-		"integration_branch":    team.IntegrationBranch,
-		"integration_path":      team.IntegrationPath,
-		"promotion_status":      team.PromotionStatus,
-		"a2a_agent_url":         team.A2AAgentURL,
+		"name":                      team.Name,
+		"tenant_id":                 team.TenantID,
+		"repo":                      team.RepoPath,
+		"provider":                  team.Provider,
+		"worker_provider":           team.WorkerProvider,
+		"provider_auto_selected":    team.ProviderAutoSelected,
+		"provider_selection_reason": team.ProviderSelectionReason,
+		"status":                    team.Status,
+		"run_state":                 team.RunState,
+		"runtime":                   team.Runtime,
+		"tasks":                     team.Tasks,
+		"created":                   team.CreatedAt,
+		"updated":                   team.UpdatedAt,
+		"planner_session_id":        team.PlannerSessionID,
+		"last_planner_summary":      team.LastPlannerSummary,
+		"pending_question":          team.PendingQuestion,
+		"step_count":                team.StepCount,
+		"execution_backend":         team.ExecutionBackend,
+		"worktree_policy":           team.WorktreePolicy,
+		"autostart":                 team.AutoStart,
+		"controller_running":        team.ControllerRunning,
+		"last_controller_error":     team.LastControllerError,
+		"target_branch":             team.TargetBranch,
+		"integration_branch":        team.IntegrationBranch,
+		"integration_path":          team.IntegrationPath,
+		"promotion_status":          team.PromotionStatus,
+		"a2a_agent_url":             team.A2AAgentURL,
 	}
 
 	activeWorkers := 0

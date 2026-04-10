@@ -108,7 +108,7 @@ func normalizeTeamConfig(config TeamConfig) TeamConfig {
 	return config
 }
 
-func newStructuredCodexTeam(config TeamConfig) *TeamStatus {
+func newStructuredCodexTeam(config TeamConfig, resolved ResolvedTeamConfig) *TeamStatus {
 	config = normalizeTeamConfig(config)
 	now := time.Now()
 	tasks := make([]TeamTask, 0, len(config.Tasks))
@@ -123,29 +123,31 @@ func newStructuredCodexTeam(config TeamConfig) *TeamStatus {
 		})
 	}
 	return &TeamStatus{
-		Name:              config.Name,
-		TenantID:          config.TenantID,
-		RepoPath:          config.RepoPath,
-		Provider:          config.Provider,
-		WorkerProvider:    config.WorkerProvider,
-		Model:             config.Model,
-		WorkerModel:       config.WorkerModel,
-		Status:            StatusRunning,
-		RunState:          TeamRunStateRunning,
-		Runtime:           TeamRuntimeStructuredCodex,
-		ExecutionBackend:  config.ExecutionBackend,
-		WorktreePolicy:    config.WorktreePolicy,
-		Tasks:             tasks,
-		CreatedAt:         now,
-		UpdatedAt:         now,
-		MaxBudgetUSD:      config.MaxBudgetUSD,
-		MaxConcurrency:    config.MaxConcurrency,
-		MaxTaskRetries:    config.MaxRetries,
-		AutoStart:         config.AutoStart,
-		TargetBranch:      config.TargetBranch,
-		IntegrationBranch: structuredTeamIntegrationBranch(config.Name),
-		PromotionStatus:   TeamPromotionStatusPending,
-		A2AAgentURL:       config.A2AAgentURL,
+		Name:                    config.Name,
+		TenantID:                config.TenantID,
+		RepoPath:                config.RepoPath,
+		Provider:                config.Provider,
+		WorkerProvider:          config.WorkerProvider,
+		Model:                   config.Model,
+		WorkerModel:             config.WorkerModel,
+		ProviderAutoSelected:    resolved.ProviderAutoSelected,
+		ProviderSelectionReason: resolved.ProviderSelectionReason,
+		Status:                  StatusRunning,
+		RunState:                TeamRunStateRunning,
+		Runtime:                 resolved.Runtime,
+		ExecutionBackend:        config.ExecutionBackend,
+		WorktreePolicy:          config.WorktreePolicy,
+		Tasks:                   tasks,
+		CreatedAt:               now,
+		UpdatedAt:               now,
+		MaxBudgetUSD:            config.MaxBudgetUSD,
+		MaxConcurrency:          config.MaxConcurrency,
+		MaxTaskRetries:          config.MaxRetries,
+		AutoStart:               config.AutoStart,
+		TargetBranch:            config.TargetBranch,
+		IntegrationBranch:       structuredTeamIntegrationBranch(config.Name),
+		PromotionStatus:         TeamPromotionStatusPending,
+		A2AAgentURL:             config.A2AAgentURL,
 	}
 }
 

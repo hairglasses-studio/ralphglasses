@@ -201,6 +201,8 @@ type TeamConfig struct {
 	WorktreePolicy   string   `json:"worktree_policy,omitempty"`
 	TargetBranch     string   `json:"target_branch,omitempty"`
 	A2AAgentURL      string   `json:"a2a_agent_url,omitempty"`
+
+	AutoStartConfigured bool `json:"-"`
 }
 
 // TeamQuestion represents a question posed by the team runtime to a human.
@@ -215,41 +217,43 @@ type TeamQuestion struct {
 
 // TeamStatus holds team state information.
 type TeamStatus struct {
-	Name                string         `json:"name"`
-	TenantID            string         `json:"tenant_id,omitempty"`
-	RepoPath            string         `json:"repo_path"`
-	LeadID              string         `json:"lead_session_id"`
-	Status              SessionStatus  `json:"status"`
-	Tasks               []TeamTask     `json:"tasks"`
-	CreatedAt           time.Time      `json:"created_at"`
-	Provider            Provider       `json:"provider,omitempty"`
-	WorkerProvider      Provider       `json:"worker_provider,omitempty"`
-	Model               string         `json:"model,omitempty"`
-	WorkerModel         string         `json:"worker_model,omitempty"`
-	RunState            string         `json:"run_state,omitempty"`
-	Runtime             string         `json:"runtime,omitempty"`
-	ExecutionBackend    string         `json:"execution_backend,omitempty"`
-	WorktreePolicy      string         `json:"worktree_policy,omitempty"`
-	TargetBranch        string         `json:"target_branch,omitempty"`
-	IntegrationBranch   string         `json:"integration_branch,omitempty"`
-	IntegrationPath     string         `json:"integration_path,omitempty"`
-	PromotionStatus     string         `json:"promotion_status,omitempty"`
-	MaxBudgetUSD        float64        `json:"max_budget_usd,omitempty"`
-	TotalSpentUSD       float64        `json:"total_spent_usd,omitempty"`
-	TotalTurnCount      int            `json:"total_turn_count,omitempty"`
-	MaxConcurrency      int            `json:"max_concurrency,omitempty"`
-	MaxTaskRetries      int            `json:"max_task_retries,omitempty"`
-	StepCount           int            `json:"step_count,omitempty"`
-	LastStepAt          time.Time      `json:"last_step_at,omitempty"`
-	UpdatedAt           time.Time      `json:"updated_at,omitempty"`
-	AutoStart           bool           `json:"auto_start,omitempty"`
-	ControllerRunning   bool           `json:"controller_running,omitempty"`
-	LastControllerError string         `json:"last_controller_error,omitempty"`
-	PendingQuestion     *TeamQuestion  `json:"pending_question,omitempty"`
-	ResolvedQuestions   []TeamQuestion `json:"resolved_questions,omitempty"`
-	PlannerSessionID    string         `json:"planner_session_id,omitempty"`
-	LastPlannerSummary  string         `json:"last_planner_summary,omitempty"`
-	A2AAgentURL         string         `json:"a2a_agent_url,omitempty"`
+	Name                    string         `json:"name"`
+	TenantID                string         `json:"tenant_id,omitempty"`
+	RepoPath                string         `json:"repo_path"`
+	LeadID                  string         `json:"lead_session_id"`
+	Status                  SessionStatus  `json:"status"`
+	Tasks                   []TeamTask     `json:"tasks"`
+	CreatedAt               time.Time      `json:"created_at"`
+	Provider                Provider       `json:"provider,omitempty"`
+	WorkerProvider          Provider       `json:"worker_provider,omitempty"`
+	Model                   string         `json:"model,omitempty"`
+	WorkerModel             string         `json:"worker_model,omitempty"`
+	ProviderAutoSelected    bool           `json:"provider_auto_selected,omitempty"`
+	ProviderSelectionReason string         `json:"provider_selection_reason,omitempty"`
+	RunState                string         `json:"run_state,omitempty"`
+	Runtime                 string         `json:"runtime,omitempty"`
+	ExecutionBackend        string         `json:"execution_backend,omitempty"`
+	WorktreePolicy          string         `json:"worktree_policy,omitempty"`
+	TargetBranch            string         `json:"target_branch,omitempty"`
+	IntegrationBranch       string         `json:"integration_branch,omitempty"`
+	IntegrationPath         string         `json:"integration_path,omitempty"`
+	PromotionStatus         string         `json:"promotion_status,omitempty"`
+	MaxBudgetUSD            float64        `json:"max_budget_usd,omitempty"`
+	TotalSpentUSD           float64        `json:"total_spent_usd,omitempty"`
+	TotalTurnCount          int            `json:"total_turn_count,omitempty"`
+	MaxConcurrency          int            `json:"max_concurrency,omitempty"`
+	MaxTaskRetries          int            `json:"max_task_retries,omitempty"`
+	StepCount               int            `json:"step_count,omitempty"`
+	LastStepAt              time.Time      `json:"last_step_at,omitempty"`
+	UpdatedAt               time.Time      `json:"updated_at,omitempty"`
+	AutoStart               bool           `json:"auto_start,omitempty"`
+	ControllerRunning       bool           `json:"controller_running,omitempty"`
+	LastControllerError     string         `json:"last_controller_error,omitempty"`
+	PendingQuestion         *TeamQuestion  `json:"pending_question,omitempty"`
+	ResolvedQuestions       []TeamQuestion `json:"resolved_questions,omitempty"`
+	PlannerSessionID        string         `json:"planner_session_id,omitempty"`
+	LastPlannerSummary      string         `json:"last_planner_summary,omitempty"`
+	A2AAgentURL             string         `json:"a2a_agent_url,omitempty"`
 }
 
 // TeamTask represents a task assigned to a team.
