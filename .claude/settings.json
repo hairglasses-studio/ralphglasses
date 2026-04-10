@@ -43,16 +43,6 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "command": "~/dotfiles/scripts/claude-notify-debounce.sh stop '  ralphglasses' \"Task complete\" 2>/dev/null || true",
-            "type": "command"
-          }
-        ]
-      }
     ]
   },
   "mcpServers": {

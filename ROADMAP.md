@@ -1534,7 +1534,7 @@ Cross-reference observations with git commits.
 ### 10.3 — Hook-Based Automation
 - [x] 10.3.1 — Add PostToolUse hooks for auto-`go vet` / auto-lint on Write/Edit `P2` `S`
 - [x] 10.3.2 — Add PreToolUse hooks for Bash safety rules (block `rm -rf`, force push) `P2` `S`
-- [x] 10.3.3 — Add Stop hook to force continuation during marathon sessions `P2` `S`
+- [x] 10.3.3 — Consolidate repo automation onto provider-parity-safe hooks only `P2` `S`
 - **Acceptance:** Hooks fire on tool use, enforcing code quality and safety gates automatically
 
 ### 10.4 — Permission & Context Management

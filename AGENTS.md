@@ -12,6 +12,7 @@ Supports **Claude Code**, **Gemini CLI**, **OpenAI Codex CLI**, **Google Antigra
 3. Run `make ci` before every commit — this is the quality gate
 4. **Role and skill surfaces**: `.agents/skills/` is canonical for workflows; `.agents/roles/` is canonical for reusable fleet roles; native role projections live in `.codex/agents/`, `.claude/agents/`, `.gemini/agents/`, and `.clinerules`
 5. **Tool discovery**: `ralphglasses_tool_groups` → `ralphglasses_load_tool_group <name>` → use tools. Groups are deferred-loaded to save context tokens.
+6. **Provider hook parity**: keep repo-level Claude/Gemini hooks limited to the shared supported surface (`SessionStart`, `BeforeTool`, `AfterTool`, `Notification`). Do not add Claude-only lifecycle hooks such as `Stop`, `SessionEnd`, or subagent hooks unless the parity tooling and Gemini bridge explicitly support them.
 
 ## Build & Run
 

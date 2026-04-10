@@ -188,6 +188,8 @@ Use the repo-local `.mcp.json` as the source of truth. Provider-specific repo co
 
 All three point at `./scripts/dev/run-mcp.sh --scan-path ~/hairglasses-studio`.
 
+When updating repo-level hook automation, keep Claude and Gemini on the shared supported hook surface only: `SessionStart`, `BeforeTool`, `AfterTool`, and `Notification`. Avoid Claude-only lifecycle hooks such as `Stop`, `SessionEnd`, or subagent hooks unless the provider-parity tooling has been extended first.
+
 ### Claude Code
 
 Already configured in `.claude/settings.json`.

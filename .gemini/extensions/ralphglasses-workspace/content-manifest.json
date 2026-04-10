@@ -4,7 +4,7 @@
   "files": [
     {
       "path": "AGENTS.md",
-      "sha256": "f4763d084a6ebc6b09f77d9eab4568bfa1c5e14ee70a54666b38157272ba7651"
+      "sha256": "73aae49e85fa17ebf60d953a1a8fce56b2657f146b5918bc0fbecd73ac908cd3"
     },
     {
       "path": "commands/ralph/bootstrap-and-firstboot.toml",
