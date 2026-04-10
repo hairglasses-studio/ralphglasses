@@ -21,9 +21,9 @@ tests:
       prompt: fix the login timeout bug and add regression tests for expired sessions
       required_terms: login, tests, sessions
 
-  - description: local enhancement preserves verification structure for auth prompts
+  - description: Ollama-backed improvement keeps concrete requirements
     vars:
-      action: enhance_local
+      action: improve_ollama
       task_type: code
-      prompt: debug the auth cache invalidation path and add regression tests for stale sessions
-      required_terms: auth, tests, sessions
+      prompt: rewrite this request so the agent debugs the login timeout and adds tests for expired sessions
+      required_terms: login, tests, expired
