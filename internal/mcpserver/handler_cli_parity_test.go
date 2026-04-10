@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
+	"github.com/hairglasses-studio/ralphglasses/internal/telemetry"
 )
 
 func reserveTCPPort(t *testing.T) int {
@@ -170,6 +171,108 @@ func TestHandleFirstbootProfile_ValidateIssues(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(payload.Issues, " "), "autonomy_level must be between 0 and 3") {
 		t.Fatalf("expected autonomy issue, got %v", payload.Issues)
+	}
+}
+
+func TestHandleTelemetryExport_Smoke(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	home := t.TempDir()
+	stateHome := filepath.Join(home, ".local", "state")
+	telemetryPath := filepath.Join(stateHome, "ralphglasses", "telemetry.jsonl")
+	if err := os.MkdirAll(filepath.Dir(telemetryPath), 0o755); err != nil {
+		t.Fatalf("mkdir telemetry dir: %v", err)
+	}
+
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_STATE_HOME", stateHome)
+
+	events := []telemetry.Event{
+		{
+			Type:      telemetry.EventSessionStart,
+			Timestamp: time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC),
+			SessionID: "sess-keep",
+			Provider:  "codex",
+			RepoName:  "repo-a",
+		},
+		{
+			Type:      telemetry.EventCrash,
+			Timestamp: time.Date(2026, 4, 10, 12, 5, 0, 0, time.UTC),
+			SessionID: "sess-skip",
+			Provider:  "claude",
+			RepoName:  "repo-b",
+		},
+	}
+	var lines []string
+	for _, ev := range events {
+		data, err := json.Marshal(ev)
+		if err != nil {
+			t.Fatalf("marshal telemetry event: %v", err)
+		}
+		lines = append(lines, string(data))
+	}
+	if err := os.WriteFile(telemetryPath, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+		t.Fatalf("write telemetry file: %v", err)
+	}
+
+	result, err := srv.handleTelemetryExport(context.Background(), makeRequest(map[string]any{
+		"repo":     "repo-a",
+		"provider": "codex",
+		"type":     string(telemetry.EventSessionStart),
+		"limit":    float64(1),
+	}))
+	if err != nil {
+		t.Fatalf("handleTelemetryExport: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleTelemetryExport returned error: %s", getResultText(result))
+	}
+
+	var payload struct {
+		Format  string            `json:"format"`
+		Count   int               `json:"count"`
+		Content string            `json:"content"`
+		Events  []telemetry.Event `json:"events"`
+	}
+	if err := json.Unmarshal([]byte(getResultText(result)), &payload); err != nil {
+		t.Fatalf("unmarshal telemetry payload: %v", err)
+	}
+	if payload.Format != "json" {
+		t.Fatalf("format = %q, want json", payload.Format)
+	}
+	if payload.Count != 1 || len(payload.Events) != 1 {
+		t.Fatalf("count/events = %d/%d, want 1/1", payload.Count, len(payload.Events))
+	}
+	if payload.Events[0].SessionID != "sess-keep" {
+		t.Fatalf("session = %q, want sess-keep", payload.Events[0].SessionID)
+	}
+	if !strings.Contains(payload.Content, "\"repo_name\": \"repo-a\"") {
+		t.Fatalf("json payload missing repo-a event: %s", payload.Content)
+	}
+
+	csvResult, err := srv.handleTelemetryExport(context.Background(), makeRequest(map[string]any{
+		"format": "csv",
+		"limit":  float64(1),
+	}))
+	if err != nil {
+		t.Fatalf("handleTelemetryExport csv: %v", err)
+	}
+	if csvResult.IsError {
+		t.Fatalf("handleTelemetryExport csv returned error: %s", getResultText(csvResult))
+	}
+
+	var csvPayload struct {
+		Format  string `json:"format"`
+		Count   int    `json:"count"`
+		Content string `json:"content"`
+	}
+	if err := json.Unmarshal([]byte(getResultText(csvResult)), &csvPayload); err != nil {
+		t.Fatalf("unmarshal csv telemetry payload: %v", err)
+	}
+	if csvPayload.Format != "csv" {
+		t.Fatalf("format = %q, want csv", csvPayload.Format)
+	}
+	if !strings.HasPrefix(csvPayload.Content, "timestamp,type,session_id,provider,repo_name") {
+		t.Fatalf("csv payload missing header: %s", csvPayload.Content)
 	}
 }
 
