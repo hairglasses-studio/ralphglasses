@@ -129,3 +129,16 @@ func TestLoggerPluginOnEventInvalidPath(t *testing.T) {
 		t.Error("expected error for invalid log path, got nil")
 	}
 }
+
+func TestNewOllamaProviderDefaults(t *testing.T) {
+	t.Parallel()
+
+	provider := NewOllamaProvider(OllamaConfig{})
+
+	if provider.endpoint != "http://127.0.0.1:11434" {
+		t.Fatalf("provider.endpoint = %q, want %q", provider.endpoint, "http://127.0.0.1:11434")
+	}
+	if provider.model != "qwen3:8b" {
+		t.Fatalf("provider.model = %q, want %q", provider.model, "qwen3:8b")
+	}
+}

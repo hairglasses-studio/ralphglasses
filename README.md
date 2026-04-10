@@ -86,6 +86,17 @@ GOOGLE_API_KEY=AIza...          # Gemini CLI
 ANTHROPIC_API_KEY=sk-ant-...    # Claude Code (optional if using OAuth)
 ```
 
+Prompt-enhancement and embedding helpers can optionally use a local Ollama-compatible endpoint:
+
+```bash
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_API_KEY=ollama
+OLLAMA_CHAT_MODEL=qwen3:8b
+OLLAMA_EMBED_MODEL=nomic-embed-text:v1.5
+```
+
+That local path is non-session only. Ralph's session runtime still targets `codex`, `claude`, `gemini`, and launch-only `antigravity`.
+
 ## Fleet Role Surfaces
 
 - `.agents/skills/` is canonical for provider-neutral workflows.

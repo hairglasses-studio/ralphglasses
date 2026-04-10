@@ -807,7 +807,7 @@ Run the 13-stage prompt enhancement pipeline (specificity, positive reframing, X
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `prompt` | string | **required** | The prompt text to enhance |
-| `mode` | string | optional | Enhancement mode: local (default, deterministic), llm (Claude/Gemini/OpenAI API), auto (try LLM, fallback to local) |
+| `mode` | string | optional | Enhancement mode: local (default, deterministic), llm (Claude/Gemini/OpenAI or local Ollama-compatible API), auto (try LLM, fallback to local) |
 | `repo` | string | optional | Repo name to load .prompt-improver.yaml config from |
 | `target_provider` | string | optional | Target model provider — controls structure style and scoring: openai (default), claude, gemini |
 | `task_type` | string | optional | Override auto-detection: code, troubleshooting, analysis, creative, workflow, general |
@@ -817,13 +817,13 @@ Run the 13-stage prompt enhancement pipeline (specificity, positive reframing, X
 
 ### `ralphglasses_prompt_improve`
 
-LLM-powered prompt improvement using Claude, Gemini, or OpenAI with domain-specific meta-prompts
+LLM-powered prompt improvement using Claude, Gemini, OpenAI, or local Ollama-compatible endpoints with domain-specific meta-prompts
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `prompt` | string | **required** | The prompt text to improve |
 | `feedback` | string | optional | Optional feedback to guide the improvement direction |
-| `provider` | string | optional | LLM provider for improvement: openai (default, requires OPENAI_API_KEY), claude (requires ANTHROPIC_API_KEY), gemini (requires GOOGLE_API_KEY) |
+| `provider` | string | optional | LLM provider for improvement: openai (default; may also target local Ollama-compatible base URLs), claude, gemini |
 | `task_type` | string | optional | Override auto-detection: code, troubleshooting, analysis, creative, workflow, general |
 | `thinking_enabled` | boolean | optional | Include thinking scaffolding in the improved prompt |
 

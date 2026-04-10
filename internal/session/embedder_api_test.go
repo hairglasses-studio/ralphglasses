@@ -187,8 +187,8 @@ func TestOllamaEmbedder_RequestFormat(t *testing.T) {
 	}
 
 	// Verify request format.
-	if gotReq.Model != "nomic-embed-text" {
-		t.Errorf("expected model 'nomic-embed-text', got %q", gotReq.Model)
+	if gotReq.Model != "nomic-embed-text:v1.5" {
+		t.Errorf("expected model 'nomic-embed-text:v1.5', got %q", gotReq.Model)
 	}
 	if gotReq.Prompt != "test prompt" {
 		t.Errorf("expected prompt 'test prompt', got %q", gotReq.Prompt)
@@ -200,6 +200,20 @@ func TestOllamaEmbedder_RequestFormat(t *testing.T) {
 	}
 	if vec[0] != 0.4 || vec[3] != 0.7 {
 		t.Errorf("unexpected vector: %v", vec)
+	}
+}
+
+func TestNewOllamaEmbedder_UsesWorkspaceDefaults(t *testing.T) {
+	t.Setenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434/")
+	t.Setenv("OLLAMA_EMBED_MODEL", "custom-embed")
+
+	embedder := NewOllamaEmbedder("")
+
+	if embedder.endpoint != "http://127.0.0.1:11434/api/embeddings" {
+		t.Fatalf("embedder.endpoint = %q, want %q", embedder.endpoint, "http://127.0.0.1:11434/api/embeddings")
+	}
+	if embedder.model != "custom-embed" {
+		t.Fatalf("embedder.model = %q, want %q", embedder.model, "custom-embed")
 	}
 }
 

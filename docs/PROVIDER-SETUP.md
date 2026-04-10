@@ -41,6 +41,17 @@ OPENAI_API_KEY=sk-...           # Codex
 
 Antigravity itself does not require a separate Ralph-owned API key variable. It inherits provider credentials from the local environment and its own app configuration.
 
+For non-session prompt-enhancement clients only, Ralph can also target a local Ollama-compatible endpoint with:
+
+```bash
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_API_KEY=ollama
+OLLAMA_CHAT_MODEL=qwen3:8b
+OLLAMA_EMBED_MODEL=nomic-embed-text:v1.5
+```
+
+That local path does not change Ralph's managed session providers. Claude, Gemini, Codex, and Antigravity remain the only session runtimes in this pass.
+
 ## Orchestration Pattern
 
 Codex leads by default and delegates subtasks to specialized providers:

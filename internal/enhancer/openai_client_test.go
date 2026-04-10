@@ -157,6 +157,26 @@ func TestNewOpenAIClient_NoAPIKey(t *testing.T) {
 	}
 }
 
+func TestNewOpenAIClient_LocalOllamaUsesDummyKey(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "")
+	t.Setenv("OLLAMA_API_KEY", "")
+	t.Setenv("OLLAMA_CHAT_MODEL", "local-chat")
+
+	client := NewOpenAIClient(LLMConfig{
+		APIKeyEnv: "OLLAMA_API_KEY",
+		BaseURL:   "http://127.0.0.1:11434",
+	})
+	if client == nil {
+		t.Fatal("expected local Ollama client")
+	}
+	if client.APIKey != "ollama" {
+		t.Fatalf("client.APIKey = %q, want %q", client.APIKey, "ollama")
+	}
+	if client.Model != "local-chat" {
+		t.Fatalf("client.Model = %q, want %q", client.Model, "local-chat")
+	}
+}
+
 func TestOpenAIClient_ReasoningEffortByTaskType(t *testing.T) {
 	t.Parallel()
 

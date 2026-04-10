@@ -414,7 +414,7 @@ Auto-generated from the live MCP contract. 224 tools available.
 - **ralphglasses_prompt_analyze**: Score a prompt across 10 quality dimensions (clarity, specificity, structure, examples, etc.) with letter grades and actionable suggestions
 - **ralphglasses_prompt_classify**: Classify a prompt's task type (code, troubleshooting, analysis, creative, workflow, general)
 - **ralphglasses_prompt_enhance**: Run the 13-stage prompt enhancement pipeline (specificity, positive reframing, XML structure, context reorder, format enforcement, etc.)
-- **ralphglasses_prompt_improve**: LLM-powered prompt improvement using Claude, Gemini, or OpenAI with domain-specific meta-prompts
+- **ralphglasses_prompt_improve**: LLM-powered prompt improvement using Claude, Gemini, OpenAI, or local Ollama-compatible endpoints with domain-specific meta-prompts
 - **ralphglasses_prompt_lint**: Deep-lint a prompt for anti-patterns: unmotivated rules, negative framing, aggressive caps, vague quantifiers, injection risks, cache-unfriendly ordering
 - **ralphglasses_prompt_should_enhance**: Check whether a prompt would benefit from enhancement
 - **ralphglasses_prompt_template_fill**: Fill a prompt template by `name` with `vars` (JSON key-value pairs)

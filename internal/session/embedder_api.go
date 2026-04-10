@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -33,12 +35,22 @@ func NewOpenAIEmbedder(apiKey string) *APIEmbedder {
 }
 
 // NewOllamaEmbedder creates an embedder that calls a local Ollama instance.
-// endpoint should be the base URL, e.g. "http://localhost:11434".
+// endpoint should be the base URL, e.g. "http://127.0.0.1:11434".
 func NewOllamaEmbedder(endpoint string) *APIEmbedder {
+	if endpoint == "" {
+		endpoint = os.Getenv("OLLAMA_BASE_URL")
+	}
+	if endpoint == "" {
+		endpoint = "http://127.0.0.1:11434"
+	}
+	model := os.Getenv("OLLAMA_EMBED_MODEL")
+	if model == "" {
+		model = "nomic-embed-text:v1.5"
+	}
 	return &APIEmbedder{
 		provider: "ollama",
-		endpoint: endpoint + "/api/embeddings",
-		model:    "nomic-embed-text",
+		endpoint: strings.TrimRight(endpoint, "/") + "/api/embeddings",
+		model:    model,
 		client:   &http.Client{Timeout: 60 * time.Second},
 	}
 }

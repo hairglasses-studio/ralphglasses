@@ -34,9 +34,21 @@ type LLMClient struct {
 
 // NewLLMClient creates a client from config. Returns nil if no API key is available.
 func NewLLMClient(cfg LLMConfig) *LLMClient {
-	apiKey := os.Getenv(cfg.APIKeyEnv)
-	if apiKey == "" {
-		apiKey = os.Getenv("ANTHROPIC_API_KEY")
+	baseURL := resolveProviderBaseURL(cfg, "https://api.anthropic.com")
+
+	apiKey := ""
+	if isLocalOllamaBaseURL(baseURL) {
+		if cfg.APIKeyEnv != "" && !strings.EqualFold(cfg.APIKeyEnv, "ANTHROPIC_API_KEY") {
+			apiKey = os.Getenv(cfg.APIKeyEnv)
+		}
+		if apiKey == "" {
+			apiKey = resolveLocalOllamaAPIKey(baseURL)
+		}
+	} else {
+		apiKey = os.Getenv(cfg.APIKeyEnv)
+		if apiKey == "" {
+			apiKey = os.Getenv("ANTHROPIC_API_KEY")
+		}
 	}
 	if apiKey == "" {
 		return nil
@@ -44,12 +56,11 @@ func NewLLMClient(cfg LLMConfig) *LLMClient {
 
 	model := cfg.Model
 	if model == "" {
-		model = "claude-sonnet-4-6"
-	}
-
-	baseURL := cfg.BaseURL
-	if baseURL == "" {
-		baseURL = "https://api.anthropic.com"
+		if isLocalOllamaBaseURL(baseURL) {
+			model = defaultLocalOllamaChatModelName()
+		} else {
+			model = "claude-sonnet-4-6"
+		}
 	}
 
 	timeout := cfg.Timeout

@@ -1,6 +1,6 @@
 // E4.3: Local Model Provider — Ollama integration for self-hosted models.
-// Enables running Devstral Small 2 (24B), Qwen3-Coder-30B-A3B, and other
-// open-source coding models locally via Ollama.
+// Optimized for the workstation-standard local model set rather than oversized
+// defaults that do not fit comfortably on a 10 GB RTX 3080.
 //
 // Zero API cost, higher latency — the NeuralUCB bandit learns optimal routing
 // between local and cloud providers based on task complexity and budget pressure.
@@ -18,30 +18,28 @@ import (
 )
 
 // OllamaProvider implements a local LLM provider using the Ollama API.
-// It supports any model available in the Ollama registry, including:
-// - Devstral Small 2 (24B) — Apache 2.0, 68% SWE-bench
-// - Qwen3-Coder-30B-A3B — MoE with 3B active params
-// - Qwen2.5-Coder-7B — 91% HumanEval
+// It supports any installed Ollama model, with defaults tuned for local-first
+// operation on this workstation.
 type OllamaProvider struct {
-	endpoint string // default http://localhost:11434
-	model    string // default "devstral-small:24b"
+	endpoint string // default http://127.0.0.1:11434
+	model    string // default "qwen3:8b"
 	client   *http.Client
 }
 
 // OllamaConfig configures the Ollama provider.
 type OllamaConfig struct {
-	Endpoint string        `json:"endpoint" yaml:"endpoint"` // default http://localhost:11434
-	Model    string        `json:"model" yaml:"model"`       // default devstral-small:24b
+	Endpoint string        `json:"endpoint" yaml:"endpoint"` // default http://127.0.0.1:11434
+	Model    string        `json:"model" yaml:"model"`       // default qwen3:8b
 	Timeout  time.Duration `json:"timeout" yaml:"timeout"`   // default 5m
 }
 
 // NewOllamaProvider creates an Ollama provider plugin.
 func NewOllamaProvider(cfg OllamaConfig) *OllamaProvider {
 	if cfg.Endpoint == "" {
-		cfg.Endpoint = "http://localhost:11434"
+		cfg.Endpoint = "http://127.0.0.1:11434"
 	}
 	if cfg.Model == "" {
-		cfg.Model = "devstral-small:24b"
+		cfg.Model = "qwen3:8b"
 	}
 	timeout := cfg.Timeout
 	if timeout == 0 {
