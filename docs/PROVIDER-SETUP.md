@@ -75,9 +75,10 @@ run from the repo root with:
 ```
 
 That suite is intentionally fast and deterministic. It validates the local
-prompt-enhancement lane; the slower Ollama-backed improvement path remains
-covered by the Go unit and integration tests in `internal/enhancer` and
-`cmd/prompt-improver`.
+prompt-enhancement lane plus one bounded Ollama-backed improvement case,
+defaulting that LLM step to the workstation-standard `code-fast` alias unless
+`OLLAMA_FAST_MODEL` overrides it. If a slower host needs more time, set
+`PROMPTFOO_PROVIDER_TIMEOUT_MS` for that run.
 
 If you want prompt-improver runs to export spans, `ralphglasses` now accepts
 either standard OTLP env vars or Langfuse-native env vars:
