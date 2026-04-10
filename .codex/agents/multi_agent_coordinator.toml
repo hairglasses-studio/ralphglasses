@@ -1,5 +1,5 @@
 # Generated from .agents/roles/multi-agent-coordinator.json
-name = "multi-agent-coordinator"
+name = "multi_agent_coordinator"
 description = "Plan fan-out, assign owned write scopes, and keep multi-agent work merge-safe."
 
 developer_instructions = """

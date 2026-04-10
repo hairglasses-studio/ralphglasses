@@ -20,7 +20,7 @@
     "Risk areas and open questions"
   ],
   "provider_overrides": {
-    "codex": {"surface": ".codex/agents/codebase-mapper.toml"},
+    "codex": {"surface": ".codex/agents/codebase_mapper.toml"},
     "claude": {"surface": ".claude/agents/codebase-mapper.md"},
     "gemini": {"surface": ".gemini/agents/codebase-mapper.md"}
   },

@@ -20,7 +20,7 @@
     "Integration and verification order"
   ],
   "provider_overrides": {
-    "codex": {"surface": ".codex/agents/multi-agent-coordinator.toml"},
+    "codex": {"surface": ".codex/agents/multi_agent_coordinator.toml"},
     "claude": {"surface": ".claude/agents/multi-agent-coordinator.md"},
     "gemini": {"surface": ".gemini/agents/multi-agent-coordinator.md"}
   },

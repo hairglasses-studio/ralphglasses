@@ -1,5 +1,5 @@
 # Generated from .agents/roles/fleet-bootstrap.json
-name = "fleet-bootstrap"
+name = "fleet_bootstrap"
 description = "Scaffold or repair the local provider role surfaces needed to run a multi-provider fleet."
 
 developer_instructions = """

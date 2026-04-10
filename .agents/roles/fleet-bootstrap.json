@@ -20,7 +20,7 @@
     "Scaffolded native role files"
   ],
   "provider_overrides": {
-    "codex": {"surface": ".codex/agents/fleet-bootstrap.toml"},
+    "codex": {"surface": ".codex/agents/fleet_bootstrap.toml"},
     "claude": {"surface": ".claude/agents/fleet-bootstrap.md"},
     "gemini": {"surface": ".gemini/agents/fleet-bootstrap.md"}
   },

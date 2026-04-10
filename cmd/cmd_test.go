@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -149,18 +150,18 @@ func TestMcpJsonFormat(t *testing.T) {
 		t.Fatalf("read .mcp.json: %v", err)
 	}
 
-	var config struct {
+	var parsed struct {
 		MCPServers map[string]struct {
 			Command string   `json:"command"`
 			Args    []string `json:"args"`
 			CWD     string   `json:"cwd"`
 		} `json:"mcpServers"`
 	}
-	if err := json.Unmarshal(data, &config); err != nil {
+	if err := json.Unmarshal(data, &parsed); err != nil {
 		t.Fatalf("parse .mcp.json: %v", err)
 	}
 
-	srv, ok := config.MCPServers["ralphglasses"]
+	srv, ok := parsed.MCPServers["ralphglasses"]
 	if !ok {
 		t.Fatal("ralphglasses server not found in .mcp.json")
 	}
@@ -168,11 +169,12 @@ func TestMcpJsonFormat(t *testing.T) {
 	if srv.Command != "bash" {
 		t.Errorf("command = %q, want bash (wrapper-based startup)", srv.Command)
 	}
-	if len(srv.Args) < 1 || srv.Args[0] != "./scripts/dev/run-mcp.sh" {
-		t.Errorf("args = %v, want wrapper startup script", srv.Args)
+	wantArgs := []string{"-lc", "exec ./scripts/dev/run-mcp.sh --scan-path " + config.DefaultScanPath}
+	if !reflect.DeepEqual(srv.Args, wantArgs) {
+		t.Errorf("args = %v, want %v", srv.Args, wantArgs)
 	}
-	if srv.CWD != "." {
-		t.Errorf("cwd = %q, want .", srv.CWD)
+	if srv.CWD != "" {
+		t.Errorf("cwd = %q, want empty for repo-local wrapper", srv.CWD)
 	}
 }
 
@@ -182,7 +184,7 @@ func TestGeminiSettingsFormat(t *testing.T) {
 		t.Fatalf("read .gemini/settings.json: %v", err)
 	}
 
-	var config struct {
+	var parsed struct {
 		Context struct {
 			FileName []string `json:"fileName"`
 		} `json:"context"`
@@ -192,29 +194,30 @@ func TestGeminiSettingsFormat(t *testing.T) {
 			CWD     string   `json:"cwd"`
 		} `json:"mcpServers"`
 	}
-	if err := json.Unmarshal(data, &config); err != nil {
+	if err := json.Unmarshal(data, &parsed); err != nil {
 		t.Fatalf("parse .gemini/settings.json: %v", err)
 	}
 
-	if !containsString(config.Context.FileName, "AGENTS.md") {
+	if !containsString(parsed.Context.FileName, "AGENTS.md") {
 		t.Error("Gemini context.fileName must include AGENTS.md")
 	}
-	if !containsString(config.Context.FileName, "GEMINI.md") {
+	if !containsString(parsed.Context.FileName, "GEMINI.md") {
 		t.Error("Gemini context.fileName must include GEMINI.md")
 	}
 
-	srv, ok := config.MCPServers["ralphglasses"]
+	srv, ok := parsed.MCPServers["ralphglasses"]
 	if !ok {
 		t.Fatal("ralphglasses server not found in .gemini/settings.json")
 	}
 	if srv.Command != "bash" {
 		t.Errorf("Gemini command = %q, want bash", srv.Command)
 	}
-	if len(srv.Args) < 1 || srv.Args[0] != "./scripts/dev/run-mcp.sh" {
-		t.Errorf("Gemini args = %v, want wrapper startup script", srv.Args)
+	wantArgs := []string{"-lc", "exec ./scripts/dev/run-mcp.sh --scan-path " + config.DefaultScanPath}
+	if !reflect.DeepEqual(srv.Args, wantArgs) {
+		t.Errorf("Gemini args = %v, want %v", srv.Args, wantArgs)
 	}
-	if srv.CWD != "." {
-		t.Errorf("Gemini cwd = %q, want .", srv.CWD)
+	if srv.CWD != "" {
+		t.Errorf("Gemini cwd = %q, want empty for repo-local wrapper", srv.CWD)
 	}
 }
 
@@ -224,29 +227,30 @@ func TestClaudeSettingsFormat(t *testing.T) {
 		t.Fatalf("read .claude/settings.json: %v", err)
 	}
 
-	var config struct {
+	var parsed struct {
 		MCPServers map[string]struct {
 			Command string   `json:"command"`
 			Args    []string `json:"args"`
 			CWD     string   `json:"cwd"`
 		} `json:"mcpServers"`
 	}
-	if err := json.Unmarshal(data, &config); err != nil {
+	if err := json.Unmarshal(data, &parsed); err != nil {
 		t.Fatalf("parse .claude/settings.json: %v", err)
 	}
 
-	srv, ok := config.MCPServers["ralphglasses"]
+	srv, ok := parsed.MCPServers["ralphglasses"]
 	if !ok {
 		t.Fatal("ralphglasses server not found in .claude/settings.json")
 	}
 	if srv.Command != "bash" {
 		t.Errorf("Claude command = %q, want bash", srv.Command)
 	}
-	if len(srv.Args) < 1 || srv.Args[0] != "./scripts/dev/run-mcp.sh" {
-		t.Errorf("Claude args = %v, want wrapper startup script", srv.Args)
+	wantArgs := []string{"-lc", "exec ./scripts/dev/run-mcp.sh --scan-path " + config.DefaultScanPath}
+	if !reflect.DeepEqual(srv.Args, wantArgs) {
+		t.Errorf("Claude args = %v, want %v", srv.Args, wantArgs)
 	}
-	if srv.CWD != "." {
-		t.Errorf("Claude cwd = %q, want .", srv.CWD)
+	if srv.CWD != "" {
+		t.Errorf("Claude cwd = %q, want empty for repo-local wrapper", srv.CWD)
 	}
 }
 
@@ -266,12 +270,9 @@ func TestCodexConfigFormat(t *testing.T) {
 			t.Errorf("expected %s in .codex/config.toml", server)
 		}
 	}
-	expectedArgs := `args = ["./scripts/dev/run-mcp.sh", "--scan-path", "` + config.DefaultScanPath + `"]`
+	expectedArgs := `args = ["-lc", "exec ./scripts/dev/run-mcp.sh --scan-path ` + config.DefaultScanPath + `"]`
 	if strings.Count(content, expectedArgs) < 3 {
-		t.Error("expected repo MCP servers to use ./scripts/dev/run-mcp.sh wrapper")
-	}
-	if strings.Count(content, `cwd = "."`) < 3 {
-		t.Error("expected repo MCP servers to keep cwd = \".\"")
+		t.Error("expected repo MCP servers to use repo-local bash launcher wrapper")
 	}
 }
 

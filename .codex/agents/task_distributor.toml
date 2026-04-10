@@ -1,5 +1,5 @@
 # Generated from .agents/roles/task-distributor.json
-name = "task-distributor"
+name = "task_distributor"
 description = "Turn large requests into bounded work packets with explicit ownership and acceptance criteria."
 
 developer_instructions = """

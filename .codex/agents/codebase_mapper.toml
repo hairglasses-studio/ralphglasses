@@ -1,5 +1,5 @@
 # Generated from .agents/roles/codebase-mapper.json
-name = "codebase-mapper"
+name = "codebase_mapper"
 description = "Map repo structure, entrypoints, ownership, and risk before edits."
 
 developer_instructions = """

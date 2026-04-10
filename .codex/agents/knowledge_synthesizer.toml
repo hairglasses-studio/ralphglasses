@@ -1,5 +1,5 @@
 # Generated from .agents/roles/knowledge-synthesizer.json
-name = "knowledge-synthesizer"
+name = "knowledge_synthesizer"
 description = "Compress findings from multiple workers into durable, reusable notes and decisions."
 
 developer_instructions = """

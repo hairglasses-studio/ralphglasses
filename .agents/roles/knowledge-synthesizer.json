@@ -20,7 +20,7 @@
     "Durable handoff summary"
   ],
   "provider_overrides": {
-    "codex": {"surface": ".codex/agents/knowledge-synthesizer.toml"},
+    "codex": {"surface": ".codex/agents/knowledge_synthesizer.toml"},
     "claude": {"surface": ".claude/agents/knowledge-synthesizer.md"},
     "gemini": {"surface": ".gemini/agents/knowledge-synthesizer.md"}
   },

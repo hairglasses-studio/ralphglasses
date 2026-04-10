@@ -20,7 +20,7 @@
     "Dependencies and blockers"
   ],
   "provider_overrides": {
-    "codex": {"surface": ".codex/agents/task-distributor.toml"},
+    "codex": {"surface": ".codex/agents/task_distributor.toml"},
     "claude": {"surface": ".claude/agents/task-distributor.md"},
     "gemini": {"surface": ".gemini/agents/task-distributor.md"}
   },
