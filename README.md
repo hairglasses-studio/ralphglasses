@@ -91,17 +91,43 @@ Prompt-enhancement and embedding helpers can optionally use a local Ollama-compa
 ```bash
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_API_KEY=ollama
-OLLAMA_CHAT_MODEL=qwen3:8b
+OLLAMA_CHAT_MODEL=code-primary
+OLLAMA_FAST_MODEL=code-fast
+OLLAMA_CODE_MODEL=code-primary
+OLLAMA_HIGH_CONTEXT_CODE_MODEL=code-long
+OLLAMA_CLOUD_CODE_MODEL=glm-5.1:cloud
+OLLAMA_CLOUD_VERIFIED_CODE_MODEL=glm-5:cloud
 OLLAMA_EMBED_MODEL=nomic-embed-text:v1.5
 OLLAMA_KEEP_ALIVE=15m
 ```
 
-That local path is non-session only. Ralph's session runtime still targets `codex`, `claude`, `gemini`, and launch-only `antigravity`.
+That local path now supports both prompt-enhancement helpers and the optional `ollama` session provider. Ralph keeps `codex`, `claude`, and `gemini` as the normal cloud session lanes, but you can explicitly launch a local Ollama-backed Claude-compatible session when you want the shared `code-*` defaults.
 
 The workstation-standard Ollama service is tuned for a single active coding lane:
 Flash Attention is enabled, the K/V cache uses `q8_0`, and concurrent model
 loads stay capped at one. Use `~/hairglasses-studio/dotfiles/scripts/hg-ollama-full-test.sh`
 to validate that local path end to end.
+
+Local prompt-improver evals can now be regression-tested from the repo root with:
+
+```bash
+~/hairglasses-studio/dotfiles/scripts/hg-promptfoo.sh . eval -c promptfoo/promptfooconfig.yaml
+```
+
+When you want those prompt-improver evals or CLI runs to emit traces to an OTLP
+collector or Langfuse, export either the standard OTLP env vars or the
+Langfuse-native trio before running `ralphglasses` or `go run ./cmd/prompt-improver`:
+
+```bash
+# Generic OTLP/HTTP or OTLP/gRPC
+OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318
+OTEL_EXPORTER_OTLP_HEADERS=authorization=Bearer demo-token
+
+# Or Langfuse-native OTLP/HTTP derivation
+LANGFUSE_HOST=https://cloud.langfuse.com
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+```
 
 ## Fleet Role Surfaces
 

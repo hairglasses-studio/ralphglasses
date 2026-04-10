@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 	"github.com/hairglasses-studio/ralphglasses/internal/parity"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 // applyToolMetadata enriches a tool with annotations and output schema if available.
@@ -240,6 +242,9 @@ func (s *Server) runtimeHealthDoc() map[string]any {
 	discoverySummary := s.discoveryAdoptionSummary()
 	adoptionPrioritySummary := s.adoptionPrioritySummary()
 	autobuildTrancheSummary := s.autobuildTrancheSummary()
+	providerHealth := session.CheckAllProviderHealth()
+	providerHealthSummary := providerHealthPayload(providerHealth)
+	ollamaInventory := session.DiscoverOllamaInventory(context.Background(), time.Second)
 
 	return map[string]any{
 		"server":                     "ralphglasses",
@@ -265,12 +270,53 @@ func (s *Server) runtimeHealthDoc() map[string]any {
 		"skill_names":                skillNames(),
 		"cli_parity_summary":         parity.CLIParityCoverage(),
 		"cli_parity_usage":           usageSummary,
+		"provider_health":            providerHealthSummary,
+		"ollama_inventory":           ollamaInventory,
 		"discovery_adoption_summary": discoverySummary,
 		"adoption_priority_summary":  adoptionPrioritySummary,
 		"autobuild_tranche_summary":  autobuildTrancheSummary,
 		"prompt_count":               len(promptCatalog()),
 		"prompt_names":               promptNames(),
 		"discovery_tools":            managementTools,
+	}
+}
+
+func providerHealthPayload(health map[session.Provider]session.ProviderHealth) map[string]any {
+	providers := make(map[string]any, len(health))
+	healthyProviders := make([]string, 0, len(health))
+
+	ordered := []session.Provider{
+		session.ProviderClaude,
+		session.ProviderOllama,
+		session.ProviderGemini,
+		session.ProviderCodex,
+		session.ProviderAntigravity,
+	}
+	for _, provider := range ordered {
+		h, ok := health[provider]
+		if !ok {
+			continue
+		}
+		healthy := h.Healthy()
+		if healthy {
+			healthyProviders = append(healthyProviders, string(provider))
+		}
+		providers[string(provider)] = map[string]any{
+			"available":  h.Available,
+			"env_ok":     h.EnvOK,
+			"healthy":    healthy,
+			"binary":     h.Binary,
+			"version":    h.Version,
+			"latency_ms": h.LatencyMs,
+			"error":      h.Error,
+		}
+	}
+
+	return map[string]any{
+		"provider_count":         len(providers),
+		"healthy_provider_count": len(healthyProviders),
+		"healthy_providers":      healthyProviders,
+		"providers":              providers,
 	}
 }
 

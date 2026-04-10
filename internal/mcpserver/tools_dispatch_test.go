@@ -232,6 +232,32 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 	if payload["cli_parity_usage"] == nil {
 		t.Fatalf("expected cli_parity_usage in server health payload: %v", payload)
 	}
+	providerHealth, ok := payload["provider_health"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected provider_health object in server health payload: %v", payload)
+	}
+	if providerHealth["provider_count"] == nil {
+		t.Fatalf("expected provider_count in provider_health payload: %v", providerHealth)
+	}
+	if providerHealth["healthy_provider_count"] == nil {
+		t.Fatalf("expected healthy_provider_count in provider_health payload: %v", providerHealth)
+	}
+	if providerHealth["providers"] == nil {
+		t.Fatalf("expected providers map in provider_health payload: %v", providerHealth)
+	}
+	ollamaInventory, ok := payload["ollama_inventory"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected ollama_inventory object in server health payload: %v", payload)
+	}
+	if ollamaInventory["base_url"] == nil {
+		t.Fatalf("expected base_url in ollama_inventory payload: %v", ollamaInventory)
+	}
+	if ollamaInventory["required_models"] == nil {
+		t.Fatalf("expected required_models in ollama_inventory payload: %v", ollamaInventory)
+	}
+	if ollamaInventory["managed_aliases"] == nil {
+		t.Fatalf("expected managed_aliases in ollama_inventory payload: %v", ollamaInventory)
+	}
 	if payload["discovery_adoption_summary"] == nil {
 		t.Fatalf("expected discovery_adoption_summary in server health payload: %v", payload)
 	}

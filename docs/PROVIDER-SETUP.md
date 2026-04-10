@@ -46,12 +46,17 @@ For non-session prompt-enhancement clients only, Ralph can also target a local O
 ```bash
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_API_KEY=ollama
-OLLAMA_CHAT_MODEL=qwen3:8b
+OLLAMA_CHAT_MODEL=code-primary
+OLLAMA_FAST_MODEL=code-fast
+OLLAMA_CODE_MODEL=code-primary
+OLLAMA_HIGH_CONTEXT_CODE_MODEL=code-long
+OLLAMA_CLOUD_CODE_MODEL=glm-5.1:cloud
+OLLAMA_CLOUD_VERIFIED_CODE_MODEL=glm-5:cloud
 OLLAMA_EMBED_MODEL=nomic-embed-text:v1.5
 OLLAMA_KEEP_ALIVE=15m
 ```
 
-That local path does not change Ralph's managed session providers. Claude, Gemini, Codex, and Antigravity remain the only session runtimes in this pass.
+That local path also enables Ralph's optional `ollama` session provider. Claude, Gemini, and Codex remain the normal cloud runtimes, and `ollama` is the explicit local lane backed by the shared `code-*` aliases from `dotfiles`.
 
 The shared workstation service uses a single-user latency profile: Flash
 Attention enabled, `q8_0` K/V cache, one loaded model, and one parallel request
@@ -60,6 +65,26 @@ lane. Validate it with:
 ```bash
 ~/hairglasses-studio/dotfiles/scripts/hg-ollama-smoke.sh
 ~/hairglasses-studio/dotfiles/scripts/hg-ollama-full-test.sh
+```
+
+Repo-owned prompt-improver eval coverage lives under `promptfoo/` and can be
+run from the repo root with:
+
+```bash
+~/hairglasses-studio/dotfiles/scripts/hg-promptfoo.sh . eval -c promptfoo/promptfooconfig.yaml
+```
+
+If you want prompt-improver runs to export spans, `ralphglasses` now accepts
+either standard OTLP env vars or Langfuse-native env vars:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318
+OTEL_EXPORTER_OTLP_HEADERS=authorization=Bearer demo-token
+
+# or
+LANGFUSE_HOST=https://cloud.langfuse.com
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
 ```
 
 ## Orchestration Pattern
