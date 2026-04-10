@@ -1721,7 +1721,7 @@ Audit repo instruction/config surfaces used by Codex, Claude, Gemini, and MCP cl
 
 ### `ralphglasses_surface_audit`
 
-Run the surfacekit workspace parity audit and return the JSON inventory snapshot
+Run the codexkit workspace parity audit and return the JSON inventory snapshot
 
 **Example:**
 

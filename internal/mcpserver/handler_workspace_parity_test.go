@@ -9,7 +9,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-func TestResolveSurfaceAuditPathsPrefersCodexkit(t *testing.T) {
+func TestResolveParityAuditPathsPrefersCodexkit(t *testing.T) {
 	t.Setenv("HG_STUDIO_ROOT", "")
 
 	workspace := t.TempDir()
@@ -18,31 +18,28 @@ func TestResolveSurfaceAuditPathsPrefersCodexkit(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, repo := range []string{"codexkit", "surfacekit"} {
-		scriptPath := filepath.Join(workspace, repo, "scripts", "agent-parity-audit.sh")
-		if err := os.MkdirAll(filepath.Dir(scriptPath), 0o755); err != nil {
+		mainPath := filepath.Join(workspace, repo, "cmd", "codexkit", "main.go")
+		if err := os.MkdirAll(filepath.Dir(mainPath), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(scriptPath, []byte("#!/usr/bin/env bash\n"), 0o755); err != nil {
+		if err := os.WriteFile(mainPath, []byte("package main\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	studioRoot, auditRoot, scriptPath, err := resolveSurfaceAuditPaths(scanPath)
+	studioRoot, codexkitRoot, err := resolveParityAuditPaths(scanPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if studioRoot != workspace {
 		t.Fatalf("studioRoot = %q, want %q", studioRoot, workspace)
 	}
-	if auditRoot != filepath.Join(workspace, "codexkit") {
-		t.Fatalf("auditRoot = %q, want codexkit root", auditRoot)
-	}
-	if scriptPath != filepath.Join(workspace, "codexkit", "scripts", "agent-parity-audit.sh") {
-		t.Fatalf("scriptPath = %q, want codexkit script", scriptPath)
+	if codexkitRoot != filepath.Join(workspace, "codexkit") {
+		t.Fatalf("codexkitRoot = %q, want codexkit root", codexkitRoot)
 	}
 }
 
-func TestResolveSurfaceAuditPathsFallsBackToSurfacekit(t *testing.T) {
+func TestResolveParityAuditPathsIgnoresSurfacekitFallback(t *testing.T) {
 	t.Setenv("HG_STUDIO_ROOT", "")
 
 	workspace := t.TempDir()
@@ -50,26 +47,16 @@ func TestResolveSurfaceAuditPathsFallsBackToSurfacekit(t *testing.T) {
 	if err := os.MkdirAll(scanPath, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	scriptPath := filepath.Join(workspace, "surfacekit", "scripts", "agent-parity-audit.sh")
-	if err := os.MkdirAll(filepath.Dir(scriptPath), 0o755); err != nil {
+	mainPath := filepath.Join(workspace, "surfacekit", "cmd", "codexkit", "main.go")
+	if err := os.MkdirAll(filepath.Dir(mainPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(scriptPath, []byte("#!/usr/bin/env bash\n"), 0o755); err != nil {
+	if err := os.WriteFile(mainPath, []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	studioRoot, auditRoot, resolvedScript, err := resolveSurfaceAuditPaths(scanPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if studioRoot != workspace {
-		t.Fatalf("studioRoot = %q, want %q", studioRoot, workspace)
-	}
-	if auditRoot != filepath.Join(workspace, "surfacekit") {
-		t.Fatalf("auditRoot = %q, want surfacekit root", auditRoot)
-	}
-	if resolvedScript != scriptPath {
-		t.Fatalf("resolvedScript = %q, want %q", resolvedScript, scriptPath)
+	if _, _, err := resolveParityAuditPaths(scanPath); err == nil {
+		t.Fatal("expected missing codexkit error")
 	}
 }
 

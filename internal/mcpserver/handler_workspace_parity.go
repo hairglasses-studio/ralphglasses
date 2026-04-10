@@ -14,75 +14,64 @@ import (
 )
 
 func (s *Server) handleSurfaceAudit(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	studioRoot, auditRoot, scriptPath, pathErr := resolveSurfaceAuditPaths(s.ScanPath)
-	var scriptFailure string
+	studioRoot, codexkitRoot, pathErr := resolveParityAuditPaths(s.ScanPath)
+	var auditFailure string
 	if pathErr == nil {
-		stdout, stderr, err := runSurfaceAuditCommand(ctx, studioRoot, auditRoot, scriptPath)
+		stdout, stderr, err := runParityAuditCommand(ctx, studioRoot, codexkitRoot)
 		if err != nil {
-			scriptFailure = formatCommandFailure("surface audit", err, stderr)
+			auditFailure = formatCommandFailure("workspace parity audit", err, stderr)
 		} else if payload, ok := extractJSONPayload(stdout); ok {
 			return textResult(payload), nil
 		}
 
-		stdout, stderr, err = runSurfaceAuditCommand(ctx, studioRoot, auditRoot, scriptPath, "--write-json")
-		if err != nil {
-			scriptFailure = formatCommandFailure("surface audit --write-json", err, stderr)
-		} else if payload, ok := extractJSONPayload(stdout); ok {
-			return textResult(payload), nil
-		}
+		auditFailure = formatCommandFailure("workspace parity audit", err, stderr)
 	}
 
-	payload, readErr := readSurfaceAuditInventory(s.ScanPath)
+	payload, readErr := readParityAuditInventory(s.ScanPath)
 	if readErr == nil {
 		return textResult(payload), nil
 	}
 	if pathErr != nil {
 		return codedError(ErrFilesystem, pathErr.Error()), nil
 	}
-	if scriptFailure != "" {
-		return codedError(ErrToolExec, fmt.Sprintf("%s; fallback inventory read failed: %v", scriptFailure, readErr)), nil
+	if auditFailure != "" {
+		return codedError(ErrToolExec, fmt.Sprintf("%s; fallback inventory read failed: %v", auditFailure, readErr)), nil
 	}
-	return codedError(ErrToolExec, fmt.Sprintf("surface audit did not produce valid JSON inventory; fallback inventory read failed: %v", readErr)), nil
+	return codedError(ErrToolExec, fmt.Sprintf("workspace parity audit did not produce valid JSON inventory; fallback inventory read failed: %v", readErr)), nil
 }
 
-func resolveSurfaceAuditPaths(scanPath string) (string, string, string, error) {
-	for _, candidate := range surfaceAuditCandidates(scanPath) {
+func resolveParityAuditPaths(scanPath string) (string, string, error) {
+	for _, candidate := range parityAuditCandidates(scanPath) {
 		base := filepath.Base(candidate)
 		options := []struct {
 			workspaceRoot string
-			auditRoot     string
+			codexkitRoot  string
 		}{}
 		switch base {
-		case "codexkit", "surfacekit":
+		case "codexkit":
 			options = append(options, struct {
 				workspaceRoot string
-				auditRoot     string
+				codexkitRoot  string
 			}{
 				workspaceRoot: filepath.Dir(candidate),
-				auditRoot:     candidate,
+				codexkitRoot:  candidate,
 			})
 		}
-		options = append(options,
-			struct {
-				workspaceRoot string
-				auditRoot     string
-			}{workspaceRoot: candidate, auditRoot: filepath.Join(candidate, "codexkit")},
-			struct {
-				workspaceRoot string
-				auditRoot     string
-			}{workspaceRoot: candidate, auditRoot: filepath.Join(candidate, "surfacekit")},
-		)
+		options = append(options, struct {
+			workspaceRoot string
+			codexkitRoot  string
+		}{workspaceRoot: candidate, codexkitRoot: filepath.Join(candidate, "codexkit")})
 		for _, option := range options {
-			scriptPath := filepath.Join(option.auditRoot, "scripts", "agent-parity-audit.sh")
-			if _, err := os.Stat(scriptPath); err == nil {
-				return option.workspaceRoot, option.auditRoot, scriptPath, nil
+			mainPath := filepath.Join(option.codexkitRoot, "cmd", "codexkit", "main.go")
+			if _, err := os.Stat(mainPath); err == nil {
+				return option.workspaceRoot, option.codexkitRoot, nil
 			}
 		}
 	}
-	return "", "", "", fmt.Errorf("surface audit script not found from scan path %q", scanPath)
+	return "", "", fmt.Errorf("codexkit workspace refresh entrypoint not found from scan path %q", scanPath)
 }
 
-func surfaceAuditCandidates(scanPath string) []string {
+func parityAuditCandidates(scanPath string) []string {
 	raw := make([]string, 0, 4)
 	if envRoot := strings.TrimSpace(os.Getenv("HG_STUDIO_ROOT")); envRoot != "" {
 		raw = append(raw, envRoot)
@@ -103,8 +92,8 @@ func surfaceAuditCandidates(scanPath string) []string {
 	return candidates
 }
 
-func readSurfaceAuditInventory(scanPath string) (string, error) {
-	for _, candidate := range surfaceAuditCandidates(scanPath) {
+func readParityAuditInventory(scanPath string) (string, error) {
+	for _, candidate := range parityAuditCandidates(scanPath) {
 		paths := []string{filepath.Join(candidate, "docs", "projects", "agent-parity", "repo-inventory.json")}
 		if filepath.Base(candidate) == "docs" {
 			paths = append([]string{filepath.Join(candidate, "projects", "agent-parity", "repo-inventory.json")}, paths...)
@@ -120,14 +109,17 @@ func readSurfaceAuditInventory(scanPath string) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("read surface audit inventory from docs/projects/agent-parity/repo-inventory.json")
+	return "", fmt.Errorf("read workspace parity inventory from docs/projects/agent-parity/repo-inventory.json")
 }
 
-func runSurfaceAuditCommand(ctx context.Context, studioRoot, auditRoot, scriptPath string, args ...string) (string, string, error) {
-	argv := append([]string{scriptPath}, args...)
-	cmd := exec.CommandContext(ctx, "bash", argv...)
-	cmd.Dir = auditRoot
-	cmd.Env = append(os.Environ(), "HG_STUDIO_ROOT="+studioRoot)
+func runParityAuditCommand(ctx context.Context, studioRoot, codexkitRoot string) (string, string, error) {
+	cmd := exec.CommandContext(ctx, "go", "run", "./cmd/codexkit", "workspace", "refresh-parity", studioRoot)
+	cmd.Dir = codexkitRoot
+	cmd.Env = append(os.Environ(),
+		"GOWORK=off",
+		"HG_STUDIO_ROOT="+studioRoot,
+		"CODEXKIT_ROOT="+codexkitRoot,
+	)
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

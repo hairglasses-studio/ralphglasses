@@ -154,7 +154,7 @@ func (s *Server) buildRepoGroup() ToolGroup {
 				mcp.WithString("repo", mcp.Required(), mcp.Description("Repo name")),
 			), s.handleRepoSurfaceAudit},
 			{mcp.NewTool("ralphglasses_surface_audit",
-				mcp.WithDescription("Run the surfacekit workspace parity audit and return the JSON inventory snapshot"),
+				mcp.WithDescription("Run the codexkit workspace parity audit and return the JSON inventory snapshot"),
 			), s.handleSurfaceAudit},
 			{mcp.NewTool("ralphglasses_claudemd_check",
 				mcp.WithDescription(descriptions.DescRalphglassesClaudemdCheck),

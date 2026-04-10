@@ -1099,7 +1099,7 @@ Save or list fleet state snapshots
 
 ### `ralphglasses_surface_audit`
 
-Run the surfacekit workspace parity audit and return the JSON inventory snapshot
+Run the codexkit workspace parity audit and return the JSON inventory snapshot
 
 *No parameters.*
 
