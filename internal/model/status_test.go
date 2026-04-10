@@ -154,6 +154,21 @@ func TestLoadCircuitBreaker_MissingFile(t *testing.T) {
 	}
 }
 
+func TestLoadCircuitBreaker_LegacyPlainState(t *testing.T) {
+	dir := setupRalphDir(t)
+	if err := os.WriteFile(filepath.Join(dir, ".ralph", ".circuit_breaker_state"), []byte("CLOSED\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := LoadCircuitBreaker(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("LoadCircuitBreaker legacy state: %v", err)
+	}
+	if loaded.State != "CLOSED" {
+		t.Fatalf("State = %q, want %q", loaded.State, "CLOSED")
+	}
+}
+
 func TestLoadProgress_Valid(t *testing.T) {
 	dir := setupRalphDir(t)
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // LoadStatus reads and parses .ralph/status.json from the given repo path.
@@ -44,7 +45,13 @@ func LoadCircuitBreaker(ctx context.Context, repoPath string) (*CircuitBreakerSt
 	}
 	var cb CircuitBreakerState
 	if err := json.Unmarshal(data, &cb); err != nil {
-		return nil, err
+		state := strings.TrimSpace(string(data))
+		switch state {
+		case "CLOSED", "OPEN", "HALF_OPEN":
+			return &CircuitBreakerState{State: state}, nil
+		default:
+			return nil, err
+		}
 	}
 	return &cb, nil
 }
