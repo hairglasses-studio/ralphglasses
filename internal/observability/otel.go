@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/henomis/langfuse-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -26,6 +27,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+)
+
+var (
+	langfuseClient *langfuse.Langfuse
 )
 
 // Provider wraps OpenTelemetry tracer and meter providers for ralphglasses.
@@ -38,7 +43,8 @@ type Provider struct {
 	noop           bool
 }
 
-// NewProvider creates an OpenTelemetry Provider.
+// NewProvider creates an OpenTelemetry Provider and initializes native Langfuse
+// if credentials are provided.
 //
 // serviceName is the resource attribute "service.name"; it falls back to the
 // OTEL_SERVICE_NAME env var and then "ralphglasses".
@@ -59,12 +65,24 @@ func NewProvider(serviceName, endpoint string) (*Provider, func(context.Context)
 	if serviceName == "" {
 		serviceName = "ralphglasses"
 	}
+
+	// Initialize native Langfuse if keys are present.
+	if publicKey := os.Getenv("LANGFUSE_PUBLIC_KEY"); publicKey != "" {
+		if secretKey := os.Getenv("LANGFUSE_SECRET_KEY"); secretKey != "" {
+			langfuseClient = langfuse.New(context.Background())
+		}
+	}
+
 	cfg := resolveTraceExporterConfig(endpoint)
 
 	// No endpoint — use noop providers so there is zero overhead.
 	if cfg.Endpoint == "" {
 		p := &Provider{serviceName: serviceName, noop: true}
-		return p, func(context.Context) {}, nil
+		return p, func(context.Context) {
+			if langfuseClient != nil {
+				langfuseClient.Flush(context.Background())
+			}
+		}, nil
 	}
 
 	res, err := resource.New(context.Background(),
@@ -105,6 +123,9 @@ func NewProvider(serviceName, endpoint string) (*Provider, func(context.Context)
 		defer cancel()
 		_ = tp.Shutdown(shutCtx)
 		_ = mp.Shutdown(shutCtx)
+		if langfuseClient != nil {
+			langfuseClient.Flush(shutCtx)
+		}
 	}
 
 	return p, cleanup, nil

@@ -13,6 +13,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/uuid v1.6.0
 	github.com/hairglasses-studio/mcpkit v0.4.2-0.20260408223251-00a639bb6b25
+	github.com/henomis/langfuse-go v0.0.3
 	github.com/mark3labs/mcp-go v0.47.0
 	github.com/nats-io/nats.go v1.50.0
 	github.com/prometheus/client_golang v1.23.2
@@ -64,6 +65,7 @@ require (
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
+	github.com/henomis/restclientgo v1.2.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/klauspost/compress v1.18.5 // indirect

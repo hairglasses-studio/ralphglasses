@@ -8,6 +8,7 @@ import (
 
 	"github.com/hairglasses-studio/mcpkit/finops"
 	"github.com/hairglasses-studio/ralphglasses/internal/tracing"
+	"github.com/henomis/langfuse-go/model"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -62,16 +63,15 @@ func FinishLLMCallSpan(span trace.Span, started time.Time, info LLMCallInfo, err
 	if span == nil {
 		return
 	}
+	endTime := time.Now()
 
 	span.SetAttributes(
-		attribute.Int64(tracing.AttrGenAILatencyMs, time.Since(started).Milliseconds()),
+		attribute.Int64(tracing.AttrGenAILatencyMs, endTime.Sub(started).Milliseconds()),
 	)
 
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
-		span.End()
-		return
 	}
 
 	attrs := []attribute.KeyValue{}
@@ -92,8 +92,62 @@ func FinishLLMCallSpan(span trace.Span, started time.Time, info LLMCallInfo, err
 		attrs = append(attrs, attribute.Float64(tracing.AttrGenAICostUSD, info.CostUSD))
 	}
 	span.SetAttributes(attrs...)
-	span.SetStatus(codes.Ok, "")
+	if err == nil {
+		span.SetStatus(codes.Ok, "")
+	}
 	span.End()
+
+	// Log to Langfuse if enabled
+	if langfuseClient != nil {
+		traceID := span.SpanContext().TraceID().String()
+		spanID := span.SpanContext().SpanID().String()
+		
+		lfTrace := &model.Trace{
+			ID:        traceID,
+			Name:      info.Operation,
+			Timestamp: &started,
+		}
+		langfuseClient.Trace(lfTrace)
+
+		lfGen := &model.Generation{
+			ID:        spanID,
+			TraceID:   traceID,
+			Name:      info.Operation,
+			StartTime: &started,
+			EndTime:   &endTime,
+			Model:     info.Model,
+		}
+		
+		metadata := map[string]interface{}{
+			"system":   info.System,
+			"provider": info.Provider,
+			"base_url": info.BaseURL,
+		}
+		if info.ResponseID != "" {
+			metadata["response_id"] = info.ResponseID
+		}
+		if info.CostUSD > 0 {
+			metadata["cost_usd"] = info.CostUSD
+		}
+		lfGen.Metadata = metadata
+
+		if info.InputTokens > 0 || info.OutputTokens > 0 {
+			lfGen.Usage = model.Usage{
+				Input:  int(info.InputTokens),
+				Output: int(info.OutputTokens),
+				Total:  int(info.InputTokens + info.OutputTokens),
+			}
+		}
+
+		if err != nil {
+			lfGen.Level = model.ObservationLevelError
+			lfGen.StatusMessage = err.Error()
+		} else {
+			lfGen.Level = model.ObservationLevelDefault
+		}
+
+		langfuseClient.Generation(lfGen, nil)
+	}
 }
 
 func EstimateLLMCostUSD(system, model string, inputTokens, outputTokens int64) float64 {
