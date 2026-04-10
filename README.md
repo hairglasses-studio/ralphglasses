@@ -115,10 +115,8 @@ Local prompt-improver evals can now be regression-tested from the repo root with
 ```
 
 That promptfoo suite is intentionally fast and deterministic. It exercises the
-local prompt-enhancement lane plus one bounded Ollama-backed improvement case,
-defaulting that LLM step to the workstation-standard `code-fast` alias unless
-you override `OLLAMA_FAST_MODEL`. If a slower host needs more time, increase
-`PROMPTFOO_PROVIDER_TIMEOUT_MS` for that run.
+local prompt-enhancement lane, while the slower Ollama-backed improvement path
+stays covered by the Go tests in `internal/enhancer` and `cmd/prompt-improver`.
 
 When you want those prompt-improver evals or CLI runs to emit traces to an OTLP
 collector or Langfuse, export either the standard OTLP env vars or the
