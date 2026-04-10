@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/bandit"
@@ -60,6 +61,45 @@ func (s *Server) rerouteClaudeProviderForCacheHealth(repoPath string, provider s
 		return target, fmt.Sprintf("rerouted from claude to %s after %d recent resumed-session cache anomalies", target, count)
 	}
 	return provider, ""
+}
+
+func parseOptionalLaunchProvider(raw string) (session.Provider, bool, error) {
+	value := strings.TrimSpace(strings.ToLower(raw))
+	if value == "" || value == "auto" {
+		return "", false, nil
+	}
+	provider := session.Provider(value)
+	if err := session.ValidateProvider(provider); err != nil {
+		return "", true, err
+	}
+	return provider, true, nil
+}
+
+func inferResumeProviderBySessionID(sessions []*session.Session, providerSessionID string) (session.Provider, bool) {
+	target := strings.TrimSpace(providerSessionID)
+	if target == "" {
+		return "", false
+	}
+	for _, sess := range sessions {
+		sess.Lock()
+		psid := strings.TrimSpace(sess.ProviderSessionID)
+		provider := sess.Provider
+		sess.Unlock()
+		if psid != "" && psid == target && provider != "" {
+			return provider, true
+		}
+	}
+	return "", false
+}
+
+func launchSelectionSuffix(sess *session.Session) string {
+	if sess == nil || !sess.ProviderAutoSelected {
+		return ""
+	}
+	if reason := strings.TrimSpace(sess.ProviderSelectionReason); reason != "" {
+		return fmt.Sprintf(" [auto-selected: %s]", reason)
+	}
+	return " [auto-selected]"
 }
 
 // wireSubsystems initializes self-learning subsystem singletons on the session

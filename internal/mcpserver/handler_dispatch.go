@@ -23,7 +23,8 @@ var validDispatchActions = map[string]bool{
 
 // handleDispatch is a unified cross-provider dispatch tool for mobile remote
 // control. It collapses rc_send, rc_act(stop/pause/resume/retry) into a single
-// entry point with optional auto-provider selection via the cascade router.
+// entry point with optional runtime provider selection when provider is omitted
+// or set to "auto".
 func (s *Server) handleDispatch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	pp := NewParamParser(argsMap(req))
 
@@ -61,8 +62,8 @@ func (s *Server) handleDispatch(ctx context.Context, req mcp.CallToolRequest) (*
 	}
 }
 
-// dispatchSend launches a new session on the given repo, auto-selecting a
-// provider via the cascade router when provider is "auto".
+// dispatchSend launches a new session on the given repo. When provider is
+// omitted or set to "auto", the runtime chooses the effective provider.
 func (s *Server) dispatchSend(ctx context.Context, pp *ParamParser, repo, providerStr string) (*mcp.CallToolResult, error) {
 	prompt := SanitizeString(pp.StringOpt("prompt", ""))
 	if prompt == "" {
@@ -79,8 +80,8 @@ func (s *Server) dispatchSend(ctx context.Context, pp *ParamParser, repo, provid
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", repo)), nil
 	}
 
-	provider := s.resolveProvider(providerStr)
-	if err := session.ValidateProvider(provider); err != nil {
+	provider, _, err := parseOptionalLaunchProvider(providerStr)
+	if err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid provider: %v", err)), nil
 	}
 
@@ -121,7 +122,7 @@ func (s *Server) dispatchSend(ctx context.Context, pp *ParamParser, repo, provid
 	}
 
 	return textResult(fmt.Sprintf("Sent to %s/%s (budget: %s, id: %s)",
-		repo, provider, formatCost(budget), shortID(sess.ID))), nil
+		repo, sess.Provider, formatCost(budget), shortID(sess.ID)) + launchSelectionSuffix(sess)), nil
 }
 
 // dispatchStop stops the most active session on the given repo.
@@ -212,22 +213,11 @@ func (s *Server) dispatchRetry(repo string) (*mcp.CallToolResult, error) {
 	return textResult(fmt.Sprintf("Retried %s (id: %s)", repo, shortID(newSess.ID))), nil
 }
 
-// resolveProvider maps a provider string to a session.Provider. When "auto",
-// the cascade router is consulted to pick the cheapest appropriate provider.
+// resolveProvider maps a provider string to an explicit session.Provider. When
+// omitted or set to "auto", runtime selection stays unset.
 func (s *Server) resolveProvider(providerStr string) session.Provider {
-	if providerStr == "" || providerStr == "auto" {
-		if s.SessMgr != nil {
-			cr := s.SessMgr.GetCascadeRouter()
-			if cr != nil {
-				tier := cr.SelectTier("general", 0)
-				if tier.Provider != "" {
-					return tier.Provider
-				}
-			}
-		}
-		return session.DefaultPrimaryProvider()
-	}
-	return session.Provider(providerStr)
+	provider, _, _ := parseOptionalLaunchProvider(providerStr)
+	return provider
 }
 
 // handleFleetSummary returns a compact one-call fleet overview formatted as

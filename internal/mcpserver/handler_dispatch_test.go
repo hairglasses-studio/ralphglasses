@@ -213,15 +213,10 @@ func TestDispatch_AutoProviderSelection(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 
-	// NewManager initializes a cascade router, so "auto" uses SelectTier.
-	// "general" maps to complexity 2; the cheapest tier with MaxComplexity >= 2
-	// is the "worker" tier (gemini). Verify auto returns a valid provider.
+	// Auto and omitted provider now leave runtime selection unset.
 	provider := srv.resolveProvider("auto")
-	switch provider {
-	case session.ProviderClaude, session.ProviderGemini, session.ProviderCodex, session.ProviderCline:
-		// OK - cascade router selected a valid provider (Cline is the default cheap provider).
-	default:
-		t.Errorf("auto provider = %q, want a valid provider", provider)
+	if provider != "" {
+		t.Errorf("auto provider = %q, want empty", provider)
 	}
 
 	// Explicit provider should be returned as-is.
@@ -237,15 +232,12 @@ func TestDispatch_AutoProviderSelection(t *testing.T) {
 
 	// Empty string should behave like auto (cascade router picks).
 	provider = srv.resolveProvider("")
-	switch provider {
-	case session.ProviderClaude, session.ProviderGemini, session.ProviderCodex, session.ProviderCline:
-		// OK
-	default:
-		t.Errorf("empty provider = %q, want a valid provider", provider)
+	if provider != "" {
+		t.Errorf("empty provider = %q, want empty", provider)
 	}
 }
 
-func TestDispatch_AutoWithCascadeRouter(t *testing.T) {
+func TestDispatch_AutoWithCascadeRouterLeavesRuntimeSelectionUnset(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)
 
@@ -254,16 +246,52 @@ func TestDispatch_AutoWithCascadeRouter(t *testing.T) {
 	cr := session.NewCascadeRouter(cfg, nil, nil, t.TempDir())
 	srv.SessMgr.SetCascadeRouter(cr)
 
-	// With cascade router, auto selects via SelectTier("general", 0).
-	// "general" maps to complexity 2, cheapest tier with MaxComplexity >= 2
-	// is the worker tier (gemini-3.1-flash).
+	// Auto still leaves selection to the runtime even if a cascade router exists.
 	provider := srv.resolveProvider("auto")
-	// The provider should be one of the valid providers (exact tier depends on config).
-	switch provider {
-	case session.ProviderClaude, session.ProviderGemini, session.ProviderCodex, session.ProviderCline:
-		// OK
-	default:
-		t.Errorf("auto with cascade returned unexpected provider: %q", provider)
+	if provider != "" {
+		t.Errorf("auto with cascade returned %q, want empty", provider)
+	}
+}
+
+func TestDispatch_SendAutoSelectsOllamaForLowRiskPrompt(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	ollamaSrv := newReadyOllamaInventoryServer(t)
+	defer ollamaSrv.Close()
+
+	setReadyOllamaEnv(t, ollamaSrv.URL)
+	srv.SessMgr.SetStateDir(t.TempDir())
+	srv.SessMgr.SetHooksForTesting(func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+		return &session.Session{
+			ID:                      "sess-dispatch-ollama",
+			Provider:                opts.Provider,
+			Model:                   opts.Model,
+			RepoPath:                opts.RepoPath,
+			RepoName:                "test-repo",
+			Status:                  session.StatusRunning,
+			LaunchedAt:              time.Now(),
+			ProviderAutoSelected:    opts.Provider == session.ProviderOllama,
+			ProviderSelectionReason: "auto-selected Ollama for a low-risk planning/reporting task because the local inventory is fully ready",
+		}, nil
+	}, nil)
+
+	result, err := srv.handleDispatch(context.Background(), makeRequest(map[string]any{
+		"repo":     "test-repo",
+		"action":   "send",
+		"provider": "auto",
+		"prompt":   "plan and summarize the repo doctor status",
+	}))
+	if err != nil {
+		t.Fatalf("handleDispatch: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, "test-repo/ollama") {
+		t.Fatalf("expected ollama in dispatch output, got: %s", text)
+	}
+	if !strings.Contains(text, "auto-selected") {
+		t.Fatalf("expected auto-selection note, got: %s", text)
 	}
 }
 

@@ -204,6 +204,66 @@ func TestHandleTriggerWebhook_LaunchLoop(t *testing.T) {
 	}
 }
 
+func TestHandleTriggerWebhook_LaunchCycleAutoSelectsOllamaForLowRiskPrompt(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	ollamaSrv := newReadyOllamaInventoryServer(t)
+	defer ollamaSrv.Close()
+
+	setReadyOllamaEnv(t, ollamaSrv.URL)
+	srv.SessMgr.SetStateDir(t.TempDir())
+	srv.SessMgr.SetHooksForTesting(
+		func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+			return &session.Session{
+				ID:                      "sess-trigger-ollama",
+				Provider:                opts.Provider,
+				Model:                   opts.Model,
+				RepoPath:                opts.RepoPath,
+				RepoName:                filepath.Base(opts.RepoPath),
+				Prompt:                  opts.Prompt,
+				Status:                  session.StatusCompleted,
+				OutputCh:                make(chan string, 1),
+				LaunchedAt:              time.Now(),
+				ProviderAutoSelected:    opts.Provider == session.ProviderOllama,
+				ProviderSelectionReason: "auto-selected Ollama for a low-risk planning/reporting task because the local inventory is fully ready",
+			}, nil
+		},
+		func(_ context.Context, sess *session.Session) error {
+			sess.Lock()
+			sess.Status = session.StatusCompleted
+			now := time.Now()
+			sess.EndedAt = &now
+			sess.Unlock()
+			return nil
+		},
+	)
+
+	result, err := srv.handleTriggerWebhook(context.Background(), makeRequest(map[string]any{
+		"prompt":     "plan and summarize the repo doctor status",
+		"agent_type": "cycle",
+		"priority":   float64(8),
+		"launch":     true,
+		"repo":       "test-repo",
+		"provider":   "auto",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("handleTriggerWebhook returned error: %s", getResultText(result))
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &data); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if data["provider"] != "ollama" {
+		t.Fatalf("provider = %v, want ollama", data["provider"])
+	}
+	if data["provider_auto_selected"] != true {
+		t.Fatalf("provider_auto_selected = %v, want true", data["provider_auto_selected"])
+	}
+}
+
 func TestHandleScheduleCreate_CreateAndList(t *testing.T) {
 	srv, _ := setupTestServer(t)
 

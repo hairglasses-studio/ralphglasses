@@ -776,8 +776,7 @@ func TestHandleRCSend_DefaultProvider(t *testing.T) {
 	// Trigger scan so test-repo is found
 	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
 
-	// No provider specified — should default to codex, then attempt launch.
-	// Launch will fail in test mode, but we still exercise the provider default + stop existing + launch paths.
+	// No provider specified — runtime selection remains unset until launch.
 	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
 		"repo":   "test-repo",
 		"prompt": "do something",
@@ -870,6 +869,49 @@ func TestHandleRCSend_WithResumeExistingSession(t *testing.T) {
 	}
 	// Resume may fail since it's trying to actually restart a process
 	_ = result
+}
+
+func TestHandleRCSend_AutoSelectsOllamaForLowRiskPrompt(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	ollamaSrv := newReadyOllamaInventoryServer(t)
+	defer ollamaSrv.Close()
+
+	setReadyOllamaEnv(t, ollamaSrv.URL)
+	srv.SessMgr.SetStateDir(t.TempDir())
+	srv.SessMgr.SetHooksForTesting(func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+		return &session.Session{
+			ID:                      "sess-rc-ollama",
+			Provider:                opts.Provider,
+			Model:                   opts.Model,
+			RepoPath:                opts.RepoPath,
+			RepoName:                "test-repo",
+			Status:                  session.StatusRunning,
+			LaunchedAt:              time.Now(),
+			ProviderAutoSelected:    opts.Provider == session.ProviderOllama,
+			ProviderSelectionReason: "auto-selected Ollama for a low-risk planning/reporting task because the local inventory is fully ready",
+		}, nil
+	}, nil)
+
+	_, _ = srv.handleScan(context.Background(), makeRequest(nil))
+
+	result, err := srv.handleRCSend(context.Background(), makeRequest(map[string]any{
+		"repo":     "test-repo",
+		"provider": "auto",
+		"prompt":   "plan and summarize the repo doctor status",
+	}))
+	if err != nil {
+		t.Fatalf("handleRCSend: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error: %s", getResultText(result))
+	}
+	text := getResultText(result)
+	if !strings.Contains(text, `"provider":"ollama"`) {
+		t.Fatalf("expected ollama provider in result, got: %s", text)
+	}
+	if !strings.Contains(text, `"provider_auto_selected":true`) {
+		t.Fatalf("expected provider_auto_selected in result, got: %s", text)
+	}
 }
 
 // --- handleRCRead extended tests ---

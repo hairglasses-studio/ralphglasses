@@ -3774,7 +3774,7 @@ Send prompt to repo -- auto-stops existing session, launches new. The 'input' to
 | `repo` | string | yes | Repo name |
 | `budget_usd` | number |  | Budget in USD (default: 5.0) |
 | `model` | string |  | Override model |
-| `provider` | string |  | codex (default), claude, gemini |
+| `provider` | string |  | Provider override: codex, claude, gemini, ollama, or auto/omit for runtime selection |
 | `resume` | string |  | true to resume last session instead of fresh start |
 
 **Example:**
@@ -3836,7 +3836,7 @@ Unified cross-provider dispatch for mobile RC. Sends prompts, stops, pauses, res
 | `action` | string | yes | Action: send, stop, pause, resume, retry |
 | `repo` | string | yes | Repo name |
 | `prompt` | string |  | Prompt text (required for send action) |
-| `provider` | string |  | Provider: claude, codex, gemini, or auto (default: auto) |
+| `provider` | string |  | Provider override: claude, codex, gemini, ollama, or auto (default: auto; runtime selects when omitted) |
 
 **Example:**
 
@@ -4607,6 +4607,7 @@ Trigger an agent session from an external source (webhook, API, or another agent
 | `max_turns` | number |  | Maximum conversation turns |
 | `model` | string |  | Model override for the session |
 | `priority` | number |  | Priority 1-10, higher = more urgent (default: 5) |
+| `provider` | string |  | Cycle provider override: claude, codex, gemini, ollama, or auto/omit for runtime selection |
 | `repo` | string |  | Repo name (required when launch=true) |
 | `tenant_id` | string |  | Workspace tenant ID (default: _default) |
 

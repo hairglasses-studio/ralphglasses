@@ -30,6 +30,7 @@ type TriggerRecord struct {
 
 // TriggerConfig holds optional configuration overrides for a trigger.
 type TriggerConfig struct {
+	Provider  string  `json:"provider,omitempty"`
 	Model     string  `json:"model,omitempty"`
 	BudgetUSD float64 `json:"budget_usd,omitempty"`
 	MaxTurns  int     `json:"max_turns,omitempty"`
@@ -77,9 +78,14 @@ func (s *Server) handleTriggerWebhook(ctx context.Context, req mcp.CallToolReque
 
 	// Parse optional config.
 	var cfg TriggerConfig
+	cfg.Provider = p.OptionalString("provider", "")
 	cfg.Model = p.OptionalString("model", "")
 	cfg.BudgetUSD = p.OptionalNumber("budget_usd", 0)
 	cfg.MaxTurns = p.OptionalInt("max_turns", 0)
+	cycleProvider, _, err := parseOptionalLaunchProvider(cfg.Provider)
+	if err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid provider: %v", err)), nil
+	}
 
 	triggerID := fmt.Sprintf("trig-%d", time.Now().UnixNano())
 	tenantID := session.NormalizeTenantID(p.OptionalString("tenant_id", ""))
@@ -137,7 +143,7 @@ func (s *Server) handleTriggerWebhook(ctx context.Context, req mcp.CallToolReque
 		case "cycle":
 			opts := session.LaunchOptions{
 				TenantID:     tenantID,
-				Provider:     session.DefaultPrimaryProvider(),
+				Provider:     cycleProvider,
 				RepoPath:     r.Path,
 				Prompt:       prompt,
 				Model:        cfg.Model,
@@ -151,6 +157,20 @@ func (s *Server) handleTriggerWebhook(ctx context.Context, req mcp.CallToolReque
 			}
 			record.Status = "launched"
 			record.SessionID = sess.ID
+			record.Config.Provider = string(sess.Provider)
+			record.Config.Model = sess.Model
+			return jsonResult(map[string]any{
+				"trigger_id":                record.ID,
+				"tenant_id":                 record.TenantID,
+				"status":                    record.Status,
+				"agent_type":                record.AgentType,
+				"priority":                  record.Priority,
+				"session_id":                record.SessionID,
+				"provider":                  string(sess.Provider),
+				"provider_auto_selected":    sess.ProviderAutoSelected,
+				"provider_selection_reason": sess.ProviderSelectionReason,
+				"created_at":                record.CreatedAt,
+			}), nil
 		}
 	}
 
@@ -161,6 +181,7 @@ func (s *Server) handleTriggerWebhook(ctx context.Context, req mcp.CallToolReque
 		"agent_type": record.AgentType,
 		"priority":   record.Priority,
 		"session_id": record.SessionID,
+		"provider":   record.Config.Provider,
 		"created_at": record.CreatedAt,
 	}), nil
 }

@@ -42,7 +42,10 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
-	provider := session.Provider(p.OptionalString("provider", ""))
+	provider, _, err := parseOptionalLaunchProvider(p.OptionalString("provider", ""))
+	if err != nil {
+		return codedError(ErrProviderUnavailable, fmt.Sprintf("invalid provider: %v", err)), nil
+	}
 	systemPrompt := p.OptionalString("system_prompt", "")
 	if err := ValidateStringLength(systemPrompt, MaxPromptLength, "system_prompt"); err != nil {
 		return codedError(ErrInvalidParams, err.Error()), nil
@@ -212,9 +215,16 @@ func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolReques
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
-	provider := session.Provider(getStringArg(req, "provider"))
-	if provider == "" {
-		provider = session.DefaultPrimaryProvider()
+	provider, explicitProvider, err := parseOptionalLaunchProvider(getStringArg(req, "provider"))
+	if err != nil {
+		return codedError(ErrInvalidParams, fmt.Sprintf("invalid provider: %v", err)), nil
+	}
+	if !explicitProvider {
+		if inferred, ok := inferResumeProviderBySessionID(s.SessMgr.FindByRepo(name), sessionID); ok {
+			provider = inferred
+		} else {
+			return codedError(ErrInvalidParams, "provider required when session_id cannot be matched to an existing provider session"), nil
+		}
 	}
 	prompt := getStringArg(req, "prompt")
 	tenantID := session.NormalizeTenantID(getStringArg(req, "tenant_id"))
@@ -224,11 +234,13 @@ func (s *Server) handleSessionResume(ctx context.Context, req mcp.CallToolReques
 	}
 
 	return jsonResult(map[string]any{
-		"session_id":   sess.ID,
-		"tenant_id":    sess.TenantID,
-		"resumed_from": sessionID,
-		"repo":         sess.RepoName,
-		"status":       sess.Status,
+		"session_id":        sess.ID,
+		"tenant_id":         sess.TenantID,
+		"resumed_from":      sessionID,
+		"provider":          sess.Provider,
+		"provider_inferred": !explicitProvider,
+		"repo":              sess.RepoName,
+		"status":            sess.Status,
 	}), nil
 }
 

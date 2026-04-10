@@ -367,11 +367,8 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 		return codedError(ErrRepoNotFound, fmt.Sprintf("repo not found: %s", name)), nil
 	}
 
-	provider := session.Provider(pp.StringOpt("provider", ""))
-	if provider == "" {
-		provider = session.DefaultPrimaryProvider()
-	}
-	if err := session.ValidateProvider(provider); err != nil {
+	provider, explicitProvider, err := parseOptionalLaunchProvider(pp.StringOpt("provider", ""))
+	if err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("invalid provider: %v", err)), nil
 	}
 
@@ -381,13 +378,34 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 		for _, sess := range existing {
 			sess.Lock()
 			psid := sess.ProviderSessionID
+			resumeProvider := sess.Provider
 			sess.Unlock()
 			if psid != "" {
-				resumed, err := s.SessMgr.Resume(ctx, r.Path, provider, psid, prompt)
+				if explicitProvider {
+					resumeProvider = provider
+				}
+				resumed, err := s.SessMgr.Resume(ctx, r.Path, resumeProvider, psid, prompt)
 				if err != nil {
 					return codedError(ErrInternal, fmt.Sprintf("resume failed: %v", err)), nil
 				}
-				return textResult(fmt.Sprintf("Resumed %s session on %s (id: %s)", provider, name, shortID(resumed.ID))), nil
+				result := map[string]any{
+					"message":            fmt.Sprintf("Resumed %s session on %s (id: %s)%s", resumed.Provider, name, shortID(resumed.ID), launchSelectionSuffix(resumed)),
+					"session_id":         resumed.ID,
+					"provider":           string(resumed.Provider),
+					"requested_provider": string(provider),
+					"repo":               name,
+					"resumed":            true,
+				}
+				if !explicitProvider && resumeProvider != "" {
+					result["provider_inferred"] = true
+				}
+				if resumed.ProviderAutoSelected {
+					result["provider_auto_selected"] = true
+				}
+				if strings.TrimSpace(resumed.ProviderSelectionReason) != "" {
+					result["provider_selection_reason"] = resumed.ProviderSelectionReason
+				}
+				return jsonResult(result), nil
 			}
 		}
 		// No resumable session found, fall through to fresh launch
@@ -431,11 +449,14 @@ func (s *Server) handleRCSend(ctx context.Context, req mcp.CallToolRequest) (*mc
 	}
 
 	return jsonResult(map[string]any{
-		"message":            fmt.Sprintf("Launched %s session on %s (budget: %s, id: %s)", provider, name, formatCost(budget), shortID(sess.ID)),
-		"session_id":         sess.ID,
-		"provider":           string(provider),
-		"repo":               name,
-		"applied_budget_usd": budget,
+		"message":                   fmt.Sprintf("Launched %s session on %s (budget: %s, id: %s)%s", sess.Provider, name, formatCost(budget), shortID(sess.ID), launchSelectionSuffix(sess)),
+		"session_id":                sess.ID,
+		"provider":                  string(sess.Provider),
+		"requested_provider":        string(provider),
+		"repo":                      name,
+		"applied_budget_usd":        budget,
+		"provider_auto_selected":    sess.ProviderAutoSelected,
+		"provider_selection_reason": sess.ProviderSelectionReason,
 	}), nil
 }
 
