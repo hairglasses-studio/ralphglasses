@@ -3,6 +3,8 @@ package session
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"slices"
 	"testing"
 	"time"
@@ -117,5 +119,37 @@ func TestOllamaInventoryAliasIssueHelpers(t *testing.T) {
 	names := inventory.AliasIssueNames()
 	if !slices.Equal(names, []string{"code-fast", "code-heavy"}) {
 		t.Fatalf("AliasIssueNames() = %v, want [code-fast code-heavy]", names)
+	}
+}
+
+func TestFetchOllamaModelsCachesRecentResults(t *testing.T) {
+	resetOllamaModelsCache()
+	t.Cleanup(resetOllamaModelsCache)
+
+	requests := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		if r.URL.Path != "/api/tags" {
+			t.Fatalf("path = %q, want /api/tags", r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"models":[{"name":"code-primary"},{"name":"devstral-small-2"}]}`))
+	}))
+	defer srv.Close()
+
+	t.Setenv("OLLAMA_BASE_URL", srv.URL)
+
+	first, err := fetchOllamaModels(context.Background(), time.Second)
+	if err != nil {
+		t.Fatalf("fetchOllamaModels() first call error = %v", err)
+	}
+	second, err := fetchOllamaModels(context.Background(), time.Second)
+	if err != nil {
+		t.Fatalf("fetchOllamaModels() second call error = %v", err)
+	}
+	if !slices.Equal(first, second) {
+		t.Fatalf("cached models = %v, want %v", second, first)
+	}
+	if requests != 1 {
+		t.Fatalf("requests = %d, want 1", requests)
 	}
 }

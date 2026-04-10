@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,7 +25,15 @@ const (
 	defaultOllamaThinkingModel    = "kimi-k2-thinking:cloud"
 	defaultOllamaEmbedModel       = "nomic-embed-text:v1.5"
 	defaultOllamaKeepAlive        = "15m"
+	ollamaModelsCacheTTL          = 5 * time.Second
 )
+
+var ollamaModelsCache = struct {
+	mu        sync.RWMutex
+	baseURL   string
+	fetchedAt time.Time
+	models    []string
+}{}
 
 type ollamaTagsResponse struct {
 	Models []struct {
@@ -212,14 +221,46 @@ func upsertEnv(env []string, kv ...string) []string {
 	return out
 }
 
+func resetOllamaModelsCache() {
+	ollamaModelsCache.mu.Lock()
+	defer ollamaModelsCache.mu.Unlock()
+	ollamaModelsCache.baseURL = ""
+	ollamaModelsCache.fetchedAt = time.Time{}
+	ollamaModelsCache.models = nil
+}
+
+func getCachedOllamaModels(baseURL string) ([]string, bool) {
+	ollamaModelsCache.mu.RLock()
+	defer ollamaModelsCache.mu.RUnlock()
+	if baseURL == "" || baseURL != ollamaModelsCache.baseURL {
+		return nil, false
+	}
+	if ollamaModelsCache.fetchedAt.IsZero() || time.Since(ollamaModelsCache.fetchedAt) >= ollamaModelsCacheTTL {
+		return nil, false
+	}
+	return append([]string(nil), ollamaModelsCache.models...), true
+}
+
+func setCachedOllamaModels(baseURL string, models []string) {
+	ollamaModelsCache.mu.Lock()
+	defer ollamaModelsCache.mu.Unlock()
+	ollamaModelsCache.baseURL = baseURL
+	ollamaModelsCache.fetchedAt = time.Now()
+	ollamaModelsCache.models = append([]string(nil), models...)
+}
+
 func fetchOllamaModels(ctx context.Context, timeout time.Duration) ([]string, error) {
 	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}
+	baseURL := resolveOllamaBaseURL()
+	if models, ok := getCachedOllamaModels(baseURL); ok {
+		return models, nil
+	}
 	reqCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, resolveOllamaBaseURL()+"/api/tags", nil)
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, baseURL+"/api/tags", nil)
 	if err != nil {
 		return nil, fmt.Errorf("build ollama tags request: %w", err)
 	}
@@ -229,12 +270,12 @@ func fetchOllamaModels(ctx context.Context, timeout time.Duration) ([]string, er
 
 	resp, err := (&http.Client{Timeout: timeout}).Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("ollama endpoint %s is not reachable: %w", resolveOllamaBaseURL(), err)
+		return nil, fmt.Errorf("ollama endpoint %s is not reachable: %w", baseURL, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("ollama endpoint %s returned HTTP %d", resolveOllamaBaseURL(), resp.StatusCode)
+		return nil, fmt.Errorf("ollama endpoint %s returned HTTP %d", baseURL, resp.StatusCode)
 	}
 
 	var payload ollamaTagsResponse
@@ -251,6 +292,7 @@ func fetchOllamaModels(ctx context.Context, timeout time.Duration) ([]string, er
 			models = append(models, id)
 		}
 	}
+	setCachedOllamaModels(baseURL, models)
 	return models, nil
 }
 
