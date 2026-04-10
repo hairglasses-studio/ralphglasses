@@ -25,4 +25,15 @@
  Configuration
   PROJECT_NAME                 ralphglasses
   PROVIDER                     codex
+  RALPH_SESSION_BUDGET         100
+
+ Progress
+  Iteration:    17
+  Completed:    2 tasks
+  Progress:     ▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/17
+  Status:       running
+  Task IDs:     QW-12, WM-1
+
+  Enter: logs  S: start  X: stop  P: pause  e: edit config  Esc: back
+
   NORMAL│ 0/0│ $0.00│ 5m

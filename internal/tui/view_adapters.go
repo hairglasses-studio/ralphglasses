@@ -88,16 +88,7 @@ func initViewRegistry() *views.Registry {
 			render: func(m *Model, width, height int) string {
 				if m.Sel.RepoIdx >= 0 && m.Sel.RepoIdx < len(m.Repos) {
 					repo := m.Repos[m.Sel.RepoIdx]
-					var detailHealth *views.RepoDetailHealth
-					if entry := m.getGateEntry(repo.Path); entry != nil {
-						detailHealth = &views.RepoDetailHealth{
-							Observations: m.getObservations(repo.Path),
-							GateReport:   entry.Report,
-						}
-						if m.SessMgr != nil {
-							detailHealth.ProviderProfiles = m.SessMgr.ProviderProfiles()
-						}
-					}
+					detailHealth := m.buildRepoDetailHealth(repo.Path)
 					m.RepoDetailView.SetData(repo, detailHealth)
 					m.RepoDetailView.SetDimensions(width, height)
 					return m.RepoDetailView.Render()

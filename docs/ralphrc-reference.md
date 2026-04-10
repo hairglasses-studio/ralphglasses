@@ -19,7 +19,7 @@ Format: JSON. The config watcher auto-reloads on file change with a 500ms deboun
 | Field | JSON Key | Type | Default | Description |
 |-------|----------|------|---------|-------------|
 | `ScanPaths` | `scan_paths` | `[]string` | -- | Directories to scan for ralph-enabled repos |
-| `DefaultProvider` | `default_provider` | `string` | `codex` | Default LLM provider (claude, gemini, codex, ollama, antigravity, crush, goose, amp, a2a; openai is a deprecated codex alias) |
+| `DefaultProvider` | `default_provider` | `string` | `codex` | Default LLM provider (claude, gemini, codex, openai, ollama) |
 | `WorkerProvider` | `worker_provider` | `string` | `""` | Default provider for worker/delegate tasks |
 | `MaxWorkers` | `max_workers` | `int` | `0` | Maximum concurrent worker sessions (0-50) |
 | `DefaultBudgetUSD` | `default_budget_usd` | `float64` | `0` | Default per-session budget in USD (0-10000) |
@@ -59,7 +59,6 @@ Partial overrides are merged with compiled-in defaults.
 | `gemini_flash` | $0.15 | $0.60 |
 | `gemini_flash_lite` | $0.07 | $0.30 |
 | `gemini_pro` | $1.25 | $10.00 |
-| `ollama` | -- | -- |
 
 ```json
 {
@@ -78,7 +77,7 @@ The `plugin_*` namespace is reserved for per-plugin configuration.
 | `auto_restart` | `bool` | -- | -- |
 | `cost_rate_multiplier` | `float` | -- | -- |
 | `default_budget_usd` | `float` | -- | -- |
-| `default_provider` | `string` | `claude`, `gemini`, `codex`, `ollama`, `antigravity`, `openai`, `crush`, `goose`, `amp`, `a2a` | -- |
+| `default_provider` | `string` | `claude`, `gemini`, `codex`, `antigravity`, `openai`, `ollama` | -- |
 | `health_check_interval` | `duration` | -- | -- |
 | `kill_timeout` | `int` | -- | [1, 60] |
 | `log_level` | `string` | `debug`, `info`, `warn`, `error` | -- |
@@ -86,12 +85,12 @@ The `plugin_*` namespace is reserved for per-plugin configuration.
 | `max_workers` | `int` | -- | [0, 50] |
 | `notify_desktop` | `bool` | -- | -- |
 | `notify_sound` | `bool` | -- | -- |
-| `provider` | `string` | `claude`, `gemini`, `codex`, `ollama`, `antigravity`, `openai`, `crush`, `goose`, `amp`, `a2a` | -- |
+| `provider` | `string` | `claude`, `gemini`, `codex`, `antigravity`, `openai`, `ollama` | -- |
 | `scan_interval` | `int` | -- | [1, 3600] |
 | `scan_paths` | `[]string` | -- | -- |
 | `session_timeout` | `duration` | -- | -- |
 | `telemetry_enabled` | `bool` | -- | -- |
-| `worker_provider` | `string` | `claude`, `gemini`, `codex`, `ollama`, `antigravity`, `openai`, `crush`, `goose`, `amp`, `a2a` | -- |
+| `worker_provider` | `string` | `claude`, `gemini`, `codex`, `antigravity`, `openai`, `ollama` | -- |
 
 ---
 
@@ -168,19 +167,6 @@ These keys are recognized but will be migrated automatically on next load.
 | `ANTHROPIC_API_KEY` | Anthropic API key for Claude provider (optional -- Claude Code uses OAuth if missing) |
 | `GEMINI_API_KEY` | Google Gemini API key for Gemini provider |
 | `OPENAI_API_KEY` | OpenAI API key for Codex/OpenAI provider |
-| `OLLAMA_BASE_URL` | Base URL for local Ollama runtime (default `http://127.0.0.1:11434`) |
-| `OLLAMA_API_KEY` | Optional Ollama API key; defaults to `ollama` for local compatibility endpoints |
-| `OLLAMA_CHAT_MODEL` | Shared local chat/default lightweight model |
-| `OLLAMA_FAST_MODEL` | Shared fast local coding lane for verify/report/reflection work |
-| `OLLAMA_CODE_MODEL` | Shared local code model used by Ollama session launches |
-| `OLLAMA_HEAVY_CODE_MODEL` | Shared heavier local code model |
-| `OLLAMA_HIGH_CONTEXT_CODE_MODEL` | Shared high-context local code model |
-| `OLLAMA_CLOUD_CODE_MODEL` | Shared cloud coding lane exposed through Ollama-compatible tooling when auth is available |
-| `OLLAMA_CLOUD_VERIFIED_CODE_MODEL` | Shared verified/fallback cloud coding lane |
-| `OLLAMA_MULTILINGUAL_CODE_MODEL` | Shared multilingual cloud coding lane |
-| `OLLAMA_THINKING_CODE_MODEL` | Shared deep-thinking cloud coding lane |
-| `OLLAMA_EMBED_MODEL` | Shared local embedding model |
-| `OLLAMA_KEEP_ALIVE` | Model keep-alive duration passed through to Ollama-aware surfaces |
 
 ---
 
@@ -188,9 +174,7 @@ These keys are recognized but will be migrated automatically on next load.
 
 ### Recognized Providers
 
-`claude`, `gemini`, `codex`, `ollama`, `antigravity`, `crush`, `goose`, `amp`, `a2a`
-
-`openai` remains accepted as a deprecated alias for `codex` in config and natural-language routing.
+`claude`, `gemini`, `codex`, `openai`, `ollama`
 
 ### Model Prefix Validation
 
@@ -200,11 +184,7 @@ These keys are recognized but will be migrated automatically on next load.
 | `gemini` | `gemini-` |
 | `codex` | `gpt-`, `o1-`, `o3-`, `o4-`, `codex-` |
 | `openai` | `gpt-`, `o1-`, `o3-`, `o4-`, `codex-` |
-| `ollama` | `llama`, `mistral`, `codellama`, `deepseek`, `phi`, `qwen`, `gemma`, `starcoder`, `devstral`, `nomic`, `glm`, `kimi`, `minimax` |
-| `crush` | `sonnet`, `claude-`, `gpt-`, `gemini-` |
-| `goose` | `claude-`, `sonnet`, `gpt-`, `gemini-` |
-| `amp` | `amp-`, `claude-`, `gpt-`, `gemini-` |
-| `a2a` | `a2a-` |
+| `ollama` | `llama`, `mistral`, `codellama`, `deepseek`, `phi`, `qwen`, `gemma`, `starcoder` |
 
 ---
 

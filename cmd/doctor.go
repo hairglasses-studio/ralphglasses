@@ -18,6 +18,7 @@ import (
 	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/parity"
 	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
 	"github.com/hairglasses-studio/ralphglasses/internal/util"
 
@@ -33,7 +34,8 @@ var doctorCmd = &cobra.Command{
 configured correctly for running ralphglasses.
 
 Checks include:
-  - Provider binaries (claude, gemini, codex, antigravity, cline)
+  - Provider binaries (claude, gemini, codex)
+  - Local Ollama daemon, required code-* lanes, and managed alias readiness
   - Git binary and version (>= 2.20 for worktree support)
   - Config file (` + ralphpath.ConfigPathDefaultDescription() + `)
   - State directory (` + ralphpath.StateDirDefaultDescription() + `) permissions
@@ -89,41 +91,14 @@ type doctorReport struct {
 func runDoctor(cmd *cobra.Command, args []string) error {
 	sp := util.ExpandHome(scanPath)
 	util.Debug.Debugf("doctor: scan-path=%s", sp)
-
-	var results []doctorResult
-
-	collect := func(r doctorResult) {
-		results = append(results, r)
+	ctx := cmd.Context()
+	if ctx == nil {
+		ctx = context.Background()
 	}
-
-	// --- Provider binaries ---
-	collect(checkClaude())
-	collect(checkGemini())
-	collect(checkCodex())
-	collect(checkAntigravity())
-	collect(checkCline())
-
-	// --- Git ---
-	collect(checkGit())
-
-	// --- Config & state ---
-	collect(checkStateDir())
-	collect(checkConfig())
-	collect(checkSQLite())
-
-	// --- Scan path ---
-	collect(checkScanPath(cmd, sp))
-
-	// --- Disk space ---
-	collect(checkDiskSpaceCheck(sp))
-
-	// --- API keys ---
-	for _, r := range checkAPIKeys() {
-		collect(r)
-	}
-
-	// Build the report.
-	report := buildDoctorReport(results)
+	report := fromParityDoctorReport(parity.RunDoctor(ctx, parity.DoctorOptions{
+		ScanPath:        sp,
+		IncludeOptional: true,
+	}))
 
 	if doctorJSON {
 		data, err := json.MarshalIndent(report, "", "  ")
@@ -132,13 +107,31 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Println(string(data))
 	} else {
-		printDoctorResults(results)
+		printDoctorResults(report.Results)
 	}
 
 	if !report.Summary.OK {
 		return ErrChecksFailed
 	}
 	return nil
+}
+
+func fromParityDoctorReport(report parity.DoctorReport) doctorReport {
+	out := doctorReport{
+		Results: make([]doctorResult, 0, len(report.Results)),
+	}
+	for _, result := range report.Results {
+		out.Results = append(out.Results, doctorResult{
+			Name:    result.Name,
+			Status:  doctorStatus(result.Status),
+			Message: result.Message,
+		})
+	}
+	out.Summary.Pass = report.Summary.Pass
+	out.Summary.Warn = report.Summary.Warn
+	out.Summary.Fail = report.Summary.Fail
+	out.Summary.OK = report.Summary.OK
+	return out
 }
 
 // buildDoctorReport tallies results into a summary.

@@ -36,6 +36,33 @@ type OllamaInventory struct {
 	Error                 string                 `json:"error,omitempty"`
 }
 
+// ReadyRequiredCount returns the number of required local-model lanes that are ready.
+func (inventory OllamaInventory) ReadyRequiredCount() int {
+	return len(inventory.ReadyRequiredModels)
+}
+
+// AliasIssues returns managed aliases that are not fully installed.
+func (inventory OllamaInventory) AliasIssues() []OllamaAliasInventory {
+	issues := make([]OllamaAliasInventory, 0, len(inventory.ManagedAliases))
+	for _, alias := range inventory.ManagedAliases {
+		if alias.Status == "installed" {
+			continue
+		}
+		issues = append(issues, alias)
+	}
+	return issues
+}
+
+// AliasIssueNames returns the alias names currently in a non-installed state.
+func (inventory OllamaInventory) AliasIssueNames() []string {
+	issues := inventory.AliasIssues()
+	names := make([]string, 0, len(issues))
+	for _, alias := range issues {
+		names = append(names, alias.Alias)
+	}
+	return names
+}
+
 // DiscoverOllamaInventory returns the live local-model inventory used by Ralph's
 // Ollama session provider and related operator surfaces.
 func DiscoverOllamaInventory(ctx context.Context, timeout time.Duration) OllamaInventory {

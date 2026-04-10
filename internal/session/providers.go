@@ -51,13 +51,14 @@ func estimateCostFromTokens(provider Provider, raw map[string]any) float64 {
 
 // ValidateProvider checks that a provider's CLI binary is available on PATH.
 func ValidateProvider(p Provider) error {
+	p = normalizeSessionProvider(p)
 	// A2A is HTTP-based, not a CLI binary — always valid.
 	if p == ProviderA2A {
 		return nil
 	}
 	bin := providerBinary(p)
 	if bin == "" {
-		return fmt.Errorf("unknown provider: %q (valid: claude, gemini, codex, antigravity, cline, crush, goose, amp, a2a)", p)
+		return fmt.Errorf("unknown provider: %q (valid: claude, gemini, codex, ollama, antigravity, cline, crush, goose, amp, a2a)", p)
 	}
 	if _, err := exec.LookPath(bin); err != nil {
 		return fmt.Errorf("%s binary not found on PATH: %w", bin, err)
@@ -67,11 +68,14 @@ func ValidateProvider(p Provider) error {
 
 // providerEnvVar returns the environment variable name required for a provider.
 func providerEnvVar(p Provider) string {
+	p = normalizeSessionProvider(p)
 	switch p {
 	case ProviderGemini:
 		return "GOOGLE_API_KEY"
 	case ProviderCodex:
 		return "OPENAI_API_KEY"
+	case ProviderOllama:
+		return "OLLAMA_API_KEY"
 	case ProviderCrush:
 		return "ANTHROPIC_API_KEY"
 	case ProviderGoose:
@@ -91,6 +95,7 @@ func providerEnvVar(p Provider) string {
 
 // ValidateProviderEnv checks that the required API key environment variable is set.
 func ValidateProviderEnv(p Provider) error {
+	p = normalizeSessionProvider(p)
 	// A2A is HTTP-based; agent URL is passed at session launch, not via env var.
 	if p == ProviderA2A {
 		return nil
@@ -98,6 +103,9 @@ func ValidateProviderEnv(p Provider) error {
 	// Cline manages its own auth via WorkOS OAuth (~/.cline/data/settings/providers.json).
 	// No environment variable is required.
 	if p == ProviderCline {
+		return nil
+	}
+	if p == ProviderOllama {
 		return nil
 	}
 	envVar := providerEnvVar(p)
@@ -128,6 +136,7 @@ func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
 	if p == "" {
 		p = DefaultPrimaryProvider()
 	}
+	p = normalizeSessionProvider(p)
 
 	if _, ok := ProviderCapabilityMatrixFor(p); ok {
 		var warnings []string
@@ -196,11 +205,14 @@ func UnsupportedOptionsWarnings(p Provider, opts LaunchOptions) []string {
 
 // ProviderDefaults returns the default model for a given provider.
 func ProviderDefaults(p Provider) (model string) {
+	p = normalizeSessionProvider(p)
 	switch p {
 	case ProviderGemini:
 		return "gemini-3.1-pro"
 	case ProviderCodex:
 		return "gpt-5.4"
+	case ProviderOllama:
+		return resolveOllamaCodeModel()
 	case ProviderCrush:
 		return "sonnet"
 	case ProviderGoose:
@@ -219,6 +231,7 @@ func ProviderDefaults(p Provider) (model string) {
 }
 
 func providerBinary(p Provider) string {
+	p = normalizeSessionProvider(p)
 	switch p {
 	case "":
 		return providerBinary(DefaultPrimaryProvider())
@@ -228,6 +241,8 @@ func providerBinary(p Provider) string {
 		return "gemini"
 	case ProviderCodex:
 		return "codex"
+	case ProviderOllama:
+		return "claude"
 	case ProviderAntigravity:
 		return "antigravity"
 	case ProviderCrush:
@@ -250,6 +265,7 @@ func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, er
 	if p == "" {
 		p = DefaultPrimaryProvider()
 	}
+	p = normalizeSessionProvider(p)
 	opts.Provider = p
 	if opts.Model == "" {
 		opts.Model = ProviderDefaults(p)
@@ -272,6 +288,11 @@ func buildCmdForProvider(ctx context.Context, opts LaunchOptions) (*exec.Cmd, er
 		return buildGeminiCmd(ctx, opts), nil
 	case ProviderCodex:
 		return buildCodexCmd(ctx, opts), nil
+	case ProviderOllama:
+		if err := prepareOllamaLaunch(&opts); err != nil {
+			return nil, err
+		}
+		return buildOllamaClaudeCmd(ctx, opts), nil
 	case ProviderAntigravity:
 		return buildAntigravityCmd(ctx, opts), nil
 	case ProviderCrush:
@@ -511,6 +532,7 @@ func validateLaunchOptions(opts LaunchOptions) error {
 	if opts.Provider == "" {
 		opts.Provider = DefaultPrimaryProvider()
 	}
+	opts.Provider = normalizeSessionProvider(opts.Provider)
 	if err := ValidateModelName(opts.Provider, opts.Model); err != nil {
 		return fmt.Errorf("model %q is invalid for %s provider: %w", opts.Model, opts.Provider, err)
 	}

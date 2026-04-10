@@ -179,6 +179,10 @@ func classifyProvider(text string) Provider {
 		return ProviderClaude
 	case strings.Contains(lower, "gemini"):
 		return ProviderGemini
+	case strings.Contains(lower, "ollama") || strings.Contains(lower, "local"):
+		return ProviderOllama
+	case strings.Contains(lower, "openai"):
+		return ProviderCodex
 	case strings.Contains(lower, "codex"):
 		return ProviderCodex
 	case strings.Contains(lower, "antigravity"):

@@ -16,6 +16,7 @@ const (
 	ProviderClaude      Provider = "claude"
 	ProviderGemini      Provider = "gemini"
 	ProviderCodex       Provider = "codex"
+	ProviderOllama      Provider = "ollama"
 	ProviderAntigravity Provider = "antigravity"
 	ProviderCrush       Provider = "crush"
 	ProviderGoose       Provider = "goose"

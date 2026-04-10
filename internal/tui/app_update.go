@@ -81,6 +81,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Refresh loop observation and gate caches (TTL-gated, not every tick).
 		m.refreshObsCache()
 		m.refreshGateCache()
+		m.refreshOllamaInventoryCache()
 		m.drainRegressionEvents()
 		// Loop panel and loop control view: only refresh when visible.
 		if m.ShowLoopPanel {

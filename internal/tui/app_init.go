@@ -94,6 +94,8 @@ type CacheState struct {
 	Gate             map[string]*GateCacheEntry
 	GateExp          time.Time
 	PrevGateVerdicts map[string]string
+	OllamaInventory  *session.OllamaInventory
+	OllamaInvTime    time.Time
 }
 
 // FleetNavState tracks fleet dashboard navigation.

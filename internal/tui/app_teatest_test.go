@@ -172,6 +172,17 @@ func normalizeGoldenViewSnapshot(view string) string {
 	return strings.TrimRight(strings.Join(lines, "\n"), "\n") + "\n"
 }
 
+func normalizeRepoDetailGoldenSnapshot(view string) string {
+	view = normalizeGoldenViewSnapshot(view)
+	for strings.Contains(view, "\n\n\n") {
+		view = strings.ReplaceAll(view, "\n\n\n", "\n\n")
+	}
+	for strings.Contains(view, "\n\nNORMAL│") {
+		view = strings.ReplaceAll(view, "\n\nNORMAL│", "\nNORMAL│")
+	}
+	return view
+}
+
 func requireViewFitsWidth(t *testing.T, view string, width int) {
 	t.Helper()
 	for idx, line := range strings.Split(strings.TrimRight(view, "\n"), "\n") {
@@ -206,8 +217,10 @@ func TestTeatest_HelpView(t *testing.T) {
 
 func TestTeatest_RepoDetailView(t *testing.T) {
 	m := newTestModelWithRepoDetail(t)
-	fm, _ := testProgram(t, m, 84, 28, keyPressMsg('q'))
-	view := normalizeGoldenViewSnapshot(fm.View().Content)
+	// Use a tall viewport so the golden captures the full repo detail content
+	// instead of a height-clipped snapshot that varies with renderer timing.
+	fm, _ := testProgram(t, m, 84, 48, keyPressMsg('q'))
+	view := normalizeRepoDetailGoldenSnapshot(fm.View().Content)
 	requireViewFitsWidth(t, view, 84)
 	golden.RequireEqual(t, view)
 }

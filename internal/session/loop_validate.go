@@ -40,6 +40,7 @@ var knownModelPrefixes = map[Provider][]string{
 	ProviderClaude: {"claude-", "sonnet", "opus", "haiku"},
 	ProviderGemini: {"gemini-"},
 	ProviderCodex:  {"gpt-", "o1-", "o3-", "o4-", "codex-"},
+	ProviderOllama: {"code-", "llama", "mistral", "codellama", "deepseek", "phi", "qwen", "gemma", "starcoder", "devstral", "nomic", "glm", "kimi", "minimax"},
 }
 
 var codexSupportedModelPatterns = []*regexp.Regexp{
@@ -144,6 +145,7 @@ var validLoopProfileProviders = map[Provider]bool{
 	ProviderClaude: true,
 	ProviderGemini: true,
 	ProviderCodex:  true,
+	ProviderOllama: true,
 	"":             true, // empty = use default
 }
 
@@ -151,6 +153,7 @@ var validLoopProfileProviders = map[Provider]bool{
 // for the given provider. Returns an error if the model doesn't match, or nil if valid.
 // Skips validation when either provider or model is empty.
 func validateModelProviderMatch(role string, provider Provider, model string) error {
+	provider = normalizeSessionProvider(provider)
 	if provider == "" || model == "" {
 		return nil
 	}
@@ -178,6 +181,7 @@ func validateModelProviderMatch(role string, provider Provider, model string) er
 // model overrides. It is intentionally stricter for Codex, where invalid
 // model IDs fail immediately at launch time.
 func ValidateModelName(provider Provider, model string) error {
+	provider = normalizeSessionProvider(provider)
 	model = strings.TrimSpace(model)
 	if provider == "" || model == "" {
 		return nil
@@ -210,6 +214,7 @@ func ValidateModelName(provider Provider, model string) error {
 // the model is in the registry, has no matching prefix, or either argument
 // is empty. This is a soft check — the registry is not exhaustive.
 func CheckModelRegistry(provider Provider, model string) string {
+	provider = normalizeSessionProvider(provider)
 	if provider == "" || model == "" {
 		return ""
 	}
@@ -237,13 +242,13 @@ func CheckModelRegistry(provider Provider, model string) string {
 // Returns an error describing the first invalid field found, or nil if valid.
 func ValidateLoopProfile(p LoopProfile) error {
 	if !validLoopProfileProviders[p.PlannerProvider] {
-		return fmt.Errorf("invalid planner_provider %q: must be one of claude, gemini, codex, or empty", p.PlannerProvider)
+		return fmt.Errorf("invalid planner_provider %q: must be one of claude, gemini, codex, ollama, or empty", p.PlannerProvider)
 	}
 	if !validLoopProfileProviders[p.WorkerProvider] {
-		return fmt.Errorf("invalid worker_provider %q: must be one of claude, gemini, codex, or empty", p.WorkerProvider)
+		return fmt.Errorf("invalid worker_provider %q: must be one of claude, gemini, codex, ollama, or empty", p.WorkerProvider)
 	}
 	if !validLoopProfileProviders[p.VerifierProvider] {
-		return fmt.Errorf("invalid verifier_provider %q: must be one of claude, gemini, codex, or empty", p.VerifierProvider)
+		return fmt.Errorf("invalid verifier_provider %q: must be one of claude, gemini, codex, ollama, or empty", p.VerifierProvider)
 	}
 
 	defaults := DefaultLoopProfile()

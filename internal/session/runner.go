@@ -48,6 +48,11 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	if provider == "" {
 		provider = DefaultPrimaryProvider()
 	}
+	normalizedProvider := normalizeSessionProvider(provider)
+	if provider != "" && provider != normalizedProvider {
+		slog.Warn("session: normalized provider alias", "requested", provider, "normalized", normalizedProvider)
+	}
+	provider = normalizedProvider
 	opts.Provider = provider
 	if opts.Model == "" {
 		opts.Model = ProviderDefaults(provider)
@@ -144,7 +149,7 @@ func launch(ctx context.Context, opts LaunchOptions, bus ...*events.Bus) (*Sessi
 	// Write prompt to stdin and close.
 	// Gemini and Codex take prompt as a CLI argument, not stdin.
 	go func() {
-		if provider == ProviderClaude && opts.Prompt != "" {
+		if (provider == ProviderClaude || provider == ProviderOllama) && opts.Prompt != "" {
 			_, _ = io.WriteString(stdin, opts.Prompt)
 		}
 		stdin.Close()

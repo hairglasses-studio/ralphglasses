@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
 func TestRenderRepoDetailFull(t *testing.T) {
@@ -110,5 +111,31 @@ func TestRenderRepoDetailParseErrors(t *testing.T) {
 	}
 	if !strings.Contains(output, "invalid JSON") {
 		t.Error("should show individual error details")
+	}
+}
+
+func TestRenderRepoDetailIncludesOllamaInventorySummary(t *testing.T) {
+	r := &model.Repo{
+		Name: "ollama-repo",
+		Path: "/path",
+	}
+	health := &RepoDetailHealth{
+		OllamaInventory: &session.OllamaInventory{
+			BaseURL:               "http://127.0.0.1:11434",
+			Reachable:             true,
+			RequiredModels:        []string{"code-primary", "code-heavy"},
+			ReadyRequiredModels:   []string{"code-primary"},
+			MissingRequiredModels: []string{"code-heavy"},
+			ManagedAliases: []session.OllamaAliasInventory{
+				{Alias: "code-fast", Status: "missing_alias"},
+			},
+		},
+	}
+
+	output := RenderRepoDetail(r, 120, health)
+	for _, check := range []string{"Local Models", "http://127.0.0.1:11434", "1/2 ready", "code-heavy", "code-fast"} {
+		if !strings.Contains(output, check) {
+			t.Errorf("output missing %q", check)
+		}
 	}
 }

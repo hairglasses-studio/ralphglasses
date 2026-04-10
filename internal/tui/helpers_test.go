@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -72,6 +73,56 @@ func TestGetGateEntryHit(t *testing.T) {
 	}
 	if got.Report.Overall != e2e.VerdictPass {
 		t.Errorf("expected pass verdict, got %s", got.Report.Overall)
+	}
+}
+
+func TestGetOllamaInventory(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	inventory := &session.OllamaInventory{BaseURL: "http://127.0.0.1:11434"}
+	m.Cache.OllamaInventory = inventory
+	if got := m.getOllamaInventory(); got != inventory {
+		t.Fatalf("getOllamaInventory() = %v, want %v", got, inventory)
+	}
+}
+
+func TestBuildRepoDetailHealthIncludesOllamaInventoryWithoutGateData(t *testing.T) {
+	m := NewModel("/tmp/test", nil)
+	inventory := &session.OllamaInventory{
+		BaseURL:             "http://127.0.0.1:11434",
+		Reachable:           true,
+		RequiredModels:      []string{"code-primary"},
+		ReadyRequiredModels: []string{"code-primary"},
+	}
+	m.Cache.OllamaInventory = inventory
+
+	health := m.buildRepoDetailHealth("/tmp/repo")
+	if health == nil {
+		t.Fatal("expected non-nil health")
+	}
+	if health.OllamaInventory != inventory {
+		t.Fatalf("health.OllamaInventory = %v, want %v", health.OllamaInventory, inventory)
+	}
+}
+
+func TestRefreshOllamaInventoryCache(t *testing.T) {
+	orig := discoverTUIOllamaInventory
+	discoverTUIOllamaInventory = func(_ context.Context, _ time.Duration) session.OllamaInventory {
+		return session.OllamaInventory{
+			BaseURL:             "http://127.0.0.1:11434",
+			Reachable:           true,
+			RequiredModels:      []string{"code-primary"},
+			ReadyRequiredModels: []string{"code-primary"},
+		}
+	}
+	t.Cleanup(func() { discoverTUIOllamaInventory = orig })
+
+	m := NewModel("/tmp/test", nil)
+	m.refreshOllamaInventoryCache()
+	if m.Cache.OllamaInventory == nil {
+		t.Fatal("expected cached inventory")
+	}
+	if m.Cache.OllamaInventory.BaseURL != "http://127.0.0.1:11434" {
+		t.Fatalf("base_url = %q, want %q", m.Cache.OllamaInventory.BaseURL, "http://127.0.0.1:11434")
 	}
 }
 

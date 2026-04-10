@@ -10,14 +10,18 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/config"
 	"github.com/hairglasses-studio/ralphglasses/internal/discovery"
 	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/ralphpath"
+	"github.com/hairglasses-studio/ralphglasses/internal/session"
 
 	_ "modernc.org/sqlite"
 )
+
+var discoverDoctorOllamaInventory = session.DiscoverOllamaInventory
 
 type DoctorStatus string
 
@@ -89,6 +93,9 @@ func CollectDoctorResults(ctx context.Context, opts DoctorOptions) []DoctorResul
 	if includeOptional || isEnabled("codex") {
 		add("codex", checkCodex)
 	}
+	if includeOptional || isEnabled("ollama") {
+		add("ollama", checkOllama)
+	}
 	add("git", checkGit)
 	add("state_dir", checkStateDir)
 	add("config", checkConfig)
@@ -156,6 +163,37 @@ func checkCodex(_ context.Context, _ DoctorOptions) DoctorResult {
 		return DoctorResult{Name: "codex", Status: StatusWarn, Message: "codex not found in PATH (optional)"}
 	}
 	return DoctorResult{Name: "codex", Status: StatusPass, Message: path}
+}
+
+func checkOllama(ctx context.Context, _ DoctorOptions) DoctorResult {
+	inventory := discoverDoctorOllamaInventory(ctx, 5*time.Second)
+	if !inventory.Reachable {
+		msg := fmt.Sprintf("%s not reachable", inventory.BaseURL)
+		if inventory.Error != "" {
+			msg = fmt.Sprintf("%s: %s", msg, inventory.Error)
+		}
+		return DoctorResult{Name: "ollama", Status: StatusWarn, Message: msg + " (optional)"}
+	}
+	if len(inventory.MissingRequiredModels) > 0 {
+		msg := fmt.Sprintf("ready %d/%d required lanes; missing %s",
+			inventory.ReadyRequiredCount(), len(inventory.RequiredModels), strings.Join(inventory.MissingRequiredModels, ", "))
+		return DoctorResult{Name: "ollama", Status: StatusWarn, Message: msg}
+	}
+	aliasIssues := inventory.AliasIssueNames()
+	if len(aliasIssues) > 0 {
+		return DoctorResult{
+			Name:   "ollama",
+			Status: StatusWarn,
+			Message: fmt.Sprintf("ready %d/%d required lanes; alias drift on %s; run hg-ollama-sync-aliases.sh",
+				inventory.ReadyRequiredCount(), len(inventory.RequiredModels), strings.Join(aliasIssues, ", ")),
+		}
+	}
+	modelCount := inventory.AvailableModelCount
+	return DoctorResult{
+		Name:    "ollama",
+		Status:  StatusPass,
+		Message: fmt.Sprintf("%s (%d models, %d/%d required lanes ready)", inventory.BaseURL, modelCount, inventory.ReadyRequiredCount(), len(inventory.RequiredModels)),
+	}
 }
 
 func checkGit(_ context.Context, _ DoctorOptions) DoctorResult {

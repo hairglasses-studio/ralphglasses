@@ -20,10 +20,12 @@ const (
 	DefaultClaudeLimit = 200000
 	DefaultGeminiLimit = 1000000
 	DefaultCodexLimit  = 128000
+	DefaultOllamaLimit = 200000
 )
 
 // ModelLimitForProvider returns the default context window size for a provider.
 func ModelLimitForProvider(p Provider) int {
+	p = normalizeSessionProvider(p)
 	switch p {
 	case ProviderClaude:
 		return DefaultClaudeLimit
@@ -31,6 +33,8 @@ func ModelLimitForProvider(p Provider) int {
 		return DefaultGeminiLimit
 	case ProviderCodex:
 		return DefaultCodexLimit
+	case ProviderOllama:
+		return DefaultOllamaLimit
 	default:
 		return DefaultCodexLimit
 	}

@@ -94,3 +94,28 @@ func TestDiscoverOllamaInventoryReportsFetchError(t *testing.T) {
 		t.Fatal("expected pull commands even when discovery fails")
 	}
 }
+
+func TestOllamaInventoryAliasIssueHelpers(t *testing.T) {
+	inventory := OllamaInventory{
+		ReadyRequiredModels: []string{"code-primary", "code-fast"},
+		ManagedAliases: []OllamaAliasInventory{
+			{Alias: "code-primary", Status: "installed"},
+			{Alias: "code-fast", Status: "missing_alias"},
+			{Alias: "code-heavy", Status: "missing_source"},
+		},
+	}
+
+	if got := inventory.ReadyRequiredCount(); got != 2 {
+		t.Fatalf("ReadyRequiredCount() = %d, want 2", got)
+	}
+
+	issues := inventory.AliasIssues()
+	if len(issues) != 2 {
+		t.Fatalf("len(AliasIssues()) = %d, want 2", len(issues))
+	}
+
+	names := inventory.AliasIssueNames()
+	if !slices.Equal(names, []string{"code-fast", "code-heavy"}) {
+		t.Fatalf("AliasIssueNames() = %v, want [code-fast code-heavy]", names)
+	}
+}
