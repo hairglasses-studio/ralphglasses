@@ -1,8 +1,13 @@
 package styles
 
 import (
+	"errors"
 	"fmt"
+	"hash/fnv"
+	"os"
+	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -10,6 +15,7 @@ import (
 )
 
 const oneShotThemeReloadDebounce = 100 * time.Millisecond
+const defaultThemeWatchPollInterval = 100 * time.Millisecond
 
 // ThemeChangedMsg is sent to the BubbleTea program when the watched theme file
 // changes on disk and the new theme has been applied to package-level styles.
@@ -27,10 +33,11 @@ type ThemeWatcherErrorMsg struct {
 // at runtime without restarting the TUI. It debounces rapid writes (e.g.,
 // editors that write+rename) and only fires after the file is stable.
 type ThemeWatcher struct {
-	path     string
-	watcher  *fsnotify.Watcher
-	program  *tea.Program
-	debounce time.Duration
+	path         string
+	watcher      *fsnotify.Watcher
+	program      *tea.Program
+	debounce     time.Duration
+	pollInterval time.Duration
 
 	mu      sync.Mutex
 	closed  bool
@@ -52,27 +59,40 @@ func WithDebounce(d time.Duration) ThemeWatcherOption {
 // and sends ThemeChangedMsg to the provided BubbleTea program when the theme
 // changes. The watcher debounces rapid writes; the default debounce is 100ms.
 func NewThemeWatcher(path string, program *tea.Program, opts ...ThemeWatcherOption) (*ThemeWatcher, error) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil, fmt.Errorf("create fsnotify watcher: %w", err)
+	if _, err := os.Stat(path); err != nil {
+		return nil, fmt.Errorf("watch %s: %w", path, err)
 	}
 
 	tw := &ThemeWatcher{
-		path:     path,
-		watcher:  watcher,
-		program:  program,
-		debounce: 100 * time.Millisecond,
-		closeCh:  make(chan struct{}),
+		path:         path,
+		program:      program,
+		debounce:     100 * time.Millisecond,
+		pollInterval: defaultThemeWatchPollInterval,
+		closeCh:      make(chan struct{}),
 	}
 	for _, opt := range opts {
 		opt(tw)
 	}
 
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		if shouldFallbackToThemePolling(err) {
+			go tw.pollLoop(currentThemeWatchState(path))
+			return tw, nil
+		}
+		return nil, fmt.Errorf("create fsnotify watcher: %w", err)
+	}
+
 	if err := watcher.Add(path); err != nil {
 		_ = watcher.Close()
+		if shouldFallbackToThemePolling(err) {
+			go tw.pollLoop(currentThemeWatchState(path))
+			return tw, nil
+		}
 		return nil, fmt.Errorf("watch %s: %w", path, err)
 	}
 
+	tw.watcher = watcher
 	go tw.loop()
 	return tw, nil
 }
@@ -81,11 +101,12 @@ func NewThemeWatcher(path string, program *tea.Program, opts ...ThemeWatcherOpti
 // pre-built fsnotify.Watcher, used for testing.
 func newThemeWatcherWithFSNotify(path string, watcher *fsnotify.Watcher, program *tea.Program, opts ...ThemeWatcherOption) *ThemeWatcher {
 	tw := &ThemeWatcher{
-		path:     path,
-		watcher:  watcher,
-		program:  program,
-		debounce: 100 * time.Millisecond,
-		closeCh:  make(chan struct{}),
+		path:         path,
+		watcher:      watcher,
+		program:      program,
+		debounce:     100 * time.Millisecond,
+		pollInterval: defaultThemeWatchPollInterval,
+		closeCh:      make(chan struct{}),
 	}
 	for _, opt := range opts {
 		opt(tw)
@@ -104,6 +125,9 @@ func (tw *ThemeWatcher) Close() error {
 	}
 	tw.closed = true
 	close(tw.closeCh)
+	if tw.watcher == nil {
+		return nil
+	}
 	return tw.watcher.Close()
 }
 
@@ -146,6 +170,43 @@ func (tw *ThemeWatcher) loop() {
 	}
 }
 
+func (tw *ThemeWatcher) pollLoop(lastState themeWatchState) {
+	interval := tw.pollInterval
+	if interval <= 0 {
+		interval = defaultThemeWatchPollInterval
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	var debounceTimer *time.Timer
+	var debounceC <-chan time.Time
+
+	for {
+		select {
+		case <-tw.closeCh:
+			if debounceTimer != nil {
+				debounceTimer.Stop()
+			}
+			return
+		case <-ticker.C:
+			nextState := currentThemeWatchState(tw.path)
+			if nextState != lastState {
+				lastState = nextState
+				if debounceTimer != nil {
+					debounceTimer.Stop()
+				}
+				debounceTimer = time.NewTimer(tw.debounce)
+				debounceC = debounceTimer.C
+			}
+		case <-debounceC:
+			debounceC = nil
+			debounceTimer = nil
+			tw.reload()
+		}
+	}
+}
+
 // reload loads the theme file, applies it, and sends a ThemeChangedMsg to
 // the BubbleTea program.
 func (tw *ThemeWatcher) reload() {
@@ -173,13 +234,23 @@ func (tw *ThemeWatcher) sendError(err error) {
 // should re-issue the command after handling the message to keep watching.
 func WatchThemeFile(path string) tea.Cmd {
 	return func() tea.Msg {
+		if _, err := os.Stat(path); err != nil {
+			return ThemeWatcherErrorMsg{Err: fmt.Errorf("watch %s: %w", path, err)}
+		}
+
 		watcher, err := fsnotify.NewWatcher()
 		if err != nil {
+			if shouldFallbackToThemePolling(err) {
+				return watchThemeFileByPolling(path)
+			}
 			return ThemeWatcherErrorMsg{Err: fmt.Errorf("create watcher: %w", err)}
 		}
 
 		if err := watcher.Add(path); err != nil {
 			_ = watcher.Close()
+			if shouldFallbackToThemePolling(err) {
+				return watchThemeFileByPolling(path)
+			}
 			return ThemeWatcherErrorMsg{Err: fmt.Errorf("watch %s: %w", path, err)}
 		}
 
@@ -228,8 +299,83 @@ func WatchThemeFile(path string) tea.Cmd {
 				if !ok {
 					return ThemeWatcherErrorMsg{Err: fmt.Errorf("watcher errors channel closed")}
 				}
+				if shouldFallbackToThemePolling(watchErr) {
+					return watchThemeFileByPolling(path)
+				}
 				return ThemeWatcherErrorMsg{Err: fmt.Errorf("fsnotify: %w", watchErr)}
 			}
 		}
 	}
+}
+
+type themeWatchState struct {
+	exists  bool
+	modTime time.Time
+	size    int64
+	digest  uint64
+}
+
+func watchThemeFileByPolling(path string) tea.Msg {
+	lastState := currentThemeWatchState(path)
+	ticker := time.NewTicker(defaultThemeWatchPollInterval)
+	defer ticker.Stop()
+
+	var debounceTimer *time.Timer
+	var debounceC <-chan time.Time
+
+	for {
+		select {
+		case <-ticker.C:
+			nextState := currentThemeWatchState(path)
+			if nextState != lastState {
+				lastState = nextState
+				if debounceTimer != nil {
+					debounceTimer.Stop()
+				}
+				debounceTimer = time.NewTimer(oneShotThemeReloadDebounce)
+				debounceC = debounceTimer.C
+			}
+		case <-debounceC:
+			debounceC = nil
+			debounceTimer = nil
+			theme, err := LoadTheme(path)
+			if err != nil {
+				return ThemeWatcherErrorMsg{Err: fmt.Errorf("load theme: %w", err)}
+			}
+			ApplyTheme(theme)
+			return ThemeChangedMsg{Theme: theme, Path: path}
+		}
+	}
+}
+
+func currentThemeWatchState(path string) themeWatchState {
+	info, err := os.Stat(path)
+	if err != nil {
+		return themeWatchState{}
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return themeWatchState{
+			exists:  true,
+			modTime: info.ModTime(),
+			size:    info.Size(),
+		}
+	}
+
+	hasher := fnv.New64a()
+	_, _ = hasher.Write(data)
+	return themeWatchState{
+		exists:  true,
+		modTime: info.ModTime(),
+		size:    info.Size(),
+		digest:  hasher.Sum64(),
+	}
+}
+
+func shouldFallbackToThemePolling(err error) bool {
+	return errors.Is(err, syscall.EMFILE) ||
+		errors.Is(err, syscall.ENFILE) ||
+		errors.Is(err, syscall.ENOSPC) ||
+		strings.Contains(strings.ToLower(err.Error()), "too many open files")
 }

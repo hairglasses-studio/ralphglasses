@@ -7,7 +7,6 @@ import (
 	"time"
 
 	lipgloss "charm.land/lipgloss/v2"
-	"github.com/fsnotify/fsnotify"
 )
 
 const testThemeYAML = `name: hotswap-test
@@ -243,16 +242,10 @@ func TestThemeWatcher_DetectsChange(t *testing.T) {
 	// then check the side effect via ApplyTheme on the package-level vars.
 	origPrimary := ColorPrimary
 
-	watcher, err := fsnotify.NewWatcher()
+	tw, err := NewThemeWatcher(path, nil, WithDebounce(50*time.Millisecond))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := watcher.Add(path); err != nil {
-		_ = watcher.Close()
-		t.Fatal(err)
-	}
-
-	tw := newThemeWatcherWithFSNotify(path, watcher, nil, WithDebounce(50*time.Millisecond))
 	defer tw.Close()
 
 	// Write updated theme.
@@ -288,16 +281,10 @@ func TestThemeWatcher_ClosedWatcherEmitsNoMessage(t *testing.T) {
 	path := filepath.Join(dir, "theme.yaml")
 	writeThemeFile(t, path, testThemeYAML)
 
-	watcher, err := fsnotify.NewWatcher()
+	tw, err := NewThemeWatcher(path, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := watcher.Add(path); err != nil {
-		_ = watcher.Close()
-		t.Fatal(err)
-	}
-
-	tw := newThemeWatcherWithFSNotify(path, watcher, nil)
 
 	// Close the watcher immediately; the loop should exit cleanly.
 	if err := tw.Close(); err != nil {

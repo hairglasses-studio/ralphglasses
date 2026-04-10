@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"hash/fnv"
 	"io/fs"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -34,6 +37,10 @@ type Watcher struct {
 
 	// newWatcher is an fsnotify constructor, overridable for testing.
 	newWatcher func() (*fsnotify.Watcher, error)
+
+	// pollInterval is used when fsnotify is unavailable and the watcher must
+	// fall back to periodic polling.
+	pollInterval time.Duration
 }
 
 // NewWatcher creates a config file watcher for the given path.
@@ -42,10 +49,11 @@ type Watcher struct {
 // once it is created.
 func NewWatcher(path string) *Watcher {
 	w := &Watcher{
-		path:       path,
-		done:       make(chan struct{}),
-		debounce:   500 * time.Millisecond,
-		newWatcher: fsnotify.NewWatcher,
+		path:         path,
+		done:         make(chan struct{}),
+		debounce:     500 * time.Millisecond,
+		newWatcher:   fsnotify.NewWatcher,
+		pollInterval: 250 * time.Millisecond,
 	}
 
 	// Load initial config (best-effort).
@@ -83,6 +91,11 @@ func (w *Watcher) OnChange(fn func(Config)) {
 func (w *Watcher) Start(ctx context.Context) error {
 	fw, err := w.newWatcher()
 	if err != nil {
+		if shouldFallbackToPolling(err) {
+			slog.Warn("config watcher: fsnotify unavailable, using polling fallback", "path", w.path, "error", err)
+			go w.pollLoop(ctx, currentWatchState(w.path))
+			return nil
+		}
 		return err
 	}
 	w.watcher = fw
@@ -92,12 +105,67 @@ func (w *Watcher) Start(ctx context.Context) error {
 	dir := dirOf(w.path)
 	if err := fw.Add(dir); err != nil {
 		_ = fw.Close()
+		if shouldFallbackToPolling(err) {
+			slog.Warn("config watcher: directory watch failed, using polling fallback", "path", w.path, "error", err)
+			w.watcher = nil
+			go w.pollLoop(ctx, currentWatchState(w.path))
+			return nil
+		}
 		return err
 	}
 
 	go w.loop(ctx)
 
 	return nil
+}
+
+type watchState struct {
+	exists  bool
+	modTime time.Time
+	size    int64
+	digest  uint64
+}
+
+func (w *Watcher) pollLoop(ctx context.Context, lastState watchState) {
+	interval := w.pollInterval
+	if interval <= 0 {
+		interval = 250 * time.Millisecond
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	var debounceTimer *time.Timer
+	var debounceC <-chan time.Time
+
+	for {
+		select {
+		case <-ctx.Done():
+			if debounceTimer != nil {
+				debounceTimer.Stop()
+			}
+			return
+		case <-w.done:
+			if debounceTimer != nil {
+				debounceTimer.Stop()
+			}
+			return
+		case <-ticker.C:
+			nextState := currentWatchState(w.path)
+			if nextState != lastState {
+				lastState = nextState
+				if debounceTimer != nil {
+					debounceTimer.Stop()
+				}
+				debounceTimer = time.NewTimer(w.debounce)
+				debounceC = debounceTimer.C
+			}
+		case <-debounceC:
+			debounceC = nil
+			debounceTimer = nil
+			w.reload()
+		}
+	}
 }
 
 // Stop stops the watcher. Safe to call multiple times.
@@ -220,4 +288,34 @@ func baseOf(path string) string {
 		}
 	}
 	return path
+}
+
+func currentWatchState(path string) watchState {
+	info, err := os.Stat(path)
+	if err != nil {
+		return watchState{}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return watchState{
+			exists:  true,
+			modTime: info.ModTime(),
+			size:    info.Size(),
+		}
+	}
+	hasher := fnv.New64a()
+	_, _ = hasher.Write(data)
+	return watchState{
+		exists:  true,
+		modTime: info.ModTime(),
+		size:    info.Size(),
+		digest:  hasher.Sum64(),
+	}
+}
+
+func shouldFallbackToPolling(err error) bool {
+	return errors.Is(err, syscall.EMFILE) ||
+		errors.Is(err, syscall.ENFILE) ||
+		errors.Is(err, syscall.ENOSPC) ||
+		strings.Contains(strings.ToLower(err.Error()), "too many open files")
 }

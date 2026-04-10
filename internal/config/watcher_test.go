@@ -3,12 +3,16 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 // writeConfig is a helper that writes a Config as JSON to the given path.
@@ -426,6 +430,49 @@ func TestWatcher_MissingFileAtStart(t *testing.T) {
 	}
 }
 
+func TestWatcher_FallsBackToPollingWhenFSNotifyUnavailable(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.json")
+	writeConfig(t, cfgPath, Config{DefaultProvider: "claude", MaxWorkers: 1})
+
+	w := NewWatcher(cfgPath)
+	w.debounce = 25 * time.Millisecond
+	w.pollInterval = 25 * time.Millisecond
+	w.newWatcher = func() (*fsnotify.Watcher, error) {
+		return nil, syscall.EMFILE
+	}
+
+	ready := make(chan Config, 1)
+	w.OnChange(func(cfg Config) {
+		select {
+		case ready <- cfg:
+		default:
+		}
+	})
+
+	ctx := t.Context()
+	if err := w.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer w.Stop()
+
+	writeConfig(t, cfgPath, Config{DefaultProvider: "gemini", MaxWorkers: 3})
+
+	select {
+	case cfg := <-ready:
+		if cfg.DefaultProvider != "gemini" {
+			t.Fatalf("callback DefaultProvider = %q, want %q", cfg.DefaultProvider, "gemini")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for polling fallback callback")
+	}
+
+	cur := w.Current()
+	if cur.DefaultProvider != "gemini" {
+		t.Fatalf("Current() DefaultProvider = %q, want %q", cur.DefaultProvider, "gemini")
+	}
+}
+
 func TestDirOf(t *testing.T) {
 	tests := []struct {
 		input string
@@ -456,6 +503,26 @@ func TestBaseOf(t *testing.T) {
 		got := baseOf(tt.input)
 		if got != tt.want {
 			t.Errorf("baseOf(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestShouldFallbackToPolling(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "emfile", err: syscall.EMFILE, want: true},
+		{name: "enfile", err: syscall.ENFILE, want: true},
+		{name: "enospc", err: syscall.ENOSPC, want: true},
+		{name: "wrapped message", err: errors.New("fsnotify: too many open files"), want: true},
+		{name: "other", err: errors.New("permission denied"), want: false},
+	}
+
+	for _, tt := range tests {
+		if got := shouldFallbackToPolling(tt.err); got != tt.want {
+			t.Errorf("%s: shouldFallbackToPolling(%v) = %t, want %t", tt.name, tt.err, got, tt.want)
 		}
 	}
 }

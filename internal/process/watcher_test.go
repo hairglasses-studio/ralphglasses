@@ -207,6 +207,19 @@ func TestWatchStatusFiles_TimeoutReturnsWatcherErrorMsg(t *testing.T) {
 	}
 }
 
+func newTestFSNotifyWatcher(t *testing.T) *fsnotify.Watcher {
+	t.Helper()
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		if shouldFallbackToPolling(err) {
+			t.Skipf("fsnotify unavailable in test environment: %v", err)
+		}
+		t.Fatal(err)
+	}
+	return watcher
+}
+
 func TestWatchWithWatcher_ClosedWatcherEmitsWatcherErrorMsg(t *testing.T) {
 	repoPath := t.TempDir()
 	ralphDir := filepath.Join(repoPath, ".ralph")
@@ -214,10 +227,7 @@ func TestWatchWithWatcher_ClosedWatcherEmitsWatcherErrorMsg(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		t.Fatal(err)
-	}
+	watcher := newTestFSNotifyWatcher(t)
 
 	done := make(chan tea.Msg, 1)
 	go func() {
