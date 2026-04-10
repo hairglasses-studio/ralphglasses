@@ -50,16 +50,16 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 	}
 
 	teamProvider := session.Provider(pp.OptionalString("provider", ""))
-	if teamProvider == "" {
-		teamProvider = session.DefaultPrimaryProvider()
-	}
-
 	workerProvider := session.Provider(pp.String("worker_provider"))
 	leadAgent := pp.String("lead_agent")
-	if teamProvider == session.ProviderCodex && strings.TrimSpace(leadAgent) != "" {
+	validationProvider := teamProvider
+	if validationProvider == "" {
+		validationProvider = session.DefaultPrimaryProvider()
+	}
+	if validationProvider == session.ProviderCodex && strings.TrimSpace(leadAgent) != "" {
 		return codedError(ErrInvalidParams, "lead_agent is not supported for codex teams"), nil
 	}
-	if err := session.ValidateLaunchAgent(teamProvider, leadAgent); err != nil {
+	if err := session.ValidateLaunchAgent(validationProvider, leadAgent); err != nil {
 		return codedError(ErrInvalidParams, fmt.Sprintf("lead_agent: %v", err)), nil
 	}
 
@@ -79,12 +79,12 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 		ExecutionBackend: strings.TrimSpace(pp.String("execution_backend")),
 		WorktreePolicy:   strings.TrimSpace(pp.String("worktree_policy")),
 		TargetBranch:     strings.TrimSpace(pp.String("target_branch")),
-		AutoStart:        pp.OptionalBool("autostart", teamProvider == session.ProviderCodex),
+		AutoStart:        pp.OptionalBool("autostart", validationProvider == session.ProviderCodex),
 		A2AAgentURL:      strings.TrimSpace(pp.String("a2a_agent_url")),
 	}
 	dryRun := pp.Bool("dry_run")
 	backendConfigured := s.SessMgr.StructuredTeamBackend() != nil || s.FleetCoordinator != nil || s.FleetClient != nil
-	if config.ExecutionBackend == "" && teamProvider == session.ProviderCodex {
+	if config.ExecutionBackend == "" && validationProvider == session.ProviderCodex {
 		if backendConfigured {
 			config.ExecutionBackend = session.TeamExecutionBackendFleet
 		} else {
@@ -102,7 +102,7 @@ func (s *Server) handleTeamCreate(ctx context.Context, req mcp.CallToolRequest) 
 	if config.ExecutionBackend == session.TeamExecutionBackendFleet && !backendConfigured {
 		return fleetNotConfiguredResult(), nil
 	}
-	if config.WorktreePolicy == "" && teamProvider == session.ProviderCodex {
+	if config.WorktreePolicy == "" && validationProvider == session.ProviderCodex {
 		config.WorktreePolicy = session.TeamWorktreePolicyPerWorker
 	}
 

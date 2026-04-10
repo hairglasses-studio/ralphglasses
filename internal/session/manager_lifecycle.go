@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/events"
@@ -44,12 +45,7 @@ func (m *Manager) InitPIDFiles() {
 // Launch starts a new provider session via the configured CLI.
 func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, error) {
 	opts.TenantID = NormalizeTenantID(opts.TenantID)
-	if opts.Provider == "" {
-		opts.Provider = DefaultPrimaryProvider()
-	}
-	if opts.Model == "" {
-		opts.Model = ProviderDefaults(opts.Provider)
-	}
+	selection := applyLaunchProviderSelection(ctx, &opts)
 	// Apply default budget from .ralphrc (RALPH_SESSION_BUDGET) when none specified.
 	if opts.MaxBudgetUSD <= 0 && m.DefaultBudgetUSD > 0 {
 		opts.MaxBudgetUSD = m.DefaultBudgetUSD
@@ -112,6 +108,14 @@ func (m *Manager) Launch(ctx context.Context, opts LaunchOptions) (*Session, err
 	if err != nil {
 		return nil, err
 	}
+	if opts.Provider != "" {
+		s.Provider = opts.Provider
+	}
+	if strings.TrimSpace(s.Model) == "" {
+		s.Model = opts.Model
+	}
+	s.ProviderAutoSelected = selection.AutoSelected
+	s.ProviderSelectionReason = selection.Reason
 	s.TenantID = opts.TenantID
 
 	// Set persistence and feedback callbacks so runner can persist and learn on completion

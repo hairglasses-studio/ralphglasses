@@ -43,9 +43,6 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 	}
 
 	provider := session.Provider(p.OptionalString("provider", ""))
-	if provider == "" {
-		provider = session.DefaultPrimaryProvider()
-	}
 	systemPrompt := p.OptionalString("system_prompt", "")
 	if err := ValidateStringLength(systemPrompt, MaxPromptLength, "system_prompt"); err != nil {
 		return codedError(ErrInvalidParams, err.Error()), nil
@@ -83,8 +80,10 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		}
 		opts.OutputSchema = json.RawMessage(schema)
 	}
-	if err := session.ValidateProvider(provider); err != nil {
-		return codedError(ErrProviderUnavailable, fmt.Sprintf("invalid provider %q: %v", provider, err)), nil
+	if provider != "" {
+		if err := session.ValidateProvider(provider); err != nil {
+			return codedError(ErrProviderUnavailable, fmt.Sprintf("invalid provider %q: %v", provider, err)), nil
+		}
 	}
 
 	// Inject improvement context from journal
@@ -131,7 +130,13 @@ func (s *Server) handleSessionLaunch(ctx context.Context, req mcp.CallToolReques
 		"model":      sess.Model,
 		"budget_usd": sess.BudgetUSD,
 	}
-	if warnings := session.UnsupportedOptionsWarnings(provider, opts); len(warnings) > 0 {
+	if sess.ProviderAutoSelected {
+		result["provider_auto_selected"] = true
+	}
+	if strings.TrimSpace(sess.ProviderSelectionReason) != "" {
+		result["provider_selection_reason"] = sess.ProviderSelectionReason
+	}
+	if warnings := session.UnsupportedOptionsWarnings(sess.Provider, opts); len(warnings) > 0 {
 		result["warnings"] = warnings
 	}
 	if enhanceMode != "" && opts.Prompt != prompt {

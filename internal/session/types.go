@@ -44,42 +44,44 @@ func (s SessionStatus) IsTerminal() bool {
 
 // Session represents a managed headless LLM CLI session.
 type Session struct {
-	ID                  string        `json:"id"`
-	TenantID            string        `json:"tenant_id,omitempty"`
-	Provider            Provider      `json:"provider"`
-	ProviderSessionID   string        `json:"provider_session_id,omitempty"`
-	RepoPath            string        `json:"repo_path"`
-	RepoName            string        `json:"repo_name"`
-	Status              SessionStatus `json:"status"`
-	Prompt              string        `json:"prompt"`
-	Model               string        `json:"model,omitempty"`
-	EnhancementSource   string        `json:"enhancement_source,omitempty"`    // "local", "llm", "none"
-	EnhancementPreScore int           `json:"enhancement_pre_score,omitempty"` // 0-100 quality score before enhancement
-	AgentName           string        `json:"agent,omitempty"`
-	TeamName            string        `json:"team_name,omitempty"`
-	SweepID             string        `json:"sweep_id,omitempty"`
-	PermissionMode      string        `json:"permission_mode,omitempty"`
-	Resumed             bool          `json:"resumed,omitempty"`
-	BudgetUSD           float64       `json:"max_budget_usd,omitempty"`
-	SpentUSD            float64       `json:"spent_usd"`
-	TurnCount           int           `json:"turn_count"`
-	MaxTurns            int           `json:"max_turns,omitempty"`
-	LaunchedAt          time.Time     `json:"launched_at"`
-	LastActivity        time.Time     `json:"last_activity"`
-	EndedAt             *time.Time    `json:"ended_at,omitempty"`
-	ExitReason          string        `json:"exit_reason,omitempty"`
-	LastOutput          string        `json:"last_output,omitempty"`
-	Error               string        `json:"error,omitempty"`
-	LastEventType       string        `json:"last_event_type,omitempty"`
-	StreamParseErrors   int           `json:"stream_parse_errors,omitempty"`
-	CostSource          string        `json:"cost_source,omitempty"` // "structured", "stderr", or "estimated"
-	CostHistory         []float64     `json:"cost_history,omitempty"`
-	CacheReadTokens     int           `json:"cache_read_tokens,omitempty"`
-	CacheWriteTokens    int           `json:"cache_write_tokens,omitempty"`
-	CacheAnomaly        string        `json:"cache_anomaly,omitempty"`
-	OutputHistory       []string      `json:"output_history,omitempty"`     // last N output lines
-	MessageHistory      []Message     `json:"message_history,omitempty"`    // full conversation history for compaction
-	TotalOutputCount    int           `json:"total_output_count,omitempty"` // monotonic counter for cursor-based tailing
+	ID                      string        `json:"id"`
+	TenantID                string        `json:"tenant_id,omitempty"`
+	Provider                Provider      `json:"provider"`
+	ProviderSessionID       string        `json:"provider_session_id,omitempty"`
+	RepoPath                string        `json:"repo_path"`
+	RepoName                string        `json:"repo_name"`
+	Status                  SessionStatus `json:"status"`
+	Prompt                  string        `json:"prompt"`
+	Model                   string        `json:"model,omitempty"`
+	ProviderAutoSelected    bool          `json:"provider_auto_selected,omitempty"`
+	ProviderSelectionReason string        `json:"provider_selection_reason,omitempty"`
+	EnhancementSource       string        `json:"enhancement_source,omitempty"`    // "local", "llm", "none"
+	EnhancementPreScore     int           `json:"enhancement_pre_score,omitempty"` // 0-100 quality score before enhancement
+	AgentName               string        `json:"agent,omitempty"`
+	TeamName                string        `json:"team_name,omitempty"`
+	SweepID                 string        `json:"sweep_id,omitempty"`
+	PermissionMode          string        `json:"permission_mode,omitempty"`
+	Resumed                 bool          `json:"resumed,omitempty"`
+	BudgetUSD               float64       `json:"max_budget_usd,omitempty"`
+	SpentUSD                float64       `json:"spent_usd"`
+	TurnCount               int           `json:"turn_count"`
+	MaxTurns                int           `json:"max_turns,omitempty"`
+	LaunchedAt              time.Time     `json:"launched_at"`
+	LastActivity            time.Time     `json:"last_activity"`
+	EndedAt                 *time.Time    `json:"ended_at,omitempty"`
+	ExitReason              string        `json:"exit_reason,omitempty"`
+	LastOutput              string        `json:"last_output,omitempty"`
+	Error                   string        `json:"error,omitempty"`
+	LastEventType           string        `json:"last_event_type,omitempty"`
+	StreamParseErrors       int           `json:"stream_parse_errors,omitempty"`
+	CostSource              string        `json:"cost_source,omitempty"` // "structured", "stderr", or "estimated"
+	CostHistory             []float64     `json:"cost_history,omitempty"`
+	CacheReadTokens         int           `json:"cache_read_tokens,omitempty"`
+	CacheWriteTokens        int           `json:"cache_write_tokens,omitempty"`
+	CacheAnomaly            string        `json:"cache_anomaly,omitempty"`
+	OutputHistory           []string      `json:"output_history,omitempty"`     // last N output lines
+	MessageHistory          []Message     `json:"message_history,omitempty"`    // full conversation history for compaction
+	TotalOutputCount        int           `json:"total_output_count,omitempty"` // monotonic counter for cursor-based tailing
 
 	Pid       int   `json:"pid,omitempty"`        // process PID captured at launch
 	ChildPids []int `json:"child_pids,omitempty"` // child PIDs collected at launch (best-effort)

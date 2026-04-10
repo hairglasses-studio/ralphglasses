@@ -2,6 +2,9 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -852,6 +855,73 @@ func TestHandleSessionLaunch_DefaultProvider(t *testing.T) {
 	}
 	// Exercises the default provider path
 	_ = result
+}
+
+func TestHandleSessionLaunch_AutoSelectsOllamaForLowRiskPrompt(t *testing.T) {
+	srv, _ := setupTestServer(t)
+	ollamaSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/tags" {
+			http.NotFound(w, r)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"models": []map[string]any{
+				{"name": "code-primary"},
+				{"name": "devstral-small-2"},
+				{"name": "code-fast"},
+				{"name": "qwen2.5-coder:7b"},
+				{"name": "code-heavy"},
+				{"name": "devstral-2"},
+				{"name": "code-long"},
+				{"name": "qwen3-coder-next"},
+				{"name": "nomic-embed-text:v1.5"},
+			},
+		})
+	}))
+	defer ollamaSrv.Close()
+
+	t.Setenv("OLLAMA_BASE_URL", ollamaSrv.URL)
+	t.Setenv("OLLAMA_CHAT_MODEL", "code-primary")
+	t.Setenv("OLLAMA_FAST_MODEL", "code-fast")
+	t.Setenv("OLLAMA_CODE_MODEL", "code-primary")
+	t.Setenv("OLLAMA_HEAVY_CODE_MODEL", "code-heavy")
+	t.Setenv("OLLAMA_HIGH_CONTEXT_CODE_MODEL", "code-long")
+	t.Setenv("OLLAMA_EMBED_MODEL", "nomic-embed-text:v1.5")
+
+	srv.SessMgr.SetStateDir(t.TempDir())
+	srv.SessMgr.SetHooksForTesting(func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
+		return &session.Session{
+			ID:         "sess-ollama",
+			Provider:   opts.Provider,
+			Model:      opts.Model,
+			RepoPath:   opts.RepoPath,
+			RepoName:   filepath.Base(opts.RepoPath),
+			Status:     session.StatusRunning,
+			LaunchedAt: time.Now(),
+		}, nil
+	}, nil)
+
+	result, err := srv.handleSessionLaunch(context.Background(), makeRequest(map[string]any{
+		"repo":   "test-repo",
+		"prompt": "plan and summarize the repo doctor status",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error result: %s", getResultText(result))
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(getResultText(result)), &payload); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if payload["provider"] != string(session.ProviderOllama) {
+		t.Fatalf("provider = %v, want %q", payload["provider"], session.ProviderOllama)
+	}
+	if payload["provider_auto_selected"] != true {
+		t.Fatalf("provider_auto_selected = %v, want true", payload["provider_auto_selected"])
+	}
 }
 
 func TestHandleSessionList_CombinedFilters(t *testing.T) {

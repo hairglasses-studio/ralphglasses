@@ -458,7 +458,20 @@ func (m *Manager) RunWorkflow(ctx context.Context, repoPath string, wf WorkflowD
 
 func (m *Manager) launchWorkflowSession(ctx context.Context, opts LaunchOptions) (*Session, error) {
 	if m.launchSession != nil {
-		return m.launchSession(ctx, opts)
+		selection := applyLaunchProviderSelection(ctx, &opts)
+		sess, err := m.launchSession(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+		if opts.Provider != "" {
+			sess.Provider = opts.Provider
+		}
+		if strings.TrimSpace(sess.Model) == "" {
+			sess.Model = opts.Model
+		}
+		sess.ProviderAutoSelected = selection.AutoSelected
+		sess.ProviderSelectionReason = selection.Reason
+		return sess, nil
 	}
 	return m.Launch(ctx, opts)
 }

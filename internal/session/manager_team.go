@@ -152,9 +152,9 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 		Tasks:          tasks,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
-		Provider:       config.Provider,
+		Provider:       firstNonBlankProvider(config.Provider, s.Provider),
 		WorkerProvider: workerProvider,
-		Model:          config.Model,
+		Model:          firstNonBlankString(config.Model, s.Model),
 		WorkerModel:    config.WorkerModel,
 		MaxBudgetUSD:   config.MaxBudgetUSD,
 	}
@@ -170,7 +170,7 @@ Provider strengths: claude (complex architecture), gemini (fast bulk generation)
 			SessionID: s.ID,
 			RepoPath:  config.RepoPath,
 			RepoName:  filepath.Base(config.RepoPath),
-			Provider:  string(config.Provider),
+			Provider:  string(firstNonBlankProvider(config.Provider, s.Provider)),
 			Data:      map[string]any{"team": config.Name, "tasks": len(config.Tasks)},
 		})
 	}
@@ -221,6 +221,20 @@ func teamLeadAllowedTools() []string {
 		"mcp__ralphglasses__ralphglasses_session_stop",
 		"mcp__ralphglasses__ralphglasses_session_output",
 	}
+}
+
+func firstNonBlankProvider(current, fallback Provider) Provider {
+	if current != "" {
+		return current
+	}
+	return fallback
+}
+
+func firstNonBlankString(current, fallback string) string {
+	if strings.TrimSpace(current) != "" {
+		return current
+	}
+	return strings.TrimSpace(fallback)
 }
 
 // DelegateTask appends a task to a team under the manager mutex.
