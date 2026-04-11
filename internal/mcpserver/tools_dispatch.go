@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -244,7 +243,6 @@ func (s *Server) runtimeHealthDoc() map[string]any {
 	autobuildTrancheSummary := s.autobuildTrancheSummary()
 	providerHealth := session.CheckAllProviderHealth()
 	providerHealthSummary := providerHealthPayload(providerHealth)
-	ollamaInventory := session.DiscoverOllamaInventory(context.Background(), time.Second)
 
 	return map[string]any{
 		"server":                     "ralphglasses",
@@ -271,7 +269,6 @@ func (s *Server) runtimeHealthDoc() map[string]any {
 		"cli_parity_summary":         parity.CLIParityCoverage(),
 		"cli_parity_usage":           usageSummary,
 		"provider_health":            providerHealthSummary,
-		"ollama_inventory":           ollamaInventory,
 		"discovery_adoption_summary": discoverySummary,
 		"adoption_priority_summary":  adoptionPrioritySummary,
 		"autobuild_tranche_summary":  autobuildTrancheSummary,
@@ -287,7 +284,6 @@ func providerHealthPayload(health map[session.Provider]session.ProviderHealth) m
 
 	ordered := []session.Provider{
 		session.ProviderClaude,
-		session.ProviderOllama,
 		session.ProviderGemini,
 		session.ProviderCodex,
 		session.ProviderAntigravity,

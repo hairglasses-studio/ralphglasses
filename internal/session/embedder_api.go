@@ -8,15 +8,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"strings"
 	"sync"
 	"time"
 )
 
-// APIEmbedder calls a remote embedding API (OpenAI or Ollama) to produce vectors.
+// APIEmbedder calls a remote embedding API (OpenAI) to produce vectors.
 type APIEmbedder struct {
-	provider string // "openai", "ollama"
+	provider string // "openai"
 	endpoint string // API endpoint URL
 	model    string // embedding model name
 	client   *http.Client
@@ -34,27 +32,6 @@ func NewOpenAIEmbedder(apiKey string) *APIEmbedder {
 	}
 }
 
-// NewOllamaEmbedder creates an embedder that calls a local Ollama instance.
-// endpoint should be the base URL, e.g. "http://127.0.0.1:11434".
-func NewOllamaEmbedder(endpoint string) *APIEmbedder {
-	if endpoint == "" {
-		endpoint = os.Getenv("OLLAMA_BASE_URL")
-	}
-	if endpoint == "" {
-		endpoint = "http://127.0.0.1:11434"
-	}
-	model := os.Getenv("OLLAMA_EMBED_MODEL")
-	if model == "" {
-		model = "nomic-embed-text:v1.5"
-	}
-	return &APIEmbedder{
-		provider: "ollama",
-		endpoint: strings.TrimRight(endpoint, "/") + "/api/embeddings",
-		model:    model,
-		client:   &http.Client{Timeout: 60 * time.Second},
-	}
-}
-
 // Embed produces a vector embedding for the given text by calling the configured API.
 func (e *APIEmbedder) Embed(text string) ([]float64, error) {
 	var reqBody []byte
@@ -65,11 +42,6 @@ func (e *APIEmbedder) Embed(text string) ([]float64, error) {
 		reqBody, err = json.Marshal(openAIEmbeddingRequest{
 			Model: e.model,
 			Input: text,
-		})
-	case "ollama":
-		reqBody, err = json.Marshal(ollamaEmbeddingRequest{
-			Model:  e.model,
-			Prompt: text,
 		})
 	default:
 		return nil, fmt.Errorf("unsupported embedding provider: %s", e.provider)
@@ -112,15 +84,6 @@ func (e *APIEmbedder) Embed(text string) ([]float64, error) {
 			return nil, fmt.Errorf("openai returned no embeddings")
 		}
 		return result.Data[0].Embedding, nil
-	case "ollama":
-		var result ollamaEmbeddingResponse
-		if err := json.Unmarshal(body, &result); err != nil {
-			return nil, fmt.Errorf("unmarshal ollama response: %w", err)
-		}
-		if len(result.Embedding) == 0 {
-			return nil, fmt.Errorf("ollama returned empty embedding")
-		}
-		return result.Embedding, nil
 	default:
 		return nil, fmt.Errorf("unsupported embedding provider: %s", e.provider)
 	}
@@ -137,16 +100,6 @@ type openAIEmbeddingResponse struct {
 }
 
 type openAIEmbeddingData struct {
-	Embedding []float64 `json:"embedding"`
-}
-
-// Ollama request/response types.
-type ollamaEmbeddingRequest struct {
-	Model  string `json:"model"`
-	Prompt string `json:"prompt"`
-}
-
-type ollamaEmbeddingResponse struct {
 	Embedding []float64 `json:"embedding"`
 }
 

@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -13,12 +12,9 @@ import (
 )
 
 const (
-	obsCacheTTL        = 10 * time.Second
-	gateCacheTTL       = 30 * time.Second
-	ollamaInventoryTTL = 30 * time.Second
+	obsCacheTTL  = 10 * time.Second
+	gateCacheTTL = 30 * time.Second
 )
-
-var discoverTUIOllamaInventory = session.DiscoverOllamaInventory
 
 // GateCacheEntry wraps a gate report for TUI caching.
 type GateCacheEntry struct {
@@ -97,16 +93,6 @@ func (m *Model) refreshGateCache() {
 	m.Cache.GateExp = time.Now()
 }
 
-// refreshOllamaInventoryCache loads the shared local-model inventory on a TTL.
-func (m *Model) refreshOllamaInventoryCache() {
-	if time.Since(m.Cache.OllamaInvTime) < ollamaInventoryTTL {
-		return
-	}
-	inventory := discoverTUIOllamaInventory(context.Background(), 5*time.Second)
-	m.Cache.OllamaInventory = &inventory
-	m.Cache.OllamaInvTime = time.Now()
-}
-
 // getObservations returns cached observations for a repo path.
 func (m *Model) getObservations(repoPath string) []session.LoopObservation {
 	if m.Cache.Obs == nil {
@@ -121,11 +107,6 @@ func (m *Model) getGateEntry(repoPath string) *GateCacheEntry {
 		return nil
 	}
 	return m.Cache.Gate[repoPath]
-}
-
-// getOllamaInventory returns the cached local-model inventory used by the TUI.
-func (m *Model) getOllamaInventory() *session.OllamaInventory {
-	return m.Cache.OllamaInventory
 }
 
 // buildRepoDetailHealth constructs cached repo detail health data for the selected repo.
@@ -146,10 +127,6 @@ func (m *Model) buildRepoDetailHealth(repoPath string) *views.RepoDetailHealth {
 			health.ProviderProfiles = profiles
 			have = true
 		}
-	}
-	if inventory := m.getOllamaInventory(); inventory != nil {
-		health.OllamaInventory = inventory
-		have = true
 	}
 	if !have {
 		return nil

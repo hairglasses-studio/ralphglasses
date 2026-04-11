@@ -13,7 +13,6 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
 	"github.com/hairglasses-studio/ralphglasses/internal/fleet"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
@@ -186,28 +185,6 @@ func TestParseCoverageTotal_EmptyProfile(t *testing.T) {
 
 // --- mapSessionProvider ---
 
-func TestMapSessionProvider(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		input    session.Provider
-		expected enhancer.ProviderName
-	}{
-		{session.ProviderGemini, enhancer.ProviderGemini},
-		{session.ProviderCodex, enhancer.ProviderOpenAI},
-		{session.ProviderOllama, enhancer.ProviderOpenAI},
-		{session.ProviderClaude, enhancer.ProviderClaude},
-		{"unknown", enhancer.ProviderClaude}, // default (unknown → claude)
-		{"", enhancer.ProviderOpenAI},        // empty → DefaultPrimaryProvider() → codex → openai
-	}
-
-	for _, tt := range tests {
-		got := mapSessionProvider(tt.input)
-		if got != tt.expected {
-			t.Errorf("mapSessionProvider(%q) = %q, want %q", tt.input, got, tt.expected)
-		}
-	}
-}
 
 // --- handleToolBenchmark ---
 

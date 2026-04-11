@@ -288,13 +288,12 @@ func ValidateConfig(cfg Config) []string {
 		"gemini": true,
 		"openai": true,
 		"codex":  true,
-		"ollama": true,
 	}
 	if !validProviders[strings.ToLower(strings.TrimSpace(cfg.LLM.Provider))] {
-		warnings = append(warnings, fmt.Sprintf("unknown LLM provider %q (valid: claude, gemini, openai, codex, ollama)", cfg.LLM.Provider))
+		warnings = append(warnings, fmt.Sprintf("unknown LLM provider %q (valid: claude, gemini, openai, codex)", cfg.LLM.Provider))
 	}
 	if cfg.TargetProvider != "" && !validProviders[strings.ToLower(strings.TrimSpace(string(cfg.TargetProvider)))] {
-		warnings = append(warnings, fmt.Sprintf("unknown target provider %q (valid: claude, gemini, openai, codex, ollama)", cfg.TargetProvider))
+		warnings = append(warnings, fmt.Sprintf("unknown target provider %q (valid: claude, gemini, openai, codex)", cfg.TargetProvider))
 	}
 
 	validEffort := map[string]bool{"low": true, "medium": true, "high": true, "max": true, "": true}

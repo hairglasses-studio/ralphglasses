@@ -102,7 +102,7 @@ func ValidateConfig(cfg *model.RalphConfig) []string {
 	}
 
 	if v := cfg.Get("PROVIDER", ""); v != "" {
-		allowed := []string{"claude", "gemini", "codex", "openai", "ollama"}
+		allowed := []string{"claude", "gemini", "codex", "openai"}
 		if !slices.Contains(allowed, strings.ToLower(v)) {
 			issues = append(issues, "WARN: PROVIDER is not a recognized provider: "+v)
 		}

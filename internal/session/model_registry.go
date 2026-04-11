@@ -29,23 +29,6 @@ var modelRegistry = []ModelInfo{
 	{ID: "gpt-5.4", Provider: ProviderCodex, DisplayName: "OpenAI GPT-5.4", ContextWindow: 1050000, CostPerMTokIn: 2.50, CostPerMTokOut: 15.0, MaxOutputTok: 128000, Capabilities: []string{"code", "reasoning", "vision"}},
 	{ID: "o3", Provider: ProviderCodex, DisplayName: "OpenAI o3", ContextWindow: 200000, CostPerMTokIn: 2.0, CostPerMTokOut: 8.0, MaxOutputTok: 100000, Capabilities: []string{"code", "reasoning"}},
 	{ID: "o4-mini", Provider: ProviderCodex, DisplayName: "OpenAI o4-mini", ContextWindow: 200000, CostPerMTokIn: 1.10, CostPerMTokOut: 4.40, MaxOutputTok: 100000, Capabilities: []string{"code", "reasoning"}},
-
-	// Shared local Ollama defaults
-	{ID: "code-fast", Provider: ProviderOllama, DisplayName: "Code Fast", ContextWindow: 131072, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 16384, Capabilities: []string{"code", "reasoning"}},
-	{ID: "code-compact", Provider: ProviderOllama, DisplayName: "Code Compact", ContextWindow: 131072, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 16384, Capabilities: []string{"code", "reasoning"}},
-	{ID: "code-primary", Provider: ProviderOllama, DisplayName: "Code Primary", ContextWindow: 131072, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 16384, Capabilities: []string{"chat", "code", "reasoning"}},
-	{ID: "code-reasoner", Provider: ProviderOllama, DisplayName: "Code Reasoner", ContextWindow: 131072, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 16384, Capabilities: []string{"code", "reasoning"}},
-	{ID: "code-long", Provider: ProviderOllama, DisplayName: "Code Long", ContextWindow: 262144, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 32768, Capabilities: []string{"code", "reasoning"}},
-	{ID: "code-heavy", Provider: ProviderOllama, DisplayName: "Code Heavy", ContextWindow: 131072, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 16384, Capabilities: []string{"code", "reasoning"}},
-	{ID: "qwen3:8b", Provider: ProviderOllama, DisplayName: "Qwen3 8B", ContextWindow: 131072, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 16384, Capabilities: []string{"chat", "reasoning"}},
-	{ID: "qwen2.5-coder:7b", Provider: ProviderOllama, DisplayName: "Qwen2.5 Coder 7B", ContextWindow: 131072, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 16384, Capabilities: []string{"code", "reasoning"}},
-	{ID: "devstral-small-2", Provider: ProviderOllama, DisplayName: "Devstral Small 2", ContextWindow: 131072, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 16384, Capabilities: []string{"code", "reasoning"}},
-	{ID: "devstral-2", Provider: ProviderOllama, DisplayName: "Devstral 2", ContextWindow: 131072, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 16384, Capabilities: []string{"code", "reasoning"}},
-	{ID: "qwen3-coder-next", Provider: ProviderOllama, DisplayName: "Qwen3 Coder Next", ContextWindow: 262144, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 32768, Capabilities: []string{"code", "reasoning"}},
-	{ID: "glm-5.1:cloud", Provider: ProviderOllama, DisplayName: "GLM 5.1 Cloud", ContextWindow: 0, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 0, Capabilities: []string{"code", "reasoning", "cloud"}},
-	{ID: "glm-5:cloud", Provider: ProviderOllama, DisplayName: "GLM 5 Cloud", ContextWindow: 0, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 0, Capabilities: []string{"code", "reasoning", "cloud"}},
-	{ID: "minimax-m2.1:cloud", Provider: ProviderOllama, DisplayName: "MiniMax M2.1 Cloud", ContextWindow: 0, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 0, Capabilities: []string{"code", "reasoning", "multilingual", "cloud"}},
-	{ID: "kimi-k2-thinking:cloud", Provider: ProviderOllama, DisplayName: "Kimi K2 Thinking Cloud", ContextWindow: 0, CostPerMTokIn: 0, CostPerMTokOut: 0, MaxOutputTok: 0, Capabilities: []string{"code", "reasoning", "cloud"}},
 }
 
 // ListModels returns all known models, optionally filtered by provider.

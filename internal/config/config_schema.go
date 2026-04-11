@@ -10,7 +10,6 @@ var knownProviders = map[string]bool{
 	"claude":      true,
 	"gemini":      true,
 	"codex":       true,
-	"ollama":      true,
 	"antigravity": true,
 	"openai":      true,
 	"crush":       true,
@@ -36,10 +35,10 @@ func ValidateConfig(cfg *Config) []error {
 
 	// Validate provider names are recognized.
 	if cfg.DefaultProvider != "" && !knownProviders[cfg.DefaultProvider] {
-		errs = append(errs, fmt.Errorf("unknown default provider %q (known: claude, gemini, codex, ollama, antigravity, openai, crush, goose, amp, a2a)", cfg.DefaultProvider))
+		errs = append(errs, fmt.Errorf("unknown default provider %q (known: claude, gemini, codex, antigravity, openai, crush, goose, amp, a2a)", cfg.DefaultProvider))
 	}
 	if cfg.WorkerProvider != "" && !knownProviders[cfg.WorkerProvider] {
-		errs = append(errs, fmt.Errorf("unknown worker provider %q (known: claude, gemini, codex, ollama, antigravity, openai, crush, goose, amp, a2a)", cfg.WorkerProvider))
+		errs = append(errs, fmt.Errorf("unknown worker provider %q (known: claude, gemini, codex, antigravity, openai, crush, goose, amp, a2a)", cfg.WorkerProvider))
 	}
 
 	// Validate worker count in sane range (1-50).

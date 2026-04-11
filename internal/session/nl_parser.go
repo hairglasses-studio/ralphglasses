@@ -58,7 +58,6 @@ var providerAliases = map[string]Provider{
 	"claude": ProviderClaude, "anthropic": ProviderClaude,
 	"gemini": ProviderGemini, "google": ProviderGemini,
 	"codex": ProviderCodex, "openai": ProviderCodex,
-	"ollama": ProviderOllama, "local": ProviderOllama,
 	"antigravity": ProviderAntigravity,
 }
 

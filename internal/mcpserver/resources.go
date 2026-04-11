@@ -549,7 +549,6 @@ func (s *Server) buildRuntimeSessionsDoc(_ context.Context) map[string]any {
 			"resource_count":            runtime["resource_count"],
 			"prompt_count":              runtime["prompt_count"],
 			"provider_health":           runtime["provider_health"],
-			"ollama_inventory":          runtime["ollama_inventory"],
 			"highest_priority_workflow": nestedString(runtime["adoption_priority_summary"], "highest_priority_workflow"),
 		},
 	}
@@ -589,7 +588,6 @@ func (s *Server) buildRuntimeOperatorDoc(ctx context.Context) map[string]any {
 			"resource_count":            runtime["resource_count"],
 			"prompt_count":              runtime["prompt_count"],
 			"provider_health":           runtime["provider_health"],
-			"ollama_inventory":          runtime["ollama_inventory"],
 			"highest_priority_workflow": nestedString(runtime["adoption_priority_summary"], "highest_priority_workflow"),
 		},
 	}
@@ -639,7 +637,6 @@ func (s *Server) buildProviderParityDoc() map[string]any {
 			"resource_count":            runtime["resource_count"],
 			"prompt_count":              runtime["prompt_count"],
 			"provider_health":           runtime["provider_health"],
-			"ollama_inventory":          runtime["ollama_inventory"],
 			"highest_priority_workflow": nestedString(runtime["adoption_priority_summary"], "highest_priority_workflow"),
 		},
 	}

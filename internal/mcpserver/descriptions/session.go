@@ -35,7 +35,7 @@ const (
 	DescRalphglassesPromptAnalyze       = "Score a prompt across 10 quality dimensions (clarity, specificity, structure, examples, etc.) with letter grades and actionable suggestions"
 	DescRalphglassesPromptEnhance       = "Run the 13-stage prompt enhancement pipeline (specificity, positive reframing, XML structure, context reorder, format enforcement, etc.)"
 	DescRalphglassesPromptLint          = "Deep-lint a prompt for anti-patterns: unmotivated rules, negative framing, aggressive caps, vague quantifiers, injection risks, cache-unfriendly ordering"
-	DescRalphglassesPromptImprove       = "LLM-powered prompt improvement using Claude, Gemini, OpenAI, or local Ollama-compatible endpoints with domain-specific meta-prompts"
+	DescRalphglassesPromptImprove       = "LLM-powered prompt improvement using Claude, Gemini, or OpenAI endpoints with domain-specific meta-prompts"
 	DescRalphglassesPromptClassify      = "Classify a prompt's task type (code, troubleshooting, analysis, creative, workflow, general)"
 	DescRalphglassesPromptShouldEnhance = "Check whether a prompt would benefit from enhancement"
 	DescRalphglassesPromptTemplates     = "List available prompt templates with descriptions and required variables"

@@ -441,7 +441,7 @@ func TestHandlePromptImprove_NoAPIKey(t *testing.T) {
 	srv, _ := setupTestServer(t)
 
 	// Ensure no API keys are set for this test
-	for _, key := range []string{"ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY", "OLLAMA_API_KEY"} {
+	for _, key := range []string{"ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY"} {
 		t.Setenv(key, "")
 	}
 	// Reset the engine so it picks up the empty env
@@ -494,16 +494,6 @@ func TestHandlePromptImprove_NoAPIKey(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name: "ollama provider considered locally available",
-			args: map[string]any{"prompt": "Write a function", "provider": "ollama"},
-			check: func(t *testing.T, text string) {
-				if strings.Contains(text, "OLLAMA_API_KEY") {
-					t.Errorf("expected runtime improve failure, not missing-key hint: %s", text)
-				}
-			},
-			wantErr: true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -532,12 +522,6 @@ func TestHandlePromptImprove_NoAPIKey(t *testing.T) {
 	}
 }
 
-func TestHasAPIKeyForProvider_Ollama(t *testing.T) {
-	t.Parallel()
-	if !hasAPIKeyForProvider("ollama") {
-		t.Fatal("expected ollama provider to be treated as locally available")
-	}
-}
 
 // --- prompt_templates ---
 

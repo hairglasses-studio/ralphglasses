@@ -28,21 +28,14 @@ type OpenAIClient struct {
 
 // NewOpenAIClient creates an OpenAI client from config. Returns nil if no API key is available.
 func NewOpenAIClient(cfg LLMConfig) *OpenAIClient {
-	baseURL := resolveProviderBaseURL(cfg, "https://api.openai.com")
+	baseURL := cfg.BaseURL
+	if baseURL == "" {
+		baseURL = "https://api.openai.com"
+	}
 
-	apiKey := ""
-	if isLocalOllamaBaseURL(baseURL) {
-		if cfg.APIKeyEnv != "" && !strings.EqualFold(cfg.APIKeyEnv, "OPENAI_API_KEY") {
-			apiKey = os.Getenv(cfg.APIKeyEnv)
-		}
-		if apiKey == "" {
-			apiKey = resolveLocalOllamaAPIKey(baseURL)
-		}
-	} else {
-		apiKey = os.Getenv(cfg.APIKeyEnv)
-		if apiKey == "" {
-			apiKey = os.Getenv("OPENAI_API_KEY")
-		}
+	apiKey := os.Getenv(cfg.APIKeyEnv)
+	if apiKey == "" {
+		apiKey = os.Getenv("OPENAI_API_KEY")
 	}
 	if apiKey == "" {
 		return nil
@@ -50,11 +43,7 @@ func NewOpenAIClient(cfg LLMConfig) *OpenAIClient {
 
 	model := cfg.Model
 	if model == "" {
-		if isLocalOllamaBaseURL(baseURL) {
-			model = defaultLocalOllamaChatModelName()
-		} else {
-			model = "o3"
-		}
+		model = "o3"
 	}
 
 	timeout := cfg.Timeout

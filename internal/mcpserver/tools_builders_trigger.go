@@ -17,7 +17,7 @@ func (s *Server) buildTriggerGroup() ToolGroup {
 				mcp.WithString("agent_type", mcp.Required(), mcp.Description("Agent type to trigger"),
 					mcp.Enum("ralph", "loop", "cycle"),
 				),
-				mcp.WithString("provider", mcp.Description("Cycle provider override: claude, codex, gemini, ollama, or auto/omit for runtime selection")),
+				mcp.WithString("provider", mcp.Description("Cycle provider override: claude, codex, gemini, or auto/omit for runtime selection")),
 				mcp.WithNumber("priority", mcp.Description("Priority 1-10, higher = more urgent (default: 5)")),
 				mcp.WithString("model", mcp.Description("Model override for the session")),
 				mcp.WithNumber("budget_usd", mcp.Description("Budget in USD for the session")),

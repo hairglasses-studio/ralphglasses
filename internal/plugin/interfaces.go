@@ -3,13 +3,13 @@ package plugin
 import "context"
 
 // ProviderPlugin extends Plugin with custom LLM provider capabilities.
-// Implementations can back alternative model providers such as Ollama,
+// Implementations can back alternative model providers
 // vLLM, or any locally-hosted inference endpoint.
 type ProviderPlugin interface {
 	Plugin
 
 	// ProviderName returns the unique identifier for this provider
-	// (e.g., "ollama", "vllm", "local-llama").
+	// (e.g., "vllm", "local-llama").
 	ProviderName() string
 
 	// Complete sends a prompt to the provider and returns the completion text.

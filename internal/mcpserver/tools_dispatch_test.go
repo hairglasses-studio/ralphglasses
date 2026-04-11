@@ -245,19 +245,6 @@ func TestHandleServerHealth_IncludesDiscoveryContract(t *testing.T) {
 	if providerHealth["providers"] == nil {
 		t.Fatalf("expected providers map in provider_health payload: %v", providerHealth)
 	}
-	ollamaInventory, ok := payload["ollama_inventory"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected ollama_inventory object in server health payload: %v", payload)
-	}
-	if ollamaInventory["base_url"] == nil {
-		t.Fatalf("expected base_url in ollama_inventory payload: %v", ollamaInventory)
-	}
-	if ollamaInventory["required_models"] == nil {
-		t.Fatalf("expected required_models in ollama_inventory payload: %v", ollamaInventory)
-	}
-	if ollamaInventory["managed_aliases"] == nil {
-		t.Fatalf("expected managed_aliases in ollama_inventory payload: %v", ollamaInventory)
-	}
 	if payload["discovery_adoption_summary"] == nil {
 		t.Fatalf("expected discovery_adoption_summary in server health payload: %v", payload)
 	}

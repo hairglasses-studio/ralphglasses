@@ -54,7 +54,7 @@ type ProviderCapabilityMatrix struct {
 
 // PrimaryProviders returns the primary interactive providers in comparison order.
 func PrimaryProviders() []Provider {
-	return []Provider{ProviderClaude, ProviderOllama, ProviderCodex, ProviderGemini, ProviderAntigravity, ProviderCline}
+	return []Provider{ProviderClaude, ProviderCodex, ProviderGemini, ProviderAntigravity, ProviderCline}
 }
 
 // ProviderCapabilityMatrices returns the capability matrix for all primary providers.
@@ -233,87 +233,6 @@ func ProviderCapabilityMatrixFor(provider Provider) (ProviderCapabilityMatrix, b
 				CapabilityHooks: {
 					Support: CapabilityNative,
 					Detail:  "Claude supports hooks through settings.json.",
-				},
-			},
-		}, true
-	case ProviderOllama:
-		return ProviderCapabilityMatrix{
-			Provider:            ProviderOllama,
-			Binary:              "claude",
-			DefaultModel:        ProviderDefaults(ProviderOllama),
-			ExecutionModel:      "streaming_cli",
-			Experimental:        true,
-			ProjectInstructions: "CLAUDE.md",
-			RepoConfigPath:      ".claude/settings.json",
-			AgentConfigPath:     ".claude/agents/*.md",
-			Capabilities: map[string]ProviderCapability{
-				CapabilityBudgetUSD: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude CLI flags. Local billing is not exposed by the backend, so ralphglasses reports zero provider-side token cost.",
-				},
-				CapabilityMaxTurns: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude CLI --max-turns.",
-				},
-				CapabilityAgent: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude CLI subagents in .claude/agents/*.md.",
-				},
-				CapabilityAllowedTools: {
-					Support: CapabilityNative,
-					Detail:  "Claude CLI still enforces tool allowlists, but backend-side tool forcing guarantees depend on Ollama's compatibility layer.",
-				},
-				CapabilitySystemPrompt: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude CLI system-prompt flags.",
-				},
-				CapabilityResume: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude CLI resume support.",
-				},
-				CapabilityWorktree: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude CLI --worktree.",
-				},
-				CapabilityPermissionMode: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude CLI --permission-mode.",
-				},
-				CapabilityOutputSchema: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude CLI --json-schema, subject to compatibility-layer fidelity.",
-				},
-				CapabilitySandboxImage: {
-					Support: CapabilityUnsupported,
-					Detail:  "Claude CLI does not accept a Docker sandbox image override.",
-				},
-				CapabilityProjectInstructions: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions still read CLAUDE.md because the runtime path is Claude CLI plus an Ollama compatibility env overlay.",
-				},
-				CapabilityMCPClient: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions still use Claude's MCP client support.",
-				},
-				CapabilityMCPServer: {
-					Support: CapabilityUnsupported,
-					Detail:  "The runtime is still an MCP client, not an MCP server.",
-				},
-				CapabilitySkills: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude project skills.",
-				},
-				CapabilityPlugins: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude plugin loading.",
-				},
-				CapabilitySubagents: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude subagents, with backend semantics governed by the local Anthropic-compatible endpoint.",
-				},
-				CapabilityHooks: {
-					Support: CapabilityNative,
-					Detail:  "Ollama sessions reuse Claude hooks.",
 				},
 			},
 		}, true

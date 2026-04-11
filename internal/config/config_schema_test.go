@@ -203,7 +203,7 @@ func TestLoad_MalformedJSON(t *testing.T) {
 }
 
 func TestAllKnownProviders(t *testing.T) {
-	for _, p := range []string{"claude", "gemini", "codex", "openai", "ollama"} {
+	for _, p := range []string{"claude", "gemini", "codex", "openai"} {
 		cfg := &Config{DefaultProvider: p}
 		errs := ValidateConfig(cfg)
 		if len(errs) != 0 {

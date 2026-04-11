@@ -278,7 +278,7 @@ func TestWorkerAgent_DiscoverProviders_Sprint7(t *testing.T) {
 		session.ProviderCodex:  true,
 		session.ProviderGemini: true,
 		session.ProviderClaude: true,
-		session.ProviderOllama: true,
+		"ollama": true,
 	}
 	if !known[providers[0]] {
 		t.Errorf("first provider = %q, want one of codex/gemini/claude/ollama", providers[0])

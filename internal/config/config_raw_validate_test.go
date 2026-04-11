@@ -223,7 +223,7 @@ func TestValidationWarning_String(t *testing.T) {
 }
 
 func TestValidateRawConfig_AllProviders(t *testing.T) {
-	for _, p := range []string{"claude", "gemini", "codex", "openai", "ollama"} {
+	for _, p := range []string{"claude", "gemini", "codex", "openai"} {
 		cfg := map[string]any{"provider": p}
 		if w := ValidateRawConfig(cfg); len(w) != 0 {
 			t.Errorf("provider %q should be valid, got %v", p, w)

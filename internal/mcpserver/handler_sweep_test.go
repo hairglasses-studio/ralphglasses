@@ -400,62 +400,6 @@ func TestSweepLaunch_ReplacesPromptPlaceholders(t *testing.T) {
 	}
 }
 
-func TestSweepLaunch_AllowsExplicitOllamaProvider(t *testing.T) {
-	repoPath := filepath.Join(t.TempDir(), "demo")
-	if err := os.MkdirAll(repoPath, 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-
-	sessMgr := session.NewManager()
-	launches := make(chan session.LaunchOptions, 1)
-	sessMgr.SetHooksForTesting(func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
-		launches <- opts
-		now := time.Now()
-		return &session.Session{
-			ID:                      "sess-demo",
-			Provider:                opts.Provider,
-			Model:                   firstNonBlank(opts.Model, session.ProviderDefaults(opts.Provider)),
-			ProviderAutoSelected:    false,
-			ProviderSelectionReason: "",
-			RepoPath:                opts.RepoPath,
-			RepoName:                filepath.Base(opts.RepoPath),
-			Status:                  session.StatusRunning,
-			Prompt:                  opts.Prompt,
-			LaunchedAt:              now,
-			LastActivity:            now,
-		}, nil
-	}, nil)
-
-	s := &Server{
-		Tasks:   NewTaskRegistry(),
-		SessMgr: sessMgr,
-		Repos:   []*model.Repo{{Name: "demo", Path: repoPath}},
-	}
-
-	req := mcp.CallToolRequest{}
-	req.Params.Arguments = map[string]any{
-		"prompt":   "Inspect demo",
-		"repos":    `["demo"]`,
-		"provider": "ollama",
-	}
-
-	result, err := s.handleSweepLaunch(context.Background(), req)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.IsError {
-		t.Fatalf("unexpected error: %s", sweepExtractText(result))
-	}
-
-	select {
-	case launch := <-launches:
-		if launch.Provider != session.ProviderOllama {
-			t.Fatalf("launch provider = %q, want %q", launch.Provider, session.ProviderOllama)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for sweep launch")
-	}
-}
 
 func TestSweepNudge_RestartPreservesOriginalProvider(t *testing.T) {
 	srv, root := setupTestServer(t)
@@ -466,7 +410,7 @@ func TestSweepNudge_RestartPreservesOriginalProvider(t *testing.T) {
 
 	stalledID := injectTestSession(t, srv, repoPath, func(s *session.Session) {
 		s.ID = "sess-stalled"
-		s.Provider = session.ProviderOllama
+		s.Provider = "ollama"
 		s.Model = "code-primary"
 		s.RepoName = "test-repo"
 		s.SweepID = "sweep-test"
@@ -505,8 +449,8 @@ func TestSweepNudge_RestartPreservesOriginalProvider(t *testing.T) {
 	if result.IsError {
 		t.Fatalf("unexpected error: %s", sweepExtractText(result))
 	}
-	if captured.Provider != session.ProviderOllama {
-		t.Fatalf("restart provider = %q, want %q", captured.Provider, session.ProviderOllama)
+	if captured.Provider != "ollama" {
+		t.Fatalf("restart provider = %q, want %q", captured.Provider, "ollama")
 	}
 	if captured.Model != "code-primary" {
 		t.Fatalf("restart model = %q, want %q", captured.Model, "code-primary")

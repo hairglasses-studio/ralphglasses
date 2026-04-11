@@ -253,48 +253,6 @@ func TestDispatch_AutoWithCascadeRouterLeavesRuntimeSelectionUnset(t *testing.T)
 	}
 }
 
-func TestDispatch_SendAutoSelectsOllamaForLowRiskPrompt(t *testing.T) {
-	srv, _ := setupTestServer(t)
-	ollamaSrv := newReadyOllamaInventoryServer(t)
-	defer ollamaSrv.Close()
-
-	setReadyOllamaEnv(t, ollamaSrv.URL)
-	srv.SessMgr.SetStateDir(t.TempDir())
-	srv.SessMgr.SetHooksForTesting(func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
-		return &session.Session{
-			ID:                      "sess-dispatch-ollama",
-			Provider:                opts.Provider,
-			Model:                   opts.Model,
-			RepoPath:                opts.RepoPath,
-			RepoName:                "test-repo",
-			Status:                  session.StatusRunning,
-			LaunchedAt:              time.Now(),
-			ProviderAutoSelected:    opts.Provider == session.ProviderOllama,
-			ProviderSelectionReason: "auto-selected Ollama for a low-risk planning/reporting task because the local inventory is fully ready",
-		}, nil
-	}, nil)
-
-	result, err := srv.handleDispatch(context.Background(), makeRequest(map[string]any{
-		"repo":     "test-repo",
-		"action":   "send",
-		"provider": "auto",
-		"prompt":   "plan and summarize the repo doctor status",
-	}))
-	if err != nil {
-		t.Fatalf("handleDispatch: %v", err)
-	}
-	if result.IsError {
-		t.Fatalf("unexpected error: %s", getResultText(result))
-	}
-	text := getResultText(result)
-	if !strings.Contains(text, "test-repo/ollama") {
-		t.Fatalf("expected ollama in dispatch output, got: %s", text)
-	}
-	if !strings.Contains(text, "auto-selected") {
-		t.Fatalf("expected auto-selection note, got: %s", text)
-	}
-}
-
 func TestDispatch_AllValidActions(t *testing.T) {
 	t.Parallel()
 

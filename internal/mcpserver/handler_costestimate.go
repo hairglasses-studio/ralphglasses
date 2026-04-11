@@ -47,8 +47,6 @@ func defaultModelForProvider(provider string) string {
 		return "gemini-3.1-flash"
 	case "codex":
 		return session.ProviderDefaults(session.ProviderCodex)
-	case "ollama":
-		return session.ProviderDefaults(session.ProviderOllama)
 	default:
 		return ""
 	}
@@ -62,8 +60,6 @@ func providerRateKey(provider string) string {
 		return "gemini_flash"
 	case "codex":
 		return "codex"
-	case "ollama":
-		return "ollama"
 	default:
 		return ""
 	}
@@ -171,7 +167,7 @@ func (s *Server) handleCostEstimate(_ context.Context, req mcp.CallToolRequest) 
 		return errResult, nil
 	}
 	if providerRateKey(provider) == "" {
-		return codedError(ErrInvalidParams, "provider must be one of: claude, gemini, codex, ollama"), nil
+		return codedError(ErrInvalidParams, "provider must be one of: claude, gemini, codex"), nil
 	}
 
 	model := pp.StringOpt("model", "")

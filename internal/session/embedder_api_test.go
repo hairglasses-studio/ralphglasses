@@ -143,79 +143,7 @@ func TestOpenAIEmbedder_RequestFormat(t *testing.T) {
 	}
 }
 
-func TestOllamaEmbedder_RequestFormat(t *testing.T) {
-	var gotReq ollamaEmbeddingRequest
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Ollama should not have Authorization header.
-		if auth := r.Header.Get("Authorization"); auth != "" {
-			t.Errorf("expected no auth header for ollama, got %q", auth)
-		}
-
-		// Verify path.
-		if r.URL.Path != "/api/embeddings" {
-			t.Errorf("expected path /api/embeddings, got %q", r.URL.Path)
-		}
-
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			t.Errorf("read body: %v", err)
-			http.Error(w, "bad", 500)
-			return
-		}
-		if err := json.Unmarshal(body, &gotReq); err != nil {
-			t.Errorf("unmarshal body: %v", err)
-			http.Error(w, "bad", 500)
-			return
-		}
-
-		resp := ollamaEmbeddingResponse{
-			Embedding: []float64{0.4, 0.5, 0.6, 0.7},
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
-	}))
-	defer server.Close()
-
-	// NewOllamaEmbedder appends /api/embeddings, so use server URL as base.
-	e := NewOllamaEmbedder("unused")
-	e.endpoint = server.URL + "/api/embeddings" // Override to use test server.
-
-	vec, err := e.Embed("test prompt")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Verify request format.
-	if gotReq.Model != "nomic-embed-text:v1.5" {
-		t.Errorf("expected model 'nomic-embed-text:v1.5', got %q", gotReq.Model)
-	}
-	if gotReq.Prompt != "test prompt" {
-		t.Errorf("expected prompt 'test prompt', got %q", gotReq.Prompt)
-	}
-
-	// Verify response parsing.
-	if len(vec) != 4 {
-		t.Fatalf("expected 4 dimensions, got %d", len(vec))
-	}
-	if vec[0] != 0.4 || vec[3] != 0.7 {
-		t.Errorf("unexpected vector: %v", vec)
-	}
-}
-
-func TestNewOllamaEmbedder_UsesWorkspaceDefaults(t *testing.T) {
-	t.Setenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434/")
-	t.Setenv("OLLAMA_EMBED_MODEL", "custom-embed")
-
-	embedder := NewOllamaEmbedder("")
-
-	if embedder.endpoint != "http://127.0.0.1:11434/api/embeddings" {
-		t.Fatalf("embedder.endpoint = %q, want %q", embedder.endpoint, "http://127.0.0.1:11434/api/embeddings")
-	}
-	if embedder.model != "custom-embed" {
-		t.Fatalf("embedder.model = %q, want %q", embedder.model, "custom-embed")
-	}
-}
 
 func TestOpenAIEmbedder_ErrorResponse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -233,19 +161,3 @@ func TestOpenAIEmbedder_ErrorResponse(t *testing.T) {
 	}
 }
 
-func TestOllamaEmbedder_EmptyEmbedding(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resp := ollamaEmbeddingResponse{Embedding: nil}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
-	}))
-	defer server.Close()
-
-	e := NewOllamaEmbedder("unused")
-	e.endpoint = server.URL + "/api/embeddings"
-
-	_, err := e.Embed("test")
-	if err == nil {
-		t.Fatal("expected error for empty embedding")
-	}
-}

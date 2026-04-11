@@ -220,7 +220,7 @@ func TestHandleSessionResume_InfersProviderFromExistingSession(t *testing.T) {
 	srv, root := setupTestServer(t)
 	repoPath := filepath.Join(root, "test-repo")
 	injectTestSession(t, srv, repoPath, func(s *session.Session) {
-		s.Provider = session.ProviderOllama
+		s.Provider = "ollama"
 		s.ProviderSessionID = "provider-session-123"
 		s.Status = session.StatusStopped
 	})
@@ -899,92 +899,7 @@ func TestHandleSessionLaunch_DefaultProvider(t *testing.T) {
 	_ = result
 }
 
-func TestHandleSessionLaunch_AutoSelectsOllamaForLowRiskPrompt(t *testing.T) {
-	srv, _ := setupTestServer(t)
-	ollamaSrv := newReadyOllamaInventoryServer(t)
-	defer ollamaSrv.Close()
 
-	setReadyOllamaEnv(t, ollamaSrv.URL)
-
-	srv.SessMgr.SetStateDir(t.TempDir())
-	srv.SessMgr.SetHooksForTesting(func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
-		return &session.Session{
-			ID:         "sess-ollama",
-			Provider:   opts.Provider,
-			Model:      opts.Model,
-			RepoPath:   opts.RepoPath,
-			RepoName:   filepath.Base(opts.RepoPath),
-			Status:     session.StatusRunning,
-			LaunchedAt: time.Now(),
-		}, nil
-	}, nil)
-
-	result, err := srv.handleSessionLaunch(context.Background(), makeRequest(map[string]any{
-		"repo":   "test-repo",
-		"prompt": "plan and summarize the repo doctor status",
-	}))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.IsError {
-		t.Fatalf("unexpected error result: %s", getResultText(result))
-	}
-
-	var payload map[string]any
-	if err := json.Unmarshal([]byte(getResultText(result)), &payload); err != nil {
-		t.Fatalf("unmarshal result: %v", err)
-	}
-	if payload["provider"] != string(session.ProviderOllama) {
-		t.Fatalf("provider = %v, want %q", payload["provider"], session.ProviderOllama)
-	}
-	if payload["provider_auto_selected"] != true {
-		t.Fatalf("provider_auto_selected = %v, want true", payload["provider_auto_selected"])
-	}
-}
-
-func TestHandleSessionLaunch_AutoProviderAliasSelectsOllamaForLowRiskPrompt(t *testing.T) {
-	srv, _ := setupTestServer(t)
-	ollamaSrv := newReadyOllamaInventoryServer(t)
-	defer ollamaSrv.Close()
-
-	setReadyOllamaEnv(t, ollamaSrv.URL)
-
-	srv.SessMgr.SetStateDir(t.TempDir())
-	srv.SessMgr.SetHooksForTesting(func(_ context.Context, opts session.LaunchOptions) (*session.Session, error) {
-		return &session.Session{
-			ID:         "sess-ollama-auto",
-			Provider:   opts.Provider,
-			Model:      opts.Model,
-			RepoPath:   opts.RepoPath,
-			RepoName:   filepath.Base(opts.RepoPath),
-			Status:     session.StatusRunning,
-			LaunchedAt: time.Now(),
-		}, nil
-	}, nil)
-
-	result, err := srv.handleSessionLaunch(context.Background(), makeRequest(map[string]any{
-		"repo":     "test-repo",
-		"provider": "auto",
-		"prompt":   "plan and summarize the repo doctor status",
-	}))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.IsError {
-		t.Fatalf("unexpected error result: %s", getResultText(result))
-	}
-
-	var payload map[string]any
-	if err := json.Unmarshal([]byte(getResultText(result)), &payload); err != nil {
-		t.Fatalf("unmarshal result: %v", err)
-	}
-	if payload["provider"] != string(session.ProviderOllama) {
-		t.Fatalf("provider = %v, want %q", payload["provider"], session.ProviderOllama)
-	}
-	if payload["provider_auto_selected"] != true {
-		t.Fatalf("provider_auto_selected = %v, want true", payload["provider_auto_selected"])
-	}
-}
 
 func TestHandleSessionList_CombinedFilters(t *testing.T) {
 	t.Parallel()

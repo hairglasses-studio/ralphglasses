@@ -185,9 +185,7 @@ func TestRule_ProviderNames(t *testing.T) {
 	}{
 		{"both empty", "", "", 0},
 		{"claude/gemini", "claude", "gemini", 0},
-		{"codex/ollama", "codex", "ollama", 0},
 		{"openai/claude", "openai", "claude", 0},
-		{"all valid providers default", "ollama", "", 0},
 		{"unknown default", "gpt5", "", 1},
 		{"unknown worker", "", "llama9000", 1},
 		{"both unknown", "foo", "bar", 2},
@@ -407,7 +405,6 @@ func TestValidateProviderName(t *testing.T) {
 		{"gemini", false},
 		{"codex", false},
 		{"openai", false},
-		{"ollama", false},
 		{"gpt5", true},
 		{"Claude", true}, // case-sensitive
 		{"GEMINI", true},
@@ -464,15 +461,6 @@ func TestValidateModelForProvider(t *testing.T) {
 		{"openai", "claude-sonnet-4-6", true},
 
 		// Ollama models.
-		{"ollama", "llama3", false},
-		{"ollama", "mistral-7b", false},
-		{"ollama", "codellama", false},
-		{"ollama", "deepseek-coder", false},
-		{"ollama", "phi3", false},
-		{"ollama", "qwen2", false},
-		{"ollama", "gemma2", false},
-		{"ollama", "starcoder2", false},
-		{"ollama", "gpt-4", true},
 
 		// Unknown provider — skip validation.
 		{"future_ai", "anything-goes", false},

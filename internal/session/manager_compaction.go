@@ -12,7 +12,7 @@ func (m *Manager) applyResumeCompaction(ctx context.Context, opts *LaunchOptions
 		return
 	}
 	provider := normalizeSessionProvider(opts.Provider)
-	if provider == ProviderClaude || provider == ProviderOllama {
+	if provider == ProviderClaude {
 		return
 	}
 

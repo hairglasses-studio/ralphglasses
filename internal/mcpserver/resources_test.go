@@ -406,7 +406,6 @@ func TestProviderParityResource_ReturnsFrontDoorSummary(t *testing.T) {
 		`"adoption_priority_summary": {`,
 		`"provider_parity": "ralph:///catalog/provider-parity"`,
 		`"provider_health": {`,
-		`"ollama_inventory": {`,
 	} {
 		if !strings.Contains(textContent.Text, expected) {
 			t.Fatalf("expected %q in provider parity resource: %s", expected, textContent.Text)
@@ -607,7 +606,6 @@ func TestRuntimeOperatorResource_ReturnsControlPlaneFrontDoor(t *testing.T) {
 		`"runtime_sessions": "ralph:///runtime/sessions"`,
 		`"active_session_count": 1`,
 		`"provider_health": {`,
-		`"ollama_inventory": {`,
 	} {
 		if !strings.Contains(textContent.Text, expected) {
 			t.Fatalf("expected %q in runtime operator resource: %s", expected, textContent.Text)
@@ -641,9 +639,6 @@ func TestRuntimeHealthResource_ReturnsServerHealthShape(t *testing.T) {
 	}
 	if !strings.Contains(textContent.Text, "\"provider_health\"") {
 		t.Fatalf("expected provider_health in runtime health: %s", textContent.Text)
-	}
-	if !strings.Contains(textContent.Text, "\"ollama_inventory\"") {
-		t.Fatalf("expected ollama_inventory in runtime health: %s", textContent.Text)
 	}
 	if !strings.Contains(textContent.Text, "\"healthy_provider_count\"") {
 		t.Fatalf("expected healthy_provider_count in runtime health: %s", textContent.Text)

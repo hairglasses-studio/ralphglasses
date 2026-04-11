@@ -151,9 +151,6 @@ func FinishLLMCallSpan(span trace.Span, started time.Time, info LLMCallInfo, err
 }
 
 func EstimateLLMCostUSD(system, model string, inputTokens, outputTokens int64) float64 {
-	if strings.EqualFold(strings.TrimSpace(system), "ollama") {
-		return 0
-	}
 	return finops.ModelCost(model, inputTokens, outputTokens)
 }
 
@@ -162,10 +159,7 @@ func ResolveGenAISystem(baseURL, fallback string) string {
 	if baseURL != "" {
 		parsed, err := url.Parse(baseURL)
 		if err == nil {
-			host := strings.ToLower(parsed.Hostname())
-			if host == "127.0.0.1" || host == "localhost" || host == "::1" {
-				return "ollama"
-			}
+			_ = strings.ToLower(parsed.Hostname())
 		}
 	}
 	fallback = strings.TrimSpace(fallback)

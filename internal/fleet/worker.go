@@ -570,7 +570,6 @@ func (w *WorkerAgent) discoverProviders() []session.Provider {
 		session.ProviderCodex,
 		session.ProviderGemini,
 		session.ProviderClaude,
-		session.ProviderOllama,
 	} {
 		if err := session.ValidateProvider(p); err == nil {
 			providers = append(providers, p)

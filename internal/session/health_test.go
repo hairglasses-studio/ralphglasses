@@ -2,7 +2,6 @@ package session
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -63,54 +62,15 @@ func TestHealthyProviders(t *testing.T) {
 
 func TestCheckAllProviderHealthReturnsAllProviders(t *testing.T) {
 	health := CheckAllProviderHealth()
-	for _, p := range []Provider{ProviderClaude, ProviderOllama, ProviderGemini, ProviderCodex, ProviderAntigravity} {
+	for _, p := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ProviderAntigravity} {
 		if _, ok := health[p]; !ok {
 			t.Errorf("missing health entry for provider %q", p)
 		}
 	}
 }
 
-func TestCheckOllamaRuntimeHealthAcceptsInstalledAlias(t *testing.T) {
-	t.Setenv("OLLAMA_CODE_MODEL", "code-primary")
-	t.Setenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 
-	err := checkOllamaRuntimeHealth(func(context.Context, time.Duration) ([]string, error) {
-		return []string{"code-primary", "nomic-embed-text:v1.5"}, nil
-	})
-	if err != nil {
-		t.Fatalf("checkOllamaRuntimeHealth() error = %v, want nil", err)
-	}
-}
 
-func TestCheckOllamaRuntimeHealthFlagsMissingAliasWhenBackingModelExists(t *testing.T) {
-	t.Setenv("OLLAMA_CODE_MODEL", "code-primary")
-	t.Setenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-
-	err := checkOllamaRuntimeHealth(func(context.Context, time.Duration) ([]string, error) {
-		return []string{"devstral-small-2"}, nil
-	})
-	if err == nil {
-		t.Fatal("expected missing alias error, got nil")
-	}
-	if !strings.Contains(err.Error(), "managed alias is missing") {
-		t.Fatalf("error = %q, want managed alias guidance", err)
-	}
-}
-
-func TestCheckOllamaRuntimeHealthIncludesPullGuidance(t *testing.T) {
-	t.Setenv("OLLAMA_CODE_MODEL", "code-primary")
-	t.Setenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-
-	err := checkOllamaRuntimeHealth(func(context.Context, time.Duration) ([]string, error) {
-		return []string{"code-fast"}, nil
-	})
-	if err == nil {
-		t.Fatal("expected missing model error, got nil")
-	}
-	if !strings.Contains(err.Error(), "ollama pull devstral-small-2") {
-		t.Fatalf("error = %q, want pull guidance for backing model", err)
-	}
-}
 
 func TestHealthChecker_DetectsUnavailable(t *testing.T) {
 	bus := events.NewBus(100)

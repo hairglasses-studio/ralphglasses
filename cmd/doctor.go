@@ -35,7 +35,6 @@ configured correctly for running ralphglasses.
 
 Checks include:
   - Provider binaries (claude, gemini, codex)
-  - Local Ollama daemon, required code-* lanes, and managed alias readiness
   - Git binary and version (>= 2.20 for worktree support)
   - Config file (` + ralphpath.ConfigPathDefaultDescription() + `)
   - State directory (` + ralphpath.StateDirDefaultDescription() + `) permissions

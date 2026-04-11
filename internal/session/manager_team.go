@@ -76,15 +76,15 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 
 ## Provider capabilities
 
-| Parameter       | claude (all) | gemini         | codex          | ollama                |
-|-----------------|--------------|----------------|----------------|-----------------------|
-| prompt          | yes          | yes            | yes            | yes                   |
-| model           | yes          | yes            | yes            | yes                   |
-| resume          | yes          | yes            | no             | yes                   |
-| system_prompt   | yes          | no (ignored)   | no (ignored)   | yes                   |
-| max_budget_usd  | yes          | no (ignored)   | no (ignored)   | yes                   |
-| agent           | yes          | no (ignored)   | no (ignored)   | yes                   |
-| allowed_tools   | yes          | no (ignored)   | no (ignored)   | yes                   |
+| Parameter       | claude (all) | gemini         | codex          |
+|-----------------|--------------|----------------|----------------|
+| prompt          | yes          | yes            | yes            |
+| model           | yes          | yes            | yes            |
+| resume          | yes          | yes            | no             |
+| system_prompt   | yes          | no (ignored)   | no (ignored)   |
+| max_budget_usd  | yes          | no (ignored)   | no (ignored)   |
+| agent           | yes          | no (ignored)   | no (ignored)   |
+| allowed_tools   | yes          | no (ignored)   | no (ignored)   |
 
 ## Workflow
 
@@ -95,7 +95,7 @@ func (m *Manager) LaunchTeam(ctx context.Context, config TeamConfig) (*TeamStatu
 5. Report final status summarizing all task outcomes
 
 Default worker provider: %s.
-Provider strengths: claude (complex architecture), gemini (fast bulk generation), codex (focused refactoring), ollama (local planning, docs, and low-risk coordination when inventory is ready).`,
+Provider strengths: claude (complex architecture), gemini (fast bulk generation), codex (focused refactoring).`,
 		taskList.String(), config.WorkerProvider, config.WorkerProvider,
 	)
 

@@ -35,8 +35,6 @@ func hasAPIKeyForProvider(provider string) bool {
 	switch strings.ToLower(strings.TrimSpace(provider)) {
 	case "gemini":
 		return os.Getenv("GOOGLE_API_KEY") != "" || os.Getenv("GEMINI_API_KEY") != ""
-	case "ollama":
-		return true
 	case "openai":
 		return os.Getenv("OPENAI_API_KEY") != ""
 	default:
@@ -189,8 +187,6 @@ func (s *Server) handlePromptImprove(ctx context.Context, req mcp.CallToolReques
 			apiHint = "GOOGLE_API_KEY"
 		case "claude":
 			apiHint = "ANTHROPIC_API_KEY"
-		case "ollama":
-			apiHint = "OLLAMA_API_KEY (or a reachable local Ollama at OLLAMA_BASE_URL)"
 		}
 		return codedError(ErrProviderUnavailable, fmt.Sprintf("LLM not available: set %s", apiHint)), nil
 	}
@@ -396,7 +392,7 @@ func mapSessionProvider(p session.Provider) enhancer.ProviderName {
 	switch p {
 	case session.ProviderGemini:
 		return enhancer.ProviderGemini
-	case session.ProviderCodex, session.ProviderOllama:
+	case session.ProviderCodex:
 		return enhancer.ProviderOpenAI
 	default:
 		return enhancer.ProviderClaude

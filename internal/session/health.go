@@ -28,27 +28,8 @@ func (h ProviderHealth) Healthy() bool {
 	return h.Available && h.EnvOK
 }
 
-func checkOllamaRuntimeHealth(fetcher func(context.Context, time.Duration) ([]string, error)) error {
-	models, err := fetcher(context.Background(), 5*time.Second)
-	if err != nil {
-		return err
-	}
-
-	model := resolveOllamaCodeModel()
-	if ollamaModelInstalledExact(model, models) {
-		return nil
-	}
-	if sourceModel := ollamaAliasSourceModel(model); sourceModel != "" && ollamaModelInstalledExact(sourceModel, models) {
-		return fmt.Errorf("ollama model %q is not installed at %s; backing model %q is present but the managed alias is missing; run `~/hairglasses-studio/dotfiles/scripts/hg-ollama-sync-aliases.sh`",
-			model, resolveOllamaBaseURL(), sourceModel)
-	}
-	return fmt.Errorf("ollama model %q is not installed at %s; pull the backing model with `ollama pull %s` or sync aliases with `~/hairglasses-studio/dotfiles/scripts/hg-ollama-sync-aliases.sh`",
-		model, resolveOllamaBaseURL(), ollamaPullHintModel(model))
-}
-
 // CheckProviderHealth runs a health check for the given provider.
 // It verifies binary availability, required env, and version probe latency.
-// Ollama also checks that the configured local coding lane is installed.
 func CheckProviderHealth(p Provider) ProviderHealth {
 	p = normalizeSessionProvider(p)
 	start := time.Now()
@@ -74,14 +55,6 @@ func CheckProviderHealth(p Provider) ProviderHealth {
 	} else {
 		h.EnvOK = true
 	}
-	if p == ProviderOllama {
-		if err := checkOllamaRuntimeHealth(fetchOllamaModels); err != nil {
-			h.EnvOK = false
-			h.Error = err.Error()
-			h.LatencyMs = time.Since(start).Milliseconds()
-			return h
-		}
-	}
 
 	// Query --version for latency measurement (no API call).
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -97,7 +70,7 @@ func CheckProviderHealth(p Provider) ProviderHealth {
 
 // CheckAllProviderHealth runs health checks for all known providers in parallel.
 func CheckAllProviderHealth() map[Provider]ProviderHealth {
-	providers := []Provider{ProviderClaude, ProviderOllama, ProviderGemini, ProviderCodex, ProviderAntigravity}
+	providers := []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ProviderAntigravity}
 	type result struct {
 		p Provider
 		h ProviderHealth
@@ -201,9 +174,6 @@ func (h *HealthChecker) checkOne(p Provider) bool {
 	}
 	if err := ValidateProviderEnv(p); err != nil {
 		return false
-	}
-	if normalizeSessionProvider(p) == ProviderOllama {
-		return checkOllamaRuntimeHealth(fetchOllamaModels) == nil
 	}
 	return true
 }

@@ -23,7 +23,6 @@ var ProviderCostRates = map[Provider]CostRate{
 	ProviderClaude: {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // claude-sonnet-4.6
 	ProviderGemini: {InputPer1M: CostGeminiFlashInput, OutputPer1M: CostGeminiFlashOutput},   // gemini-3.1-flash
 	ProviderCodex:  {InputPer1M: CostCodexInput, OutputPer1M: CostCodexOutput},               // gpt-5.4
-	ProviderOllama: {InputPer1M: 0.0, OutputPer1M: 0.0},                                      // local Ollama default billing
 	ProviderCrush:  {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // crush multi-model, default to Claude rates
 	ProviderGoose:  {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // goose multi-model, default to Claude rates
 	ProviderAmp:    {InputPer1M: CostClaudeSonnetInput, OutputPer1M: CostClaudeSonnetOutput}, // amp managed models, default to Claude rates
@@ -65,7 +64,7 @@ func LoadCostRatesFromDir(ralphDir string) {
 	defer costRateMu.Unlock()
 
 	// Apply overrides to ProviderCostRates.
-	for _, provider := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ProviderOllama, ProviderCrush, ProviderGoose, ProviderAmp, ProviderCline, ProviderA2A} {
+	for _, provider := range []Provider{ProviderClaude, ProviderGemini, ProviderCodex, ProviderCrush, ProviderGoose, ProviderAmp, ProviderCline, ProviderA2A} {
 		rate := cr.ProviderCostRateFrom(provider)
 		if rate.InputPer1M > 0 || rate.OutputPer1M > 0 {
 			ProviderCostRates[provider] = rate

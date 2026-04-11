@@ -75,9 +75,6 @@ func (cr *CostRates) ProviderCostRateFrom(p Provider) CostRate {
 	case ProviderCodex:
 		rate.InputPer1M = cr.lookupInput("codex", CostCodexInput)
 		rate.OutputPer1M = cr.lookupOutput("codex", CostCodexOutput)
-	case ProviderOllama:
-		rate.InputPer1M = cr.lookupInput("ollama", 0.0)
-		rate.OutputPer1M = cr.lookupOutput("ollama", 0.0)
 	case ProviderCrush:
 		rate.InputPer1M = cr.lookupInput("crush", CostClaudeSonnetInput)
 		rate.OutputPer1M = cr.lookupOutput("crush", CostClaudeSonnetOutput)

@@ -37,17 +37,6 @@ func TestNewPromptImprover_OpenAI(t *testing.T) {
 	}
 }
 
-func TestNewPromptImprover_OllamaAlias(t *testing.T) {
-	t.Setenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-	t.Setenv("OLLAMA_API_KEY", "")
-	client := NewPromptImprover(LLMConfig{Enabled: true, Provider: "ollama"})
-	if client == nil {
-		t.Fatal("expected non-nil client for ollama")
-	}
-	if client.Provider() != ProviderOpenAI {
-		t.Errorf("expected provider %q, got %q", ProviderOpenAI, client.Provider())
-	}
-}
 
 func TestNewPromptImprover_NilWhenNoKey(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "")

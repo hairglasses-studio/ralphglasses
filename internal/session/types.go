@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,7 +17,6 @@ const (
 	ProviderClaude      Provider = "claude"
 	ProviderGemini      Provider = "gemini"
 	ProviderCodex       Provider = "codex"
-	ProviderOllama      Provider = "ollama"
 	ProviderAntigravity Provider = "antigravity"
 	ProviderCrush       Provider = "crush"
 	ProviderGoose       Provider = "goose"
@@ -36,6 +36,18 @@ const (
 	StatusErrored     SessionStatus = "errored"
 	StatusInterrupted SessionStatus = "interrupted" // process gone after restart; rehydrated from store
 )
+
+func normalizeSessionProvider(provider Provider) Provider {
+	raw := strings.ToLower(strings.TrimSpace(string(provider)))
+	switch raw {
+	case "":
+		return ""
+	case "openai":
+		return ProviderCodex
+	default:
+		return Provider(raw)
+	}
+}
 
 // IsTerminal returns true if the status represents a finished session.
 func (s SessionStatus) IsTerminal() bool {

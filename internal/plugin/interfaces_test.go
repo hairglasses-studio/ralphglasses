@@ -91,16 +91,16 @@ func TestProviderPlugin_Complete(t *testing.T) {
 	t.Parallel()
 
 	p := &mockProviderPlugin{
-		fakePlugin:   fakePlugin{name: "ollama", version: "0.1"},
-		providerName: "ollama-local",
+		fakePlugin:   fakePlugin{name: "vllm", version: "0.1"},
+		providerName: "vllm-local",
 		completeFunc: func(_ context.Context, prompt string, opts map[string]any) (string, error) {
 			model, _ := opts["model"].(string)
 			return "reply from " + model + ": " + prompt, nil
 		},
 	}
 
-	if p.ProviderName() != "ollama-local" {
-		t.Errorf("ProviderName() = %q, want %q", p.ProviderName(), "ollama-local")
+	if p.ProviderName() != "vllm-local" {
+		t.Errorf("ProviderName() = %q, want %q", p.ProviderName(), "vllm-local")
 	}
 
 	result, err := p.Complete(context.Background(), "hello", map[string]any{"model": "llama3"})

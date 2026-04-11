@@ -17,7 +17,6 @@ type RepoDetailHealth struct {
 	Observations     []session.LoopObservation
 	GateReport       *e2e.GateReport
 	ProviderProfiles []session.ProviderProfile
-	OllamaInventory  *session.OllamaInventory
 }
 
 // RenderRepoDetail renders a detailed view of a single repo.
@@ -231,12 +230,6 @@ func RenderRepoDetail(r *model.Repo, width int, health *RepoDetailHealth) string
 		}
 	}
 
-	if health != nil && health.OllamaInventory != nil {
-		b.WriteString("\n")
-		b.WriteString(styles.HeaderStyle.Render(fmt.Sprintf("%s Local Models", styles.IconSession)))
-		b.WriteString("\n")
-		writeOllamaInventorySummary(&b, health.OllamaInventory)
-	}
 	b.WriteString("\n")
 
 	// Parse error warnings
@@ -295,32 +288,6 @@ func (v *RepoDetailView) regenerate() {
 	}
 	content := RenderRepoDetail(v.repo, v.width, v.health)
 	v.Viewport.SetContent(content)
-}
-
-func writeOllamaInventorySummary(b *strings.Builder, inventory *session.OllamaInventory) {
-	if inventory == nil {
-		return
-	}
-	status := styles.StatusRunning.Render("ready")
-	switch {
-	case !inventory.Reachable:
-		status = styles.WarningStyle.Render("offline")
-	case len(inventory.MissingRequiredModels) > 0 || len(inventory.AliasIssues()) > 0:
-		status = styles.WarningStyle.Render("degraded")
-	}
-
-	b.WriteString(fmt.Sprintf("  Status:     %s\n", status))
-	b.WriteString(fmt.Sprintf("  Endpoint:   %s\n", inventory.BaseURL))
-	b.WriteString(fmt.Sprintf("  Required:   %d/%d ready\n", inventory.ReadyRequiredCount(), len(inventory.RequiredModels)))
-	if len(inventory.MissingRequiredModels) > 0 {
-		b.WriteString(fmt.Sprintf("  Missing:    %s\n", strings.Join(inventory.MissingRequiredModels, ", ")))
-	}
-	if aliasIssues := inventory.AliasIssueNames(); len(aliasIssues) > 0 {
-		b.WriteString(fmt.Sprintf("  AliasSync:  %s\n", strings.Join(aliasIssues, ", ")))
-	}
-	if inventory.Error != "" {
-		b.WriteString(fmt.Sprintf("  Error:      %s\n", inventory.Error))
-	}
 }
 
 // renderRepoStatus renders the Status section as a standalone string.

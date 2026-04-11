@@ -83,7 +83,6 @@ func DefaultProviderCosts() *ProviderCosts {
 			"claude_sonnet":     CostClaudeSonnetInput,
 			"claude_opus":       CostClaudeOpusInput,
 			"codex":             CostCodexInput,
-			"ollama":            0.0,
 		},
 		OutputPerMToken: map[string]float64{
 			"gemini_flash_lite": CostGeminiFlashLiteOutput,
@@ -93,7 +92,6 @@ func DefaultProviderCosts() *ProviderCosts {
 			"claude_sonnet":     CostClaudeSonnetOutput,
 			"claude_opus":       CostClaudeOpusOutput,
 			"codex":             CostCodexOutput,
-			"ollama":            0.0,
 		},
 	}
 }
@@ -176,9 +174,6 @@ func (pc *ProviderCosts) CostRateForProvider(provider string) (inputPer1M, outpu
 	case "codex", "openai":
 		return pc.InputRate("codex", CostCodexInput),
 			pc.OutputRate("codex", CostCodexOutput)
-	case "ollama":
-		return pc.InputRate("ollama", 0.0),
-			pc.OutputRate("ollama", 0.0)
 	case "crush":
 		return pc.InputRate("crush", CostClaudeSonnetInput),
 			pc.OutputRate("crush", CostClaudeSonnetOutput)

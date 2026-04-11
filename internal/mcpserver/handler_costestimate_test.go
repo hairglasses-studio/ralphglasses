@@ -229,35 +229,6 @@ func TestHandleCostEstimateCodex(t *testing.T) {
 	}
 }
 
-func TestHandleCostEstimateOllama(t *testing.T) {
-	t.Parallel()
-	srv, _ := setupTestServer(t)
-
-	result, err := srv.handleCostEstimate(context.Background(), makeRequest(map[string]any{
-		"provider": "ollama",
-	}))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.IsError {
-		t.Fatalf("unexpected error: %s", getResultText(result))
-	}
-
-	var est CostEstimate
-	if err := json.Unmarshal([]byte(getResultText(result)), &est); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
-	if est.Provider != "ollama" {
-		t.Fatalf("provider = %q, want ollama", est.Provider)
-	}
-	if est.Model != session.ProviderDefaults(session.ProviderOllama) {
-		t.Fatalf("model = %q, want %q", est.Model, session.ProviderDefaults(session.ProviderOllama))
-	}
-	if est.Estimate.MidUSD != 0 {
-		t.Fatalf("mid estimate = %f, want 0", est.Estimate.MidUSD)
-	}
-}
-
 func TestHandleCostEstimateWithRepo(t *testing.T) {
 	t.Parallel()
 	srv, _ := setupTestServer(t)

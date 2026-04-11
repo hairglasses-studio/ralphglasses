@@ -68,7 +68,7 @@ func TestHandleSurfaceAuditFallsBackToDocsInventory(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(inventoryPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	payload := `{"summary":{"total_repos_with_ollama_support":8},"repos":[{"repo":"ralphglasses","ollama_support_mode":"session_provider"}]}`
+	payload := `{"summary":{"total_repos_with_ollama_support":0},"repos":[{"repo":"ralphglasses","ollama_support_mode":"none"}]}`
 	if err := os.WriteFile(inventoryPath, []byte(payload), 0o644); err != nil {
 		t.Fatal(err)
 	}

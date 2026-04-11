@@ -40,7 +40,6 @@ var knownModelPrefixes = map[Provider][]string{
 	ProviderClaude: {"claude-", "sonnet", "opus", "haiku"},
 	ProviderGemini: {"gemini-"},
 	ProviderCodex:  {"gpt-", "o1-", "o3-", "o4-", "codex-"},
-	ProviderOllama: {"code-", "llama", "mistral", "codellama", "deepseek", "phi", "qwen", "gemma", "starcoder", "devstral", "nomic", "glm", "kimi", "minimax"},
 }
 
 var codexSupportedModelPatterns = []*regexp.Regexp{
@@ -145,7 +144,6 @@ var validLoopProfileProviders = map[Provider]bool{
 	ProviderClaude: true,
 	ProviderGemini: true,
 	ProviderCodex:  true,
-	ProviderOllama: true,
 	"":             true, // empty = use default
 }
 
@@ -263,13 +261,13 @@ func InferProviderFromModel(model string) (Provider, bool) {
 // Returns an error describing the first invalid field found, or nil if valid.
 func ValidateLoopProfile(p LoopProfile) error {
 	if !validLoopProfileProviders[p.PlannerProvider] {
-		return fmt.Errorf("invalid planner_provider %q: must be one of claude, gemini, codex, ollama, or empty", p.PlannerProvider)
+		return fmt.Errorf("invalid planner_provider %q: must be one of claude, gemini, codex, or empty", p.PlannerProvider)
 	}
 	if !validLoopProfileProviders[p.WorkerProvider] {
-		return fmt.Errorf("invalid worker_provider %q: must be one of claude, gemini, codex, ollama, or empty", p.WorkerProvider)
+		return fmt.Errorf("invalid worker_provider %q: must be one of claude, gemini, codex, or empty", p.WorkerProvider)
 	}
 	if !validLoopProfileProviders[p.VerifierProvider] {
-		return fmt.Errorf("invalid verifier_provider %q: must be one of claude, gemini, codex, ollama, or empty", p.VerifierProvider)
+		return fmt.Errorf("invalid verifier_provider %q: must be one of claude, gemini, codex, or empty", p.VerifierProvider)
 	}
 
 	defaults := DefaultLoopProfile()

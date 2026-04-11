@@ -15,7 +15,7 @@ type Config struct {
 	// ScanPaths lists directories to scan for ralph-enabled repos.
 	ScanPaths []string `json:"scan_paths,omitempty"`
 
-	// DefaultProvider is the default LLM provider (claude, gemini, codex, ollama, antigravity, crush, goose, amp, a2a).
+	// DefaultProvider is the default LLM provider (claude, gemini, codex, antigravity, crush, goose, amp, a2a).
 	// The legacy "openai" value is accepted as a deprecated alias for "codex".
 	DefaultProvider string `json:"default_provider,omitempty"`
 
