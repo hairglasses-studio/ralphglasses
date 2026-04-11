@@ -41,6 +41,10 @@ type Config struct {
 	// Affects pipeline stage behavior (XML vs markdown structure) and scoring suggestions.
 	// Empty defaults to the LLM.Provider value (or "openai" if both are unset).
 	TargetProvider ProviderName `yaml:"target_provider"`
+
+	// CavemanLevel controls the intensity of token-saving compression:
+	// "lite", "full", "ultra", "wenyan-lite", "wenyan-full", "wenyan-ultra".
+	CavemanLevel string `yaml:"caveman_level"`
 }
 
 // LLMConfig holds settings for the LLM-backed enhancement mode.

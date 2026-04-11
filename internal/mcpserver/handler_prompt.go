@@ -11,6 +11,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/ralphglasses/internal/enhancer"
+	"github.com/hairglasses-studio/ralphglasses/internal/model"
 	"github.com/hairglasses-studio/ralphglasses/internal/session"
 )
 
@@ -90,6 +91,13 @@ func (s *Server) handlePromptEnhance(ctx context.Context, req mcp.CallToolReques
 	if repoName := p.OptionalString("repo", ""); repoName != "" {
 		if r := s.findRepo(repoName); r != nil {
 			cfg = enhancer.LoadConfig(r.Path)
+
+			// Also check .ralphrc for CAVEMAN_LEVEL override
+			if rc, err := model.LoadConfig(ctx, r.Path); err == nil && rc != nil {
+				if cl := rc.Values["CAVEMAN_LEVEL"]; cl != "" {
+					cfg.CavemanLevel = cl
+				}
+			}
 		}
 	}
 
@@ -114,7 +122,7 @@ func (s *Server) handlePromptEnhance(ctx context.Context, req mcp.CallToolReques
 	trace := map[string]any{
 		"stages_run":     result.StagesRun,
 		"stages_skipped": result.SkippedStages,
-		"total_stages":   13,
+		"total_stages":   14,
 	}
 
 	// Wrap result with trace

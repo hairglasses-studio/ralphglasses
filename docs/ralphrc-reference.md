@@ -117,6 +117,7 @@ Keys must match `[A-Z_][A-Z0-9_]*`.
 | `CASCADE_EXPENSIVE_MODEL` | string | `gpt-5.4` | expensive model for cascade routing |
 | `CASCADE_EXPENSIVE_PROVIDER` | string | `codex` | expensive provider for cascade routing |
 | `CASCADE_MAX_CHEAP_BUDGET` | float | `2.00` | max budget for cheap cascade tier in USD (range: 0.01--100) |
+| `CAVEMAN_LEVEL` | string | -- | caveman compression level (lite, full, ultra, wenyan-lite, wenyan-full, wenyan-ultra) |
 | `CB_FAIL_THRESHOLD` | int | `5` | circuit breaker failure threshold (range: 1--100) |
 | `CB_HALF_OPEN_MAX` | int | `2` | circuit breaker half-open max attempts (range: 1--20) |
 | `CB_RESET_TIMEOUT` | int | `300` | circuit breaker reset timeout in seconds (range: 10--3600) |

@@ -316,6 +316,25 @@ func EnhanceWithConfig(raw string, taskType TaskType, cfg Config) EnhanceResult 
 		}
 	}
 
+	// Stage 13: Caveman compression — apply token-saving compression based on level
+	if cfg.CavemanLevel != "" {
+		if cfg.IsStageDisabled("caveman") {
+			result.SkippedStages = append(result.SkippedStages, SkippedStage{
+				Name: "caveman", Reason: "disabled in config",
+			})
+		} else {
+			text, imps = CompressCaveman(text, cfg.CavemanLevel)
+			if len(imps) > 0 {
+				result.StagesRun = append(result.StagesRun, "caveman")
+				result.Improvements = append(result.Improvements, imps...)
+			} else {
+				result.SkippedStages = append(result.SkippedStages, SkippedStage{
+					Name: "caveman", Reason: "no compression opportunities detected",
+				})
+			}
+		}
+	}
+
 	// Prepend config preamble if set
 	if cfg.Preamble != "" {
 		text = cfg.Preamble + "\n\n" + text
